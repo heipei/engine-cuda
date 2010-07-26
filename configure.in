@@ -1,0 +1,151 @@
+#
+# @version 0.1.0 (2010)
+# @author Paolo Margara <paolo.margara@gmail.com>
+# 
+# Copyright 2010 Paolo Margara
+#
+# This file is part of Engine_cudamrg.
+#
+# Engine_cudamrg is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License or
+# any later version.
+# 
+# Engine_cudamrg is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Engine_cudamrg.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+define([PACKAGE_VERSION_MAJOR], [0])
+define([PACKAGE_VERSION_MINOR], [1])
+define([PACKAGE_VERSION_FIX],   [0])
+
+AC_INIT([engine_cudamrg],[PACKAGE_VERSION_MAJOR.PACKAGE_VERSION_MINOR.PACKAGE_VERSION_FIX],[paolo.margara@polito.it])
+
+AC_PROG_CC
+AC_LANG_C
+        
+AC_PROG_MAKE_SET
+
+CFLAGS=" -O3 -Wall"
+CFLAGS_TEST="$CFLAGS"
+
+AC_ARG_WITH([cudatoolkitpath],AS_HELP_STRING([--with-cudatoolkitpath],[prefix where cuda is installed (default=/usr/local/cuda)]),
+[
+ NVCC="$with_cudatoolkitpath/bin/nvcc";
+ if test $(uname -m) = "x86_64"
+  then
+  LDFLAGS="$LDFLAGS -L$with_cudatoolkitpath/lib64/";
+  NVLDFLAGS="$NVLDFLAGS -L$with_cudatoolkitpath/lib64/";
+  else
+  LDFLAGS="$LDFLAGS -L$with_cudatoolkitpath/lib/";
+  NVLDFLAGS="$NVLDFLAGS -L$with_cudatoolkitpath/lib/";
+  fi
+ CPPFLAGS="$CPPFLAGS -I$with_cudatoolkitpath/include/";
+ NVCPPFLAGS="$NVCPPFLAGS -I$with_cudatoolkitpath/include/"],
+[if test $(uname -m) = "x86_64"
+  then
+  LDFLAGS="$LDFLAGS -L/usr/local/cuda/lib64/";
+  NVLDFLAGS="$NVLDFLAGS -L/usr/local/cuda/lib64/";
+  else
+  LDFLAGS="$LDFLAGS -L/usr/local/cuda/lib/";
+  NVLDFLAGS="$NVLDFLAGS -L/usr/local/cuda/lib/";
+  fi
+ NVCC="/usr/local/cuda/bin/nvcc";
+ CPPFLAGS="$CPPFLAGS -I/usr/local/cuda/include/";
+ NVCPPFLAGS="$NVCPPFLAGS -I/usr/local/cuda/include/"])
+
+AC_ARG_WITH([memorytransfertype], 
+AS_HELP_STRING([--with-memorytransfertype],[specify the kind of memory transfer type, allowed value are pinned, zerocopy, pageable (default pinned) ]),
+[if test $with_memorytransfertype = "zerocopy"
+  then
+    NVCPPFLAGS="$NVCPPFLAGS -DZERO_COPY"
+  elif test $with_memorytransfertype = "pageable"
+   then
+    NVCPPFLAGS="$NVCPPFLAGS"
+  else
+    NVCPPFLAGS="$NVCPPFLAGS -DPINNED"
+  fi],
+[NVCPPFLAGS="$NVCPPFLAGS -DPINNED"])
+
+AC_ARG_WITH([opensslenginedir],
+AS_HELP_STRING([--with-opensslenginedir],[specify the directory where openssl engine are located (default $PREFIX/lib/engines) ]),
+[ENGINEDIR="$with_opensslenginedir"],[ENGINEDIR="lib/engines/"])
+
+AC_ARG_WITH([buffersize],AS_HELP_STRING([--with-buffersize],[specify the size of the buffer (default 8MB) ]),
+[NVCPPFLAGS="$NVCPPFLAGS -DMAX_CHUNK_SIZE=$with_buffersize"],[NVCPPFLAGS="$NVCPPFLAGS -DMAX_CHUNK_SIZE=8*1024*1024"])
+
+AC_ARG_WITH([maxrregcount],AS_HELP_STRING([--with-rregcount],[specify the max number of reg that a thread must use (default no restriction) ]),
+[NVCPPFLAGS="$NVCPPFLAGS -maxrregcount=$with_maxrregcount"],[NVCPPFLAGS="$NVCPPFLAGS"])
+
+AC_ARG_WITH([ccbin],[AS_HELP_STRING([--with-ccbin],[specify a compiler different from the default (default=gcc)])],
+[NVCFLAGS="$NVCFLAGS -ccbin=$with_ccbin"],[NVCFLAGS="$NVCFLAGS"])
+
+AC_ARG_ENABLE([writecombined],[AS_HELP_STRING([--enable-writecombined],[enable write combined during pinned memory transfer (default=disabled)])],
+[NVCPPFLAGS="$NVCPPFLAGS -DWC"],[NVCPPFLAGS="$NVCPPFLAGS"])
+
+AC_ARG_ENABLE([deviceemu],[AS_HELP_STRING([--enable-deviceemu],[compile with device emulation (default=disabled)])],
+[NVCFLAGS="$NVCFLAGS -deviceemu"],[NVCFLAGS="$NVCFLAGS"])
+
+AC_ARG_ENABLE([debug],[AS_HELP_STRING([--enable-debug],[enable debug support (default=disabled)])],
+[CFLAGS="$(echo $CFLAGS|sed s/-O./-g/)";NVCFLAGS="$NVCFLAGS -g -G"],[CFLAGS="$CFLAGS";NVCFLAGS="$NVCFLAGS"])
+
+AC_ARG_ENABLE([gprof],[AS_HELP_STRING([--enable-gprof],[enable gprof support (default=disabled)])],
+[CFLAGS="$(echo $CFLAGS|sed s/-O./-pg/)"],[CFLAGS="$CFLAGS"])
+
+AC_ARG_ENABLE([quiet],[AS_HELP_STRING([--enable-quiet],[no output except warning and error (default=disabled)])],
+[NVCFLAGS="$NVCFLAGS"],[NVCFLAGS="$NVCFLAGS --ptxas-options=-v"])
+
+AC_ARG_ENABLE([cpuonly],[AS_HELP_STRING([--enable-cpuonly],[AES calculation is done through libcrypto (default=disabled)])],
+[CPPFLAGS="$CPPFLAGS -DCPU"],[CPPFLAGS="$CPPFLAGS"])
+
+AC_ARG_ENABLE([td4uint8],[AS_HELP_STRING([--disable-td4uint8],[choose if store td4 in a table of unsigned 8 bit int or 32 bit int (default=enabled)])],
+[NVCPPFLAGS="$NVCPPFLAGS"],[NVCPPFLAGS="$NVCPPFLAGS -DTD4_UINT8"])
+
+AC_ARG_ENABLE([dsuint8],[AS_HELP_STRING([--disable-dsuint8],[enable write combined during pinned memory transfer (default=enabled)])],
+[NVCPPFLAGS="$NVCPPFLAGS"],[NVCPPFLAGS="$NVCPPFLAGS -DD_S_UINT8"])
+
+AC_ARG_ENABLE([ttableconstant],[AS_HELP_STRING([--disable-ttableconstant],[choose if store T-table in constant or shared memory (default=enabled)])],
+[NVCPPFLAGS="$NVCPPFLAGS"],[NVCPPFLAGS="$NVCPPFLAGS -DT_TABLE_CONSTANT"])
+
+AC_HEADER_STDC
+AC_CHECK_HEADERS([stdio.h] ,,AC_MSG_ERROR(stdio.h required))
+AC_CHECK_HEADERS([stdlib.h],,AC_MSG_ERROR(stdlib.h required))
+AC_CHECK_HEADERS([stdint.h],,AC_MSG_ERROR(stdint.h required))
+AC_CHECK_HEADERS([assert.h],,AC_MSG_ERROR(assert.h required))
+AC_CHECK_HEADERS([memory.h],,AC_MSG_ERROR(memory.h required))
+AC_CHECK_HEADERS([openssl/aes.h],,AC_MSG_ERROR(openssl/aes.h required))
+AC_CHECK_HEADERS([openssl/engine.h],,AC_MSG_ERROR(openssl/engine.h required))
+AC_CHECK_HEADERS([cuda_runtime_api.h],,AC_MSG_ERROR(cuda_runtime_api.h required))
+
+AC_CHECK_LIB([crypto],AES_set_encrypt_key,[LIBS="-lcrypto";LIBS_TEST="-lcrypto"],[AC_MSG_ERROR([Cannot find crypto library])])
+AC_CHECK_LIB([cudart],cudaGetDeviceCount,[LIBS="$LIBS -lcudart"],[AC_MSG_ERROR([Cannot find cuda runtime library])])
+AC_CHECK_LIB([cuda],cudaGetDeviceCount,[LIBS="$LIBS -lcuda"],[AC_MSG_ERROR([Cannot find cuda library])])
+
+CFLAGS="$CFLAGS -fPIC"
+
+AC_SUBST(NVCC)
+
+AC_SUBST(CPPFLAGS)
+AC_SUBST(NVCPPFLAGS)
+
+AC_SUBST(LDFLAGS)
+AC_SUBST(NVLDFLAGS)
+
+AC_SUBST(CFLAGS)
+AC_SUBST(NVCFLAGS)
+AC_SUBST(CFLAGS_TEST)
+
+AC_SUBST(LIBS)
+AC_SUBST(LIBS_TEST)
+
+AC_SUBST(ENGINEDIR)
+
+VERSION="PACKAGE_VERSION_MAJOR.PACKAGE_VERSION_MINOR.PACKAGE_VERSION_FIX"
+AC_SUBST(VERSION)
+
+AC_OUTPUT(Makefile)

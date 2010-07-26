@@ -1,0 +1,70 @@
+#
+# @version 0.1.0 (2010)
+# @author Paolo Margara <paolo.margara@gmail.com>
+# 
+# Copyright 2010 Paolo Margara
+#
+# This file is part of Engine_cudamrg.
+#
+# Engine_cudamrg is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License or
+# any later version.
+# 
+# Engine_cudamrg is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Engine_cudamrg.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+CC = @CC@
+NVCC = @NVCC@
+
+VERSION = @VERSION@
+
+LDFLAGS= @LDFLAGS@
+NVLDFLAGS= @NVLDFLAGS@
+
+CPPFLAGS= @CPPFLAGS@
+NVCPPFLAGS= @NVCPPFLAGS@
+
+CFLAGS= @CFLAGS@
+
+NVCFLAGS_LIBS = @NVCFLAGS@ --compiler-options '-Wall -fPIC'
+NVCFLAGS_TEST = @NVCFLAGS@ --compiler-options '-Wall'
+
+LIBS_TEST = @LIBS_TEST@
+LIBS_LIBS = @LIBS@
+
+LIBNAME = libcudamrg.so
+TESTNAME= teststate
+
+LIBSRC = e_cuda.c aes_cuda.cu
+TESTSRC= teststate.c aes_cuda.cu
+
+LIBOBJ = e_cuda.o aes_cuda.o
+TESTOBJ= aes_cuda.o teststate.o
+
+all:	lib test
+
+test: $(TESTSRC)
+	$(NVCC) $(NVCPPFLAGS) $(NVCFLAGS_TEST) $(NVLDFLAGS) $(LIBS_TEST) -o $(TESTNAME) $(TESTSRC)
+
+lib:	$(LIBOBJ)
+	$(CC) -shared -Wl,-soname,$(LIBNAME) $(CFLAGS_LIBS) $(CPPFLAGS) $(LDFLAGS) $(LIBS_LIBS) -o $(LIBNAME) $(LIBOBJ)
+
+aes_cuda.o: aes_cuda.cu
+	$(NVCC) $(NVCPPFLAGS) $(NVCFLAGS_LIBS) -c -o aes_cuda.o aes_cuda.cu 
+
+install: lib
+	mkdir -p @prefix@/@ENGINEDIR@
+	cp $(LIBNAME) @prefix@/@ENGINEDIR@
+
+clean:
+	rm -f *.o *.obj lib tags core .pure .nfs* *.old *.bak fluff *.linkinfo *.so *.a teststate
+
+distclean: clean
+	rm -f config.* Makefile

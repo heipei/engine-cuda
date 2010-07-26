@@ -1,0 +1,18 @@
+Engine_cudamrg Quickstart
+-------------------
+
+./configure
+make
+make install
+
+Credits
+-------------------
+
+This is a full credits-file of people that have contributed to this project.
+It is sorted by name and the fields are: name (N), email (E), web-address
+(W), description (D).
+
+N: Paolo Margara
+E: paolo.margara@gmail.com
+W: http://www.mrgcorner.it
+D: Developer, tester and maintainer
