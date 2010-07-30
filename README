@@ -5,6 +5,8 @@ Engine_cudamrg Quickstart
 make
 make install
 
+For any further information please refer to http://code.google.com/p/engine-cuda/
+
 Credits
 -------------------
 

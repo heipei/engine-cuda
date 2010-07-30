@@ -397,7 +397,7 @@ static int cuda_aes_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const u
 #ifdef CPU
 			ccd=(struct cuda_cipher_data *)(ctx->cipher_data);
 			ak=&ccd->ks;
-			AES_cbc_decrypt(in_arg,out_arg,nbytes,ak,ctx->iv,AES_ENCRYPT);
+			AES_cbc_encrypt(in_arg,out_arg,nbytes,ak,ctx->iv,AES_ENCRYPT);
 #else
 			while (nbytes!=current) {
 				AES_cuda_encrypt_cbc((in_arg+current),(out_arg+current),(nbytes-current));
