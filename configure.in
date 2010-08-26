@@ -1,5 +1,5 @@
 #
-# @version 0.1.0 (2010)
+# @version 0.1.1 (2010)
 # @author Paolo Margara <paolo.margara@gmail.com>
 # 
 # Copyright 2010 Paolo Margara
@@ -22,7 +22,7 @@
 
 define([PACKAGE_VERSION_MAJOR], [0])
 define([PACKAGE_VERSION_MINOR], [1])
-define([PACKAGE_VERSION_FIX],   [0])
+define([PACKAGE_VERSION_FIX],   [1])
 
 AC_INIT([engine_cudamrg],[PACKAGE_VERSION_MAJOR.PACKAGE_VERSION_MINOR.PACKAGE_VERSION_FIX],[paolo.margara@gmail.com])
 
@@ -88,9 +88,6 @@ AC_ARG_WITH([ccbin],[AS_HELP_STRING([--with-ccbin],[specify a compiler different
 AC_ARG_ENABLE([writecombined],[AS_HELP_STRING([--enable-writecombined],[enable write combined during pinned memory transfer (default=disabled)])],
 [NVCPPFLAGS="$NVCPPFLAGS -DWC"],[NVCPPFLAGS="$NVCPPFLAGS"])
 
-AC_ARG_ENABLE([deviceemu],[AS_HELP_STRING([--enable-deviceemu],[compile with device emulation (default=disabled)])],
-[NVCFLAGS="$NVCFLAGS -deviceemu"],[NVCFLAGS="$NVCFLAGS"])
-
 AC_ARG_ENABLE([debug],[AS_HELP_STRING([--enable-debug],[enable debug support (default=disabled)])],
 [CFLAGS="$(echo $CFLAGS|sed s/-O./-g/)";NVCFLAGS="$NVCFLAGS -g -G"],[CFLAGS="$CFLAGS";NVCFLAGS="$NVCFLAGS"])
 
@@ -105,9 +102,6 @@ AC_ARG_ENABLE([cpuonly],[AS_HELP_STRING([--enable-cpuonly],[AES calculation is d
 
 AC_ARG_ENABLE([td4uint8],[AS_HELP_STRING([--disable-td4uint8],[choose if store td4 in a table of unsigned 8 bit int or 32 bit int (default=enabled)])],
 [NVCPPFLAGS="$NVCPPFLAGS"],[NVCPPFLAGS="$NVCPPFLAGS -DTD4_UINT8"])
-
-AC_ARG_ENABLE([dsuint8],[AS_HELP_STRING([--disable-dsuint8],[enable write combined during pinned memory transfer (default=enabled)])],
-[NVCPPFLAGS="$NVCPPFLAGS"],[NVCPPFLAGS="$NVCPPFLAGS -DD_S_UINT8"])
 
 AC_ARG_ENABLE([ttableconstant],[AS_HELP_STRING([--disable-ttableconstant],[choose if store T-table in constant or shared memory (default=enabled)])],
 [NVCPPFLAGS="$NVCPPFLAGS"],[NVCPPFLAGS="$NVCPPFLAGS -DT_TABLE_CONSTANT"])

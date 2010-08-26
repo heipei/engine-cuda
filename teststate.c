@@ -1,5 +1,5 @@
 /**
- * @version 0.1.0 (2010) - Copyright (c) 2010.
+ * @version 0.1.1 (2010) - Copyright (c) 2010.
  *
  * @author Paolo Margara <paolo.margara@gmail.com>
  *
@@ -19,7 +19,6 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with Engine_cudamrg.  If not, see <http://www.gnu.org/licenses/>.
-
  *
  */
 
@@ -51,12 +50,17 @@ int main(int argc, char **argv) {
 			0x2D, 0xC2, 0x60, 0x61, 0x55, 0x38, 0x18, 0xEA, 0x63, 0x5E, 0xC5,
 			0xD5, 0xA7, 0x72, 0x7E };
 
-/* Test Vector CBC 128bit */
-
-uint8_t key128_cbc[AES_KEY_SIZE_128] ={0x2b,0x7e,0x15,0x16,0x28,0xae,0xd2,0xa6,0xab,0xf7,0x15,0x88,0x09,0xcf,0x4f,0x3c};
-uint8_t iv_cbc[AES_BLOCK_SIZE]       ={0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f};
-uint8_t input_cbc[AES_BLOCK_SIZE]    ={0x76,0x49,0xab,0xac,0x81,0x19,0xb2,0x46,0xce,0xe9,0x8e,0x9b,0x12,0xe9,0x19,0x7d};
-uint8_t plaintext_cbc[AES_BLOCK_SIZE]={0x6b,0xc1,0xbe,0xe2,0x2e,0x40,0x9f,0x96,0xe9,0x3d,0x7e,0x11,0x73,0x93,0x17,0x2a};
+	/* Test Vector CBC */
+	uint8_t key128_cbc[AES_KEY_SIZE_128] = {0x2b,0x7e,0x15,0x16,0x28,0xae,0xd2,0xa6,0xab,0xf7,0x15,0x88,0x09,0xcf,0x4f,0x3c};
+	uint8_t key192_cbc[AES_KEY_SIZE_192] = {0x8e,0x73,0xb0,0xf7,0xda,0x0e,0x64,0x52,0xc8,0x10,0xf3,0x2b,0x80,0x90,0x79,0xe5,
+						0x62,0xf8,0xea,0xd2,0x52,0x2c,0x6b,0x7b};
+	uint8_t key256_cbc[AES_KEY_SIZE_256] = {0x60,0x3d,0xeb,0x10,0x15,0xca,0x71,0xbe,0x2b,0x73,0xae,0xf0,0x85,0x7d,0x77,0x81,
+						0x1f,0x35,0x2c,0x07,0x3b,0x61,0x08,0xd7,0x2d,0x98,0x10,0xa3,0x09,0x14,0xdf,0xf4};
+	uint8_t iv_cbc[AES_BLOCK_SIZE]       = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f};
+	uint8_t plaintext_cbc[AES_BLOCK_SIZE]= {0x6b,0xc1,0xbe,0xe2,0x2e,0x40,0x9f,0x96,0xe9,0x3d,0x7e,0x11,0x73,0x93,0x17,0x2a};
+	uint8_t ciphertextcbc128[AES_BLOCK_SIZE]= {0x76,0x49,0xab,0xac,0x81,0x19,0xb2,0x46,0xce,0xe9,0x8e,0x9b,0x12,0xe9,0x19,0x7d};
+	uint8_t ciphertextcbc192[AES_BLOCK_SIZE]= {0x4f,0x02,0x1d,0xb2,0x43,0xbc,0x63,0x3d,0x71,0x78,0x18,0x3a,0x9f,0xa0,0x71,0xe8};
+	uint8_t ciphertextcbc256[AES_BLOCK_SIZE]= {0xf5,0x8c,0x4c,0x04,0xd6,0xe5,0xf1,0xba,0x77,0x9e,0xab,0xfb,0x5f,0x7b,0xfb,0xd6};
 
 	/* needed variables */
 	int i, nm;
@@ -116,25 +120,40 @@ uint8_t plaintext_cbc[AES_BLOCK_SIZE]={0x6b,0xc1,0xbe,0xe2,0x2e,0x40,0x9f,0x96,0
 	for (i = 0; i < AES_BLOCK_SIZE; i++)
 		printf("%x", dec_output256[i]);
 
-	printf("\n\nCBC - IV: ");
+	printf("\n\nAES CBC test vector:");
+	printf("\nCBC - IV:         ");
 	for (i = 0; i < AES_BLOCK_SIZE; i++)
 		printf("%x", iv_cbc[i]);
 	printf("\nCBC - key 128bit: ");
-	for (i = 0; i < AES_BLOCK_SIZE; i++)
+	for (i = 0; i < AES_KEY_SIZE_128; i++)
 		printf("%x", key128_cbc[i]);
-	printf("\nCBC - input for a 128bit key: ");
-	for (i = 0; i < AES_BLOCK_SIZE; i++)
-		printf("%x", input_cbc[i]);
-	printf("\nCBC - Decrypted output for a 128bit key: ");
+	printf("\nCBC - key 192bit: ");
+	for (i = 0; i < AES_KEY_SIZE_192; i++)
+		printf("%x", key192_cbc[i]);
+	printf("\nCBC - key 256bit: ");
+	for (i = 0; i < AES_KEY_SIZE_256; i++)
+		printf("%x", key256_cbc[i]);
+	printf("\nCBC - Plaintext:  ");
 	for (i = 0; i < AES_BLOCK_SIZE; i++)
 		printf("%x", plaintext_cbc[i]);
-	printf("\n");
+
+	printf("\nCBC - Ciphertext for a 128bit key: ");
+	for (i = 0; i < AES_BLOCK_SIZE; i++)
+		printf("%x", ciphertextcbc128[i]);
+	printf("\nCBC - Ciphertext for a 192bit key: ");
+	for (i = 0; i < AES_BLOCK_SIZE; i++)
+		printf("%x", ciphertextcbc192[i]);
+	printf("\nCBC - Ciphertext for a 256bit key: ");
+	for (i = 0; i < AES_BLOCK_SIZE; i++)
+		printf("%x", ciphertextcbc256[i]);
+
+	printf("\n\n");
 
 	/* Initializing the CUDA encrypt library */
-	AES_cuda_init(&nm,0,OUTPUT_VERBOSE);
+	AES_cuda_init(&nm,0,OUTPUT_NORMAL);
 
 	/* Encrypt with a 128bit key */
-	printf("\n\nPress any key to start encrypting with a 128bit key...\n");
+	printf("Press any key to start encrypting with a 128bit key...\n");
 	AES_set_encrypt_key((unsigned char*) key128, 128, ak);
 	/* GPU work */
 	AES_cuda_transfer_key(ak);
@@ -259,13 +278,90 @@ uint8_t plaintext_cbc[AES_BLOCK_SIZE]={0x6b,0xc1,0xbe,0xe2,0x2e,0x40,0x9f,0x96,0
 	/* GPU work*/
 	AES_cuda_transfer_key(ak);
 	AES_cuda_transfer_iv(iv_cbc);
-	AES_cuda_decrypt_cbc(input_cbc,out,AES_BLOCK_SIZE);
+	AES_cuda_decrypt_cbc(ciphertextcbc128,out,AES_BLOCK_SIZE);
 	printf("output GPU: ");
 	for (i = 0; i < AES_BLOCK_SIZE; i++)
 		printf("%x", out[i]);
 	printf("\n");
 	/* CPU work */
-	AES_cbc_encrypt(input_cbc,out,AES_BLOCK_SIZE,ak,iv_cbc,AES_DECRYPT);
+	memcpy(iv_cbc_tmp,iv_cbc,AES_BLOCK_SIZE*sizeof(uint8_t)); 
+	AES_cbc_encrypt(ciphertextcbc128,out,AES_BLOCK_SIZE,ak,iv_cbc_tmp,AES_DECRYPT);
+	printf("output CPU: ");
+	for (i = 0; i < AES_BLOCK_SIZE; i++)
+		printf("%x", out[i]);
+	printf("\n");
+//
+	/* Encrypt with a 192bit key CBC */
+	printf("\nPress any key to start encrypting with a 192bit key CBC...\n");
+	AES_set_encrypt_key((unsigned char*) key192_cbc, 192, ak);
+	/* GPU work*/
+	AES_cuda_transfer_key(ak);
+	AES_cuda_transfer_iv(iv_cbc);
+	AES_cuda_encrypt_cbc(plaintext_cbc,out,AES_BLOCK_SIZE);
+	printf("output GPU: ");
+	for (i = 0; i < AES_BLOCK_SIZE; i++)
+		printf("%x", out[i]);
+	printf("\n");
+	/* CPU work */
+	memcpy(iv_cbc_tmp,iv_cbc,AES_BLOCK_SIZE*sizeof(uint8_t)); 
+	AES_cbc_encrypt(plaintext_cbc,out,AES_BLOCK_SIZE,ak,iv_cbc_tmp,AES_ENCRYPT);
+	printf("output CPU: ");
+	for (i = 0; i < AES_BLOCK_SIZE; i++)
+		printf("%x", out[i]);
+	printf("\n");
+//
+	/* Decrypt with a 192bit key CBC */
+	printf("\nPress any key to start decrypting with a 192bit key CBC...\n");
+	AES_set_decrypt_key((unsigned char*) key192_cbc, 192, ak);
+	/* GPU work*/
+	AES_cuda_transfer_key(ak);
+	AES_cuda_transfer_iv(iv_cbc);
+	AES_cuda_decrypt_cbc(ciphertextcbc192,out,AES_BLOCK_SIZE);
+	printf("output GPU: ");
+	for (i = 0; i < AES_BLOCK_SIZE; i++)
+		printf("%x", out[i]);
+	printf("\n");
+	/* CPU work */
+	memcpy(iv_cbc_tmp,iv_cbc,AES_BLOCK_SIZE*sizeof(uint8_t)); 
+	AES_cbc_encrypt(ciphertextcbc192,out,AES_BLOCK_SIZE,ak,iv_cbc_tmp,AES_DECRYPT);
+	printf("output CPU: ");
+	for (i = 0; i < AES_BLOCK_SIZE; i++)
+		printf("%x", out[i]);
+	printf("\n");
+//
+	/* Encrypt with a 256bit key CBC */
+	printf("\nPress any key to start encrypting with a 256bit key CBC...\n");
+	AES_set_encrypt_key((unsigned char*) key256_cbc, 256, ak);
+	/* GPU work*/
+	AES_cuda_transfer_key(ak);
+	AES_cuda_transfer_iv(iv_cbc);
+	AES_cuda_encrypt_cbc(plaintext_cbc,out,AES_BLOCK_SIZE);
+	printf("output GPU: ");
+	for (i = 0; i < AES_BLOCK_SIZE; i++)
+		printf("%x", out[i]);
+	printf("\n");
+	/* CPU work */
+	memcpy(iv_cbc_tmp,iv_cbc,AES_BLOCK_SIZE*sizeof(uint8_t)); 
+	AES_cbc_encrypt(plaintext_cbc,out,AES_BLOCK_SIZE,ak,iv_cbc_tmp,AES_ENCRYPT);
+	printf("output CPU: ");
+	for (i = 0; i < AES_BLOCK_SIZE; i++)
+		printf("%x", out[i]);
+	printf("\n");
+//
+	/* Decrypt with a 256bit key CBC */
+	printf("\nPress any key to start decrypting with a 256bit key CBC...\n");
+	AES_set_decrypt_key((unsigned char*) key256_cbc, 256, ak);
+	/* GPU work*/
+	AES_cuda_transfer_key(ak);
+	AES_cuda_transfer_iv(iv_cbc);
+	AES_cuda_decrypt_cbc(ciphertextcbc256,out,AES_BLOCK_SIZE);
+	printf("output GPU: ");
+	for (i = 0; i < AES_BLOCK_SIZE; i++)
+		printf("%x", out[i]);
+	printf("\n");
+	/* CPU work */
+	memcpy(iv_cbc_tmp,iv_cbc,AES_BLOCK_SIZE*sizeof(uint8_t)); 
+	AES_cbc_encrypt(ciphertextcbc256,out,AES_BLOCK_SIZE,ak,iv_cbc_tmp,AES_DECRYPT);
 	printf("output CPU: ");
 	for (i = 0; i < AES_BLOCK_SIZE; i++)
 		printf("%x", out[i]);

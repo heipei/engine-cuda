@@ -2,6 +2,9 @@
 openssl_conf = openssl_init
 
 # Insert the following line at the bottom of your openssl.cnf file
+[openssl_init]
+engines = engine_section
+
 [engine_section]
 # Configure ENGINE named "cudamrg"
 cudamrg = cudamrg_section
@@ -13,6 +16,6 @@ dynamic_path = /opt/lib/engines/libcudamrg.so
 default_algorithms = ALL
 init = 1
 # cudamrg specific ctrl.
-#BUFFER_SIZE = 16
+#BUFFER_SIZE = 2
 #VERBOSE = EMPTY
 #QUIET = EMPTY
