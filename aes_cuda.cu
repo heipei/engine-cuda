@@ -1239,12 +1239,7 @@ if(buffer_size_engine==0)
 	CUDA_MRG_ERROR_CHECK(cudaEventCreate(&stop));
 	CUDA_MRG_ERROR_CHECK(cudaEventRecord(start,0));
 
-#if defined PINNED && defined WC && CUDART_VERSION >= 2020
-        //pinned memory mode - use special function to get OS-pinned memory
-        CUDA_MRG_ERROR_CHECK(cudaHostAlloc( (void**)&h_s, buffer_size, cudaHostAllocWriteCombined));
-        CUDA_MRG_ERROR_CHECK(cudaHostAlloc( (void**)&h_out, buffer_size, cudaHostAllocWriteCombined));
-        if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"  Using pinned memory: cudaHostAllocWriteCombined\n\n");
-#elif defined PINNED && ! defined WC && CUDART_VERSION >= 2020
+#if defined PINNED && CUDART_VERSION >= 2020
         //pinned memory mode - use special function to get OS-pinned memory
         CUDA_MRG_ERROR_CHECK(cudaHostAlloc( (void**)&h_s, buffer_size, cudaHostAllocDefault));
         CUDA_MRG_ERROR_CHECK(cudaHostAlloc( (void**)&h_out, buffer_size, cudaHostAllocDefault));
