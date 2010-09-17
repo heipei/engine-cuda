@@ -707,7 +707,6 @@ enable_debug
 enable_gprof
 enable_quiet
 enable_cpuonly
-enable_td4uint8
 enable_ttableconstant
 '
       ac_precious_vars='build_alias
@@ -1346,8 +1345,6 @@ Optional Features:
                           (default=disabled)
   --enable-cpuonly        AES calculation is done through libcrypto
                           (default=disabled)
-  --disable-td4uint8      choose if store td4 in a table of unsigned 8 bit int
-                          or 32 bit int (default=enabled)
   --disable-ttableconstant
                           choose if store T-table in constant or shared memory
                           (default=enabled)
@@ -1827,6 +1824,13 @@ ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
+
+echo -n "Searching for libcuda.so..."
+for i in $(find /lib* /usr/lib* -name libcuda.so 2> /dev/null|sed s/libcuda.so//g)
+	do
+	LDFLAGS=$LDFLAGS' '-L$i
+	done
+echo "DONE"
 
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
@@ -2915,14 +2919,6 @@ if test "${enable_cpuonly+set}" = set; then
   enableval=$enable_cpuonly; CPPFLAGS="$CPPFLAGS -DCPU"
 else
   CPPFLAGS="$CPPFLAGS"
-fi
-
-
-# Check whether --enable-td4uint8 was given.
-if test "${enable_td4uint8+set}" = set; then
-  enableval=$enable_td4uint8; NVCPPFLAGS="$NVCPPFLAGS"
-else
-  NVCPPFLAGS="$NVCPPFLAGS -DTD4_UINT8"
 fi
 
 

@@ -26,6 +26,13 @@ define([PACKAGE_VERSION_FIX],   [1])
 
 AC_INIT([engine_cudamrg],[PACKAGE_VERSION_MAJOR.PACKAGE_VERSION_MINOR.PACKAGE_VERSION_FIX],[paolo.margara@gmail.com])
 
+echo -n "Searching for libcuda.so..."
+for i in $(find /lib* /usr/lib* -name libcuda.so 2> /dev/null|sed s/libcuda.so//g)
+	do
+	LDFLAGS=$LDFLAGS' '-L$i
+	done
+echo "DONE"
+
 AC_PROG_CC
 AC_LANG_C
         
@@ -96,9 +103,6 @@ AC_ARG_ENABLE([quiet],[AS_HELP_STRING([--enable-quiet],[no output except warning
 
 AC_ARG_ENABLE([cpuonly],[AS_HELP_STRING([--enable-cpuonly],[AES calculation is done through libcrypto (default=disabled)])],
 [CPPFLAGS="$CPPFLAGS -DCPU"],[CPPFLAGS="$CPPFLAGS"])
-
-AC_ARG_ENABLE([td4uint8],[AS_HELP_STRING([--disable-td4uint8],[choose if store td4 in a table of unsigned 8 bit int or 32 bit int (default=enabled)])],
-[NVCPPFLAGS="$NVCPPFLAGS"],[NVCPPFLAGS="$NVCPPFLAGS -DTD4_UINT8"])
 
 AC_ARG_ENABLE([ttableconstant],[AS_HELP_STRING([--disable-ttableconstant],[choose if store T-table in constant or shared memory (default=enabled)])],
 [NVCPPFLAGS="$NVCPPFLAGS"],[NVCPPFLAGS="$NVCPPFLAGS -DT_TABLE_CONSTANT"])
