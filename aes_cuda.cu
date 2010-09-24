@@ -1480,7 +1480,7 @@ if ((nbytes%(MAX_THREAD*STATE_THREAD))==0) {
 	if (output_verbosity==OUTPUT_VERBOSE) fprintf(stdout,"done!\n");
 	}
 
-
+#ifndef CBC_ENC_CPU
 //
 // CBC  encrypt
 //
@@ -1709,6 +1709,7 @@ extern "C" void AES_cuda_encrypt_cbc(const unsigned char *in, unsigned char *out
 
 	if (output_verbosity==OUTPUT_VERBOSE) fprintf(stdout,"done!\n");
 	}
+#endif
 #else
 #error "ERROR: DEVICE EMULATION is NOT supported."
 #endif

@@ -322,10 +322,15 @@ static int cuda_aes_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const u
 #if 0
 	int n;
 #endif
-#ifdef CPU
+#if defined CPU
 	//if (!quiet && verbose) fprintf(stdout,"C");
 	CUDA_CIPHER_DATA *ccd;
 	AES_KEY *ak;
+#elif defined CBC_ENC_CPU
+	//if (!quiet && verbose) fprintf(stdout,"G");
+	CUDA_CIPHER_DATA *ccd;
+	AES_KEY *ak;
+	int chunk;
 #else
 	//if (!quiet && verbose) fprintf(stdout,"G");
 	int chunk;
@@ -394,7 +399,7 @@ static int cuda_aes_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const u
 				}
 #endif
 		} else {
-#ifdef CPU
+#if defined CPU || defined CBC_ENC_CPU
 			ccd=(struct cuda_cipher_data *)(ctx->cipher_data);
 			ak=&ccd->ks;
 			AES_cbc_encrypt(in_arg,out_arg,nbytes,ak,ctx->iv,AES_ENCRYPT);

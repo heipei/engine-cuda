@@ -253,6 +253,7 @@ int main(int argc, char **argv) {
 		printf("%x", out[i]);
 	printf("\n");
 //
+#ifndef CBC_ENC_CPU
 	/* Encrypt with a 128bit key CBC */
 	printf("\nPress any key to start encrypting with a 128bit key CBC...\n");
 	AES_set_encrypt_key((unsigned char*) key128_cbc, 128, ak);
@@ -271,6 +272,7 @@ int main(int argc, char **argv) {
 	for (i = 0; i < AES_BLOCK_SIZE; i++)
 		printf("%x", out[i]);
 	printf("\n");
+#endif
 //
 	/* Decrypt with a 128bit key CBC */
 	printf("\nPress any key to start decrypting with a 128bit key CBC...\n");
@@ -291,6 +293,7 @@ int main(int argc, char **argv) {
 		printf("%x", out[i]);
 	printf("\n");
 //
+#ifndef CBC_ENC_CPU
 	/* Encrypt with a 192bit key CBC */
 	printf("\nPress any key to start encrypting with a 192bit key CBC...\n");
 	AES_set_encrypt_key((unsigned char*) key192_cbc, 192, ak);
@@ -309,6 +312,7 @@ int main(int argc, char **argv) {
 	for (i = 0; i < AES_BLOCK_SIZE; i++)
 		printf("%x", out[i]);
 	printf("\n");
+#endif
 //
 	/* Decrypt with a 192bit key CBC */
 	printf("\nPress any key to start decrypting with a 192bit key CBC...\n");
@@ -329,6 +333,7 @@ int main(int argc, char **argv) {
 		printf("%x", out[i]);
 	printf("\n");
 //
+#ifndef CBC_ENC_CPU
 	/* Encrypt with a 256bit key CBC */
 	printf("\nPress any key to start encrypting with a 256bit key CBC...\n");
 	AES_set_encrypt_key((unsigned char*) key256_cbc, 256, ak);
@@ -347,6 +352,7 @@ int main(int argc, char **argv) {
 	for (i = 0; i < AES_BLOCK_SIZE; i++)
 		printf("%x", out[i]);
 	printf("\n");
+#endif
 //
 	/* Decrypt with a 256bit key CBC */
 	printf("\nPress any key to start decrypting with a 256bit key CBC...\n");

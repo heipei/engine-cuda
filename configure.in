@@ -104,6 +104,9 @@ AC_ARG_ENABLE([quiet],[AS_HELP_STRING([--enable-quiet],[no output except warning
 AC_ARG_ENABLE([cpuonly],[AS_HELP_STRING([--enable-cpuonly],[AES calculation is done through libcrypto (default=disabled)])],
 [CPPFLAGS="$CPPFLAGS -DCPU"],[CPPFLAGS="$CPPFLAGS"])
 
+AC_ARG_ENABLE([cbcencgpu],[AS_HELP_STRING([--enable-cbcencgpu],[AES CBC encrypt is done through CUDA code (default=disabled)])],
+[CPPFLAGS="$CPPFLAGS";NVCPPFLAGS="$NVCPPFLAGS"],[CPPFLAGS="$CPPFLAGS -DCBC_ENC_CPU";NVCPPFLAGS="$NVCPPFLAGS -DCBC_ENC_CPU"])
+
 AC_ARG_ENABLE([ttableconstant],[AS_HELP_STRING([--disable-ttableconstant],[choose if store T-table in constant or shared memory (default=enabled)])],
 [NVCPPFLAGS="$NVCPPFLAGS"],[NVCPPFLAGS="$NVCPPFLAGS -DT_TABLE_CONSTANT"])
 
