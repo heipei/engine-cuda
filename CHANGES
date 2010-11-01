@@ -1,4 +1,4 @@
-
+﻿
 Engine_cudamrg CHANGES
  _______________
 
@@ -7,14 +7,14 @@ Engine_cudamrg CHANGES
   *) Optimized support for integrated GPU.
      [Paolo Margara <paolo.margara@gmail.com>]
 
-  *) Build process semplified.
+  *) Build process simplified.
      [Paolo Margara <paolo.margara@gmail.com>]
 
   *) Generic code cleanup and many optimizations.
      [Paolo Margara <paolo.margara@gmail.com>]
 
-  *) Encryption for AES CBC mode now are computed by the cpu.
-     Since the CBC mode needs the ciphertexts of each previous step to
+  *) Now encryption for AES CBC mode are computed by the cpu.
+     Since the CBC mode needs the cipher texts of each previous step to
      process the next step, and so it isn't possible to begin the encryption
      of a block until its previous block has been encrypted, we can't hope
      to do parallel processing during the encryption stage of this mode.
@@ -28,7 +28,7 @@ Engine_cudamrg CHANGES
  First public release, 0.1.0  [26 Jul 2010]
 
   *) Optimized support for AES encryption and decryption for 128 bit, 
-     192 bit and 256 bit key lenght with a fine-graned approach,
+     192 bit and 256 bit key length with a fine-grained approach,
      the code is optimized for 32 bit operation.
      [Paolo Margara <paolo.margara@gmail.com>]
 
@@ -36,8 +36,8 @@ Engine_cudamrg CHANGES
      [Paolo Margara <paolo.margara@gmail.com>]
 
   *) Ability to keep T-table in constant memory or shared memory,
-     the key and the rounds are keapt in texture memory.
-     All access in global memory are coalesed.
+     the key and the rounds are kept in texture memory.
+     All access in global memory are coalesced.
      [Paolo Margara <paolo.margara@gmail.com>]
 
   *) Support for the GNU/Linux operating system.
