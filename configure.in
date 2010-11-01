@@ -24,14 +24,7 @@ define([PACKAGE_VERSION_MAJOR], [0])
 define([PACKAGE_VERSION_MINOR], [1])
 define([PACKAGE_VERSION_FIX],   [1])
 
-AC_INIT([engine_cudamrg],[PACKAGE_VERSION_MAJOR.PACKAGE_VERSION_MINOR.PACKAGE_VERSION_FIX],[paolo.margara@gmail.com])
-
-echo -n "Searching for libcuda.so..."
-for i in $(find /lib* /usr/lib* -name libcuda.so 2> /dev/null|sed s/libcuda.so//g)
-	do
-	LDFLAGS=$LDFLAGS' '-L$i
-	done
-echo "DONE"
+AC_INIT([engine_cudamrg],[PACKAGE_VERSION_MAJOR.PACKAGE_VERSION_MINOR.PACKAGE_VERSION_FIX],[paolo.margara@gmail.com],[engine_cudamrg],[http://code.google.com/p/engine-cuda/])
 
 AC_PROG_CC
 AC_LANG_C
@@ -66,19 +59,6 @@ AC_ARG_WITH([cudatoolkitpath],AS_HELP_STRING([--with-cudatoolkitpath],[prefix wh
  CPPFLAGS="$CPPFLAGS -I/usr/local/cuda/include/";
  NVCPPFLAGS="$NVCPPFLAGS -I/usr/local/cuda/include/"])
 
-AC_ARG_WITH([memorytransfertype], 
-AS_HELP_STRING([--with-memorytransfertype],[specify the kind of memory transfer type, allowed value are pinned, zerocopy, pageable (default pinned) ]),
-[if test $with_memorytransfertype = "zerocopy"
-  then
-    NVCPPFLAGS="$NVCPPFLAGS -DZERO_COPY"
-  elif test $with_memorytransfertype = "pageable"
-   then
-    NVCPPFLAGS="$NVCPPFLAGS"
-  else
-    NVCPPFLAGS="$NVCPPFLAGS -DPINNED"
-  fi],
-[NVCPPFLAGS="$NVCPPFLAGS -DPINNED"])
-
 AC_ARG_WITH([opensslenginedir],
 AS_HELP_STRING([--with-opensslenginedir],[specify the directory where openssl engine are located (default $PREFIX/lib/engines) ]),
 [ENGINEDIR="$with_opensslenginedir"],[ENGINEDIR="lib/engines/"])
@@ -107,6 +87,9 @@ AC_ARG_ENABLE([cpuonly],[AS_HELP_STRING([--enable-cpuonly],[AES calculation is d
 AC_ARG_ENABLE([cbcencgpu],[AS_HELP_STRING([--enable-cbcencgpu],[AES CBC encrypt is done through CUDA code (default=disabled)])],
 [CPPFLAGS="$CPPFLAGS";NVCPPFLAGS="$NVCPPFLAGS"],[CPPFLAGS="$CPPFLAGS -DCBC_ENC_CPU";NVCPPFLAGS="$NVCPPFLAGS -DCBC_ENC_CPU"])
 
+AC_ARG_ENABLE([pageable],[AS_HELP_STRING([--enable-pageable],[specify memory transfer type as pageable (default=disabled)])],
+[NVCPPFLAGS="$NVCPPFLAGS -DPAGEABLE"],[NVCPPFLAGS="$NVCPPFLAGS"])
+
 AC_ARG_ENABLE([ttableconstant],[AS_HELP_STRING([--disable-ttableconstant],[choose if store T-table in constant or shared memory (default=enabled)])],
 [NVCPPFLAGS="$NVCPPFLAGS"],[NVCPPFLAGS="$NVCPPFLAGS -DT_TABLE_CONSTANT"])
 
@@ -122,7 +105,6 @@ AC_CHECK_HEADERS([cuda_runtime_api.h],,AC_MSG_ERROR(cuda_runtime_api.h required)
 
 AC_CHECK_LIB([crypto],AES_set_encrypt_key,[LIBS="-lcrypto";LIBS_TEST="-lcrypto"],[AC_MSG_ERROR([Cannot find crypto library])])
 AC_CHECK_LIB([cudart],cudaGetDeviceCount,[LIBS="$LIBS -lcudart"],[AC_MSG_ERROR([Cannot find cuda runtime library])])
-AC_CHECK_LIB([cuda],cudaGetDeviceCount,[LIBS="$LIBS -lcuda"],[AC_MSG_ERROR([Cannot find cuda library])])
 
 CFLAGS="$CFLAGS -fPIC"
 

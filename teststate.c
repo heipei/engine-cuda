@@ -66,26 +66,10 @@ int main(int argc, char **argv) {
 	int i, nm;
 	uint8_t *out, *iv_cbc_tmp;
 	AES_KEY *ak;
-	cudaError_t cudaerrno;
 
 	iv_cbc_tmp=(uint8_t *) malloc(AES_BLOCK_SIZE * sizeof(uint8_t));
 	out= (uint8_t *) malloc(AES_BLOCK_SIZE * sizeof(uint8_t));
 	ak = (AES_KEY *) malloc(sizeof(AES_KEY));
-
-	/* Verify the presence of a CUDA supported device */
-	int deviceCount;
-	cudaGetDeviceCount(&deviceCount);
-	cudaerrno = cudaGetLastError();
-	if (cudaSuccess != cudaerrno) {
-		printf("Cuda error in file '%s' in line %i : %s.\n",__FILE__,__LINE__, cudaGetErrorString(cudaerrno));
-		exit(EXIT_FAILURE);
-	}
-	if (deviceCount == 0) {
-		printf("\nError: no devices supporting CUDA.\n");
-		exit(EXIT_FAILURE);
-	} else {
-		printf("\nSuccessfully found a device supporting CUDA.\n");
-	}
 
 	/* Show the test vector to the user*/
 	printf("\nAES test vector:\n");

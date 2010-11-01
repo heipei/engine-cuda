@@ -1,5 +1,5 @@
 /**
- * @version 0.1.0 (2010)
+ * @version 0.1.1 (2010)
  * @author Paolo Margara <paolo.margara@gmail.com>
  * 
  * Copyright 2010 Paolo Margara
@@ -83,21 +83,6 @@ int cuda_init(ENGINE * engine) {
 		verbosity=OUTPUT_NORMAL;
 	}
 #ifndef CPU
-	int deviceCount;
-	cudaError_t cudaerrno;
-
-	cudaGetDeviceCount(&deviceCount);
-	cudaerrno=cudaGetLastError();
-	if( cudaSuccess != cudaerrno) {
-		if (!quiet) fprintf(stderr,"Cuda error: %s.\n",cudaGetErrorString(cudaerrno));
-		return 0;
-		}
-	if (deviceCount == 0) {
-		if (!quiet) fprintf(stderr,"\nError: no devices supporting CUDA.\n");
-        	return 0;
-		} else {
-		if (!quiet) fprintf(stdout,"\nSuccessfully found a device supporting CUDA.\n");
-		}
 	AES_cuda_init(&num_multiprocessors,buffer_size,verbosity);
 #else	
 	AES_cuda_init(&num_multiprocessors,buffer_size,verbosity);
