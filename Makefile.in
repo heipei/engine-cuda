@@ -48,12 +48,12 @@ TESTSRC= teststate.c aes_cuda.cu
 LIBOBJ = e_cuda.o aes_cuda.o
 TESTOBJ= aes_cuda.o teststate.o
 
-all:	lib test
+all:	$(LIBNAME) $(TESTNAME)
 
-test: $(TESTSRC)
+$(TESTNAME): $(TESTSRC)
 	$(NVCC) $(NVCPPFLAGS) $(NVCFLAGS_TEST) $(NVLDFLAGS) $(LIBS_TEST) -o $(TESTNAME) $(TESTSRC)
 
-lib:	$(LIBOBJ)
+$(LIBNAME): $(LIBOBJ)
 	$(CC) -shared -Wl,-soname,$(LIBNAME) $(CFLAGS_LIBS) $(CPPFLAGS) $(LDFLAGS) $(LIBS_LIBS) -o $(LIBNAME) $(LIBOBJ)
 
 aes_cuda.o: aes_cuda.cu
@@ -68,3 +68,5 @@ clean:
 
 distclean: clean
 	rm -f config.* Makefile
+
+.PHONY: all clean distclean install

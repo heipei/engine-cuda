@@ -24,7 +24,7 @@ infile_e='./trailer.mp4'
 infile_d='./trailer.aes'
 outfile='/dev/null'
 key='c26d8562740cdcea548efc08babd19a3d1aaedf6'
-cmd='/opt/bin/openssl'
+cmd='/usr/bin/openssl'
 
 for cipher in aes-128-ecb aes-192-ecb aes-256-ecb aes-128-cbc aes-192-cbc aes-256-cbc
 do
