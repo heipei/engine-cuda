@@ -29,11 +29,8 @@
 #include <stdint.h>
 #include <assert.h>
 #include <cuda_runtime_api.h>
-
-#define NUM_BLOCK_PER_MULTIPROCESSOR	3
-#define SIZE_BLOCK_PER_MULTIPROCESSOR	256*1024
-#define MAX_THREAD			256
-#define STATE_THREAD			4
+#include "cuda_common.h"
+#include "common.h"
 
 #define AES_ENCRYPT		1
 #define AES_DECRYPT		0
@@ -43,34 +40,11 @@
 #define AES_KEY_SIZE_192	24
 #define AES_KEY_SIZE_256	32
 
-#define OUTPUT_QUIET		0
-#define OUTPUT_NORMAL		1
-#define OUTPUT_VERBOSE		2
-
-#define CUDA_MRG_ERROR_CHECK(call) {																	\
-	call;				                                												\
-	cudaerrno=cudaGetLastError();																	\
-	if(cudaSuccess!=cudaerrno) {                                       					         						\
-		if (output_verbosity!=OUTPUT_QUIET) fprintf(stderr, "Cuda error in file '%s' in line %i: %s.\n",__FILE__,__LINE__,cudaGetErrorString(cudaerrno));	\
-		exit(EXIT_FAILURE);                                                  											\
-    } }
-
-#define CUDA_MRG_ERROR_NOTIFY(msg) {                                    												\
-	cudaerrno=cudaGetLastError();																	\
-	if(cudaSuccess!=cudaerrno) {                                                											\
-		if (output_verbosity!=OUTPUT_QUIET) fprintf(stderr, "Cuda error in file '%s' in line %i: %s.\n",__FILE__,__LINE__-3,cudaGetErrorString(cudaerrno));	\
-		exit(EXIT_FAILURE);                                                  											\
-    } }
-
 typedef struct aes_key_st {
 	unsigned int rd_key[4 *(AES_MAXNR + 1)];
 	int rounds;
 	} AES_KEY;
 
-static int output_verbosity;
-#if ! defined PAGEABLE || CUDART_VERSION < 2020
-static int isIntegrated;
-#endif
 /*
 Te0[x] = S [x].[02, 01, 01, 03];
 Te1[x] = S [x].[03, 02, 01, 01];
@@ -681,45 +655,6 @@ texture <int,1,cudaReadModeElementType> texref_r;
 
 void (*transferHostToDevice) (const unsigned char  **input, uint32_t **deviceMem, uint8_t **hostMem, size_t *size);
 void (*transferDeviceToHost) (      unsigned char **output, uint32_t **deviceMem, uint8_t **hostMem, size_t *size);
-#ifndef PAGEABLE
-void transferHostToDevice_PINNED   (const unsigned char **input, uint32_t **deviceMem, uint8_t **hostMem, size_t *size) {
-	cudaError_t cudaerrno;
-	memcpy(*hostMem,*input,*size);
-        CUDA_MRG_ERROR_CHECK(cudaMemcpyAsync(*deviceMem, *hostMem, *size, cudaMemcpyHostToDevice, 0));
-	}
-#if CUDART_VERSION >= 2020
-void transferHostToDevice_ZEROCOPY (const unsigned char **input, uint32_t **deviceMem, uint8_t **hostMem, size_t *size) {
-	cudaError_t cudaerrno;
-	memcpy(*hostMem,*input,*size);
-	CUDA_MRG_ERROR_CHECK(cudaHostGetDevicePointer(&d_s,h_s, 0));
-	}
-#endif
-#else
-void transferHostToDevice_PAGEABLE (const unsigned char **input, uint32_t **deviceMem, uint8_t **hostMem, size_t *size) {
-	cudaError_t cudaerrno;
-	CUDA_MRG_ERROR_CHECK(cudaMemcpy(*deviceMem, *input, *size, cudaMemcpyHostToDevice));
-	}
-#endif
-#ifndef PAGEABLE
-void transferDeviceToHost_PINNED   (unsigned char **output, uint32_t **deviceMem, uint8_t **hostMem, size_t *size) {
-	cudaError_t cudaerrno;
-        CUDA_MRG_ERROR_CHECK(cudaMemcpyAsync(*hostMem, *deviceMem, *size, cudaMemcpyDeviceToHost, 0));
-	CUDA_MRG_ERROR_CHECK(cudaThreadSynchronize());
-	memcpy(*output,*hostMem,*size);
-	}
-#if CUDART_VERSION >= 2020
-void transferDeviceToHost_ZEROCOPY (unsigned char **output, uint32_t **deviceMem, uint8_t **hostMem, size_t *size) {
-	cudaError_t cudaerrno;
-	CUDA_MRG_ERROR_CHECK(cudaThreadSynchronize());
-	memcpy(*output,*hostMem,*size);
-	}
-#endif
-#else
-void transferDeviceToHost_PAGEABLE (unsigned char **output, uint32_t **deviceMem, uint8_t **hostMem, size_t *size) {
-	cudaError_t cudaerrno;
-	CUDA_MRG_ERROR_CHECK(cudaMemcpy(*output,*deviceMem,*size, cudaMemcpyDeviceToHost));
-	}
-#endif
 
 #if defined T_TABLE_CONSTANT
 __global__ void AESencKernel(uint32_t state[]) {
@@ -1060,7 +995,7 @@ extern "C" void AES_cuda_encrypt(const unsigned char *in, unsigned char *out, si
 		dim3 dimGrid(nbytes/(MAX_THREAD*STATE_THREAD));
 		dim3 dimBlock(STATE_THREAD,MAX_THREAD/STATE_THREAD);
 		AESencKernel<<<dimGrid,dimBlock>>>(d_s);
-		CUDA_MRG_ERROR_NOTIFY("kernel launch failure");
+		_CUDA_N("kernel launch failure");
 		} else {
 			dim3 dimGrid(1);
 #if defined T_TABLE_CONSTANT
@@ -1069,7 +1004,7 @@ extern "C" void AES_cuda_encrypt(const unsigned char *in, unsigned char *out, si
 			dim3 dimBlock(STATE_THREAD,1024/AES_BLOCK_SIZE);
 #endif
 			AESencKernel<<<dimGrid,dimBlock>>>(d_s);
-			CUDA_MRG_ERROR_NOTIFY("kernel launch failure");
+			_CUDA_N("kernel launch failure");
 			}
 
 	transferDeviceToHost (&out, &d_s, &h_s, &nbytes);
@@ -1093,7 +1028,7 @@ extern "C" void AES_cuda_decrypt(const unsigned char *in, unsigned char *out,siz
 		dim3 dimGrid(nbytes/(MAX_THREAD*STATE_THREAD));
 		dim3 dimBlock(STATE_THREAD,MAX_THREAD/STATE_THREAD);
 		AESdecKernel<<<dimGrid,dimBlock>>>(d_s);
-		CUDA_MRG_ERROR_NOTIFY("kernel launch failure");
+		_CUDA_N("kernel launch failure");
 		} else {
 			dim3 dimGrid(1);
 #if defined T_TABLE_CONSTANT
@@ -1102,7 +1037,7 @@ extern "C" void AES_cuda_decrypt(const unsigned char *in, unsigned char *out,siz
 			dim3 dimBlock(STATE_THREAD,1024/AES_BLOCK_SIZE);
 #endif
 			AESdecKernel<<<dimGrid,dimBlock>>>(d_s);
-			CUDA_MRG_ERROR_NOTIFY("kernel launch failure");
+			_CUDA_N("kernel launch failure");
 			}
 
 	transferDeviceToHost (&out, &d_s, &h_s, &nbytes);
@@ -1120,29 +1055,29 @@ extern "C" void AES_cuda_transfer_key(const AES_KEY *key) {
 	texref_r.normalized = false;    		// access with integer texture coordinates
 	
 	cudaChannelFormatDesc channelDescR = cudaCreateChannelDesc (32, 0, 0, 0, cudaChannelFormatKindSigned);
-	CUDA_MRG_ERROR_NOTIFY("cudaCreateChannelDesc");
+	_CUDA_N("cudaCreateChannelDesc");
 
-	CUDA_MRG_ERROR_CHECK(cudaMallocArray(&arrayR,&channelDescR,1,1));
+	_CUDA(cudaMallocArray(&arrayR,&channelDescR,1,1));
 
-	CUDA_MRG_ERROR_CHECK(cudaMemcpyToArray(arrayR,0,0,&key->rounds,sizeof(int), cudaMemcpyHostToDevice));
+	_CUDA(cudaMemcpyToArray(arrayR,0,0,&key->rounds,sizeof(int), cudaMemcpyHostToDevice));
 	
-	CUDA_MRG_ERROR_CHECK(cudaBindTextureToArray(texref_r, arrayR, channelDescR));
+	_CUDA(cudaBindTextureToArray(texref_r, arrayR, channelDescR));
 
 	texref_dk.addressMode[0] = cudaAddressModeClamp;
 	texref_dk.addressMode[1] = cudaAddressModeClamp;
 	texref_dk.filterMode = cudaFilterModePoint;
 	texref_dk.normalized = false;    				// access with integer texture coordinates
 
-	CUDA_MRG_ERROR_CHECK(cudaGetTextureReference(&texref_RDK,"texref_dk"));
+	_CUDA(cudaGetTextureReference(&texref_RDK,"texref_dk"));
 
 	cudaChannelFormatDesc channelDescDK = cudaCreateChannelDesc (32, 0, 0, 0, cudaChannelFormatKindUnsigned);
-	CUDA_MRG_ERROR_NOTIFY("cudaCreateChannelDesc");
+	_CUDA_N("cudaCreateChannelDesc");
 
-	CUDA_MRG_ERROR_CHECK(cudaMallocArray(&arrayDK,&channelDescDK,4*(key->rounds+1),1));
+	_CUDA(cudaMallocArray(&arrayDK,&channelDescDK,4*(key->rounds+1),1));
 
-	CUDA_MRG_ERROR_CHECK(cudaMemcpyToArray(arrayDK,0,0, key->rd_key,4*(key->rounds+1)*sizeof(unsigned int), cudaMemcpyHostToDevice));
+	_CUDA(cudaMemcpyToArray(arrayDK,0,0, key->rd_key,4*(key->rounds+1)*sizeof(unsigned int), cudaMemcpyHostToDevice));
 
-	CUDA_MRG_ERROR_CHECK(cudaBindTextureToArray(texref_dk, arrayDK, channelDescDK));
+	_CUDA(cudaBindTextureToArray(texref_dk, arrayDK, channelDescDK));
 	}
 
 extern "C" void AES_cuda_finish() {
@@ -1151,33 +1086,33 @@ extern "C" void AES_cuda_finish() {
 #ifndef PAGEABLE 
 #if CUDART_VERSION >= 2020
 	if(isIntegrated) {
-		CUDA_MRG_ERROR_CHECK(cudaFreeHost(h_s));
-		CUDA_MRG_ERROR_CHECK(cudaFreeHost(h_out));
-		CUDA_MRG_ERROR_CHECK(cudaFreeHost(h_iv));
+		_CUDA(cudaFreeHost(h_s));
+		_CUDA(cudaFreeHost(h_out));
+		_CUDA(cudaFreeHost(h_iv));
 		} else {
-			CUDA_MRG_ERROR_CHECK(cudaFree(d_s));
-			CUDA_MRG_ERROR_CHECK(cudaFree(d_out));
-			CUDA_MRG_ERROR_CHECK(cudaFree(d_iv));
+			_CUDA(cudaFree(d_s));
+			_CUDA(cudaFree(d_out));
+			_CUDA(cudaFree(d_iv));
 			}
 #else	
-	CUDA_MRG_ERROR_CHECK(cudaFree(d_s));
-	CUDA_MRG_ERROR_CHECK(cudaFree(d_out));
-	CUDA_MRG_ERROR_CHECK(cudaFree(d_iv));
+	_CUDA(cudaFree(d_s));
+	_CUDA(cudaFree(d_out));
+	_CUDA(cudaFree(d_iv));
 #endif
 #else
-	CUDA_MRG_ERROR_CHECK(cudaFree(d_s));
-	CUDA_MRG_ERROR_CHECK(cudaFree(d_out));
-	CUDA_MRG_ERROR_CHECK(cudaFree(d_iv));
+	_CUDA(cudaFree(d_s));
+	_CUDA(cudaFree(d_out));
+	_CUDA(cudaFree(d_iv));
 #endif	
 
-	CUDA_MRG_ERROR_CHECK(cudaFree(d_k));
-	CUDA_MRG_ERROR_CHECK(cudaFree(rounds));
+	_CUDA(cudaFree(d_k));
+	_CUDA(cudaFree(rounds));
 
-	CUDA_MRG_ERROR_CHECK(cudaEventRecord(stop,0));
+	_CUDA(cudaEventRecord(stop,0));
 
-	CUDA_MRG_ERROR_CHECK(cudaEventSynchronize(stop));
+	_CUDA(cudaEventSynchronize(stop));
 
-	CUDA_MRG_ERROR_CHECK(cudaEventElapsedTime(&elapsed,start,stop));
+	_CUDA(cudaEventElapsedTime(&elapsed,start,stop));
 
 	if (output_verbosity>=OUTPUT_NORMAL) fprintf(stdout,"\nTotal time: %f milliseconds\n",elapsed);	
 	}
@@ -1185,37 +1120,12 @@ extern "C" void AES_cuda_finish() {
 extern "C" void AES_cuda_init(int* nm,int buffer_size_engine,int output_kind) {
 	assert(nm);
 	cudaError_t cudaerrno;
-   	int deviceCount,buffer_size;
+   	int buffer_size;
 	cudaDeviceProp deviceProp;
     	
 	output_verbosity=output_kind;
 
-	CUDA_MRG_ERROR_CHECK(cudaGetDeviceCount(&deviceCount));
-	// This function call returns 0 if there are no CUDA capable devices.
-	if (deviceCount == 0) {
-		if (output_verbosity!=OUTPUT_QUIET) 
-			fprintf(stderr,"There is no device supporting CUDA.\n");
-		exit(EXIT_FAILURE);
-	} else {
-		if (output_verbosity>=OUTPUT_NORMAL) 
-			fprintf(stdout,"Successfully found a device supporting CUDA (CUDART_VERSION %d).\n",CUDART_VERSION);
-	}
-	CUDA_MRG_ERROR_CHECK(cudaSetDevice(0));
-	CUDA_MRG_ERROR_CHECK(cudaGetDeviceProperties(&deviceProp, 0));
-	
-	if (output_verbosity==OUTPUT_VERBOSE) {
-        	fprintf(stdout,"\nDevice %d: \"%s\"\n", 0, deviceProp.name);
-      	 	fprintf(stdout,"  CUDA Capability Major revision number:         %d\n", deviceProp.major);
-       		fprintf(stdout,"  CUDA Capability Minor revision number:         %d\n", deviceProp.minor);
-#if CUDART_VERSION >= 2000
-        	fprintf(stdout,"  Number of multiprocessors:                     %d\n", deviceProp.multiProcessorCount);
-#endif
-#if CUDART_VERSION >= 2020
-		fprintf(stdout,"  Integrated:                                    %s\n", deviceProp.integrated ? "Yes" : "No");
-        	fprintf(stdout,"  Support host page-locked memory mapping:       %s\n", deviceProp.canMapHostMemory ? "Yes" : "No");
-#endif
-		fprintf(stdout,"\n");
-		}
+	checkCUDADevice(&deviceProp, output_verbosity);
 	
 	if(buffer_size_engine==0)
 		buffer_size=MAX_CHUNK_SIZE;
@@ -1230,56 +1140,56 @@ extern "C" void AES_cuda_init(int* nm,int buffer_size_engine,int output_kind) {
 	isIntegrated=deviceProp.integrated;
 	if(isIntegrated) {
         	//zero-copy memory mode - use special function to get OS-pinned memory
-		CUDA_MRG_ERROR_CHECK(cudaSetDeviceFlags(cudaDeviceMapHost));
+		_CUDA(cudaSetDeviceFlags(cudaDeviceMapHost));
         	if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"Using zero-copy memory.\n");
-        	CUDA_MRG_ERROR_CHECK(cudaHostAlloc((void**)&h_s,buffer_size,cudaHostAllocMapped));
-		CUDA_MRG_ERROR_CHECK(cudaHostAlloc((void**)&h_out,buffer_size,cudaHostAllocMapped));
-		CUDA_MRG_ERROR_CHECK(cudaHostAlloc((void**)&h_iv,buffer_size,cudaHostAllocMapped));
+        	_CUDA(cudaHostAlloc((void**)&h_s,buffer_size,cudaHostAllocMapped));
+		_CUDA(cudaHostAlloc((void**)&h_out,buffer_size,cudaHostAllocMapped));
+		_CUDA(cudaHostAlloc((void**)&h_iv,buffer_size,cudaHostAllocMapped));
 		transferHostToDevice = transferHostToDevice_ZEROCOPY;		// set memory transfer function
 		transferDeviceToHost = transferDeviceToHost_ZEROCOPY;		// set memory transfer function
-		CUDA_MRG_ERROR_CHECK(cudaHostGetDevicePointer(&d_s,h_s, 0));
-		CUDA_MRG_ERROR_CHECK(cudaHostGetDevicePointer(&d_out,h_out, 0));
-		CUDA_MRG_ERROR_CHECK(cudaHostGetDevicePointer(&d_iv,h_iv, 0));
+		_CUDA(cudaHostGetDevicePointer(&d_s,h_s, 0));
+		_CUDA(cudaHostGetDevicePointer(&d_out,h_out, 0));
+		_CUDA(cudaHostGetDevicePointer(&d_iv,h_iv, 0));
 		} else {
        			//pinned memory mode - use special function to get OS-pinned memory
-        		CUDA_MRG_ERROR_CHECK(cudaHostAlloc( (void**)&h_s, buffer_size, cudaHostAllocDefault));
-        		CUDA_MRG_ERROR_CHECK(cudaHostAlloc( (void**)&h_out, buffer_size, cudaHostAllocDefault));
-        		CUDA_MRG_ERROR_CHECK(cudaHostAlloc( (void**)&h_iv, buffer_size, cudaHostAllocDefault));
+        		_CUDA(cudaHostAlloc( (void**)&h_s, buffer_size, cudaHostAllocDefault));
+        		_CUDA(cudaHostAlloc( (void**)&h_out, buffer_size, cudaHostAllocDefault));
+        		_CUDA(cudaHostAlloc( (void**)&h_iv, buffer_size, cudaHostAllocDefault));
         		if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"Using pinned memory: cudaHostAllocDefault.\n");
 			transferHostToDevice = transferHostToDevice_PINNED;	// set memory transfer function
 			transferDeviceToHost = transferDeviceToHost_PINNED;	// set memory transfer function
-			CUDA_MRG_ERROR_CHECK(cudaMalloc((void **)&d_s,buffer_size));
-			CUDA_MRG_ERROR_CHECK(cudaMalloc((void **)&d_out,buffer_size));
-			CUDA_MRG_ERROR_CHECK(cudaMalloc((void **)&d_iv,AES_BLOCK_SIZE));
+			_CUDA(cudaMalloc((void **)&d_s,buffer_size));
+			_CUDA(cudaMalloc((void **)&d_out,buffer_size));
+			_CUDA(cudaMalloc((void **)&d_iv,AES_BLOCK_SIZE));
 			}
 #else
         //pinned memory mode - use special function to get OS-pinned memory
-        CUDA_MRG_ERROR_CHECK(cudaMallocHost((void**)&h_s, buffer_size));
-        CUDA_MRG_ERROR_CHECK(cudaMallocHost((void**)&h_out, buffer_size));
-        CUDA_MRG_ERROR_CHECK(cudaMallocHost((void**)&h_iv, buffer_size));
+        _CUDA(cudaMallocHost((void**)&h_s, buffer_size));
+        _CUDA(cudaMallocHost((void**)&h_out, buffer_size));
+        _CUDA(cudaMallocHost((void**)&h_iv, buffer_size));
         if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"Using pinned memory: cudaHostAllocDefault.\n");
 	transferHostToDevice = transferHostToDevice_PINNED;			// set memory transfer function
 	transferDeviceToHost = transferDeviceToHost_PINNED;			// set memory transfer function
-	CUDA_MRG_ERROR_CHECK(cudaMalloc((void **)&d_s,buffer_size));
-	CUDA_MRG_ERROR_CHECK(cudaMalloc((void **)&d_out,buffer_size));
-        CUDA_MRG_ERROR_CHECK(cudaMalloc((void **)&d_iv,AES_BLOCK_SIZE));
+	_CUDA(cudaMalloc((void **)&d_s,buffer_size));
+	_CUDA(cudaMalloc((void **)&d_out,buffer_size));
+        _CUDA(cudaMalloc((void **)&d_iv,AES_BLOCK_SIZE));
 #endif
 #else
         if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"Using pageable memory.\n");
 	transferHostToDevice = transferHostToDevice_PAGEABLE;			// set memory transfer function
 	transferDeviceToHost = transferDeviceToHost_PAGEABLE;			// set memory transfer function
-	CUDA_MRG_ERROR_CHECK(cudaMalloc((void **)&d_s,buffer_size));
-	CUDA_MRG_ERROR_CHECK(cudaMalloc((void **)&d_out,buffer_size));
-        CUDA_MRG_ERROR_CHECK(cudaMalloc((void **)&d_iv,AES_BLOCK_SIZE));
+	_CUDA(cudaMalloc((void **)&d_s,buffer_size));
+	_CUDA(cudaMalloc((void **)&d_out,buffer_size));
+        _CUDA(cudaMalloc((void **)&d_iv,AES_BLOCK_SIZE));
 #endif
 
 	if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"The current buffer size is %d.\n\n", buffer_size);
-        CUDA_MRG_ERROR_CHECK(cudaMalloc((void **)&d_k, 4*(AES_MAXNR + 1)*sizeof(uint32_t)));
-	CUDA_MRG_ERROR_CHECK(cudaMalloc((void **)&rounds,4*sizeof(uint32_t)));
+        _CUDA(cudaMalloc((void **)&d_k, 4*(AES_MAXNR + 1)*sizeof(uint32_t)));
+	_CUDA(cudaMalloc((void **)&rounds,4*sizeof(uint32_t)));
 
-	CUDA_MRG_ERROR_CHECK(cudaEventCreate(&start));
-	CUDA_MRG_ERROR_CHECK(cudaEventCreate(&stop));
-	CUDA_MRG_ERROR_CHECK(cudaEventRecord(start,0));
+	_CUDA(cudaEventCreate(&start));
+	_CUDA(cudaEventCreate(&stop));
+	_CUDA(cudaEventRecord(start,0));
 	}
 //
 // CBC parallel decrypt
@@ -1485,7 +1395,7 @@ extern "C" void AES_cuda_decrypt_cbc(const unsigned char *in, unsigned char *out
 		dim3 dimGrid(nbytes/(MAX_THREAD*STATE_THREAD));
 		dim3 dimBlock(STATE_THREAD,MAX_THREAD/STATE_THREAD);
 		AESdecKernel_cbc<<<dimGrid,dimBlock>>>(d_s,d_out,d_iv);
-		CUDA_MRG_ERROR_NOTIFY("kernel launch failure");
+		_CUDA_N("kernel launch failure");
 		} else {
 			dim3 dimGrid(1);
 #if defined T_TABLE_CONSTANT
@@ -1494,7 +1404,7 @@ extern "C" void AES_cuda_decrypt_cbc(const unsigned char *in, unsigned char *out
 			dim3 dimBlock(STATE_THREAD,1024/AES_BLOCK_SIZE);
 #endif
 			AESdecKernel_cbc<<<dimGrid,dimBlock>>>(d_s,d_out,d_iv);
-			CUDA_MRG_ERROR_NOTIFY("kernel launch failure");
+			_CUDA_N("kernel launch failure");
 			}
 
 	transferDeviceToHost(&out, &d_out, &h_s, &nbytes);
@@ -1708,7 +1618,7 @@ extern "C" void AES_cuda_encrypt_cbc(const unsigned char *in, unsigned char *out
 	dim3 dimGrid(1);
 	dim3 dimBlock(STATE_THREAD);
 	AESencKernel_cbc<<<dimGrid,dimBlock>>>(d_s,d_iv,nbytes);
-	CUDA_MRG_ERROR_NOTIFY("kernel launch failure");
+	_CUDA_N("kernel launch failure");
 
 	transferDeviceToHost(&out, &d_s, &h_s, &nbytes);
 

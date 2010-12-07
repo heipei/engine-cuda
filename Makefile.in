@@ -42,24 +42,35 @@ LIBS_LIBS = @LIBS@
 LIBNAME = libcudamrg.so
 TESTNAME= teststate
 
-LIBSRC = e_cuda.c aes_cuda.cu
+LIBSRC = e_cuda.c aes_cuda.cu des_cuda.cu cuda_common.cu common.c
 TESTSRC= teststate.c aes_cuda.cu
 
-LIBOBJ = e_cuda.o aes_cuda.o
+LIBOBJ = e_cuda.o aes_cuda.o des_cuda.o cuda_common.o common.o
 TESTOBJ= aes_cuda.o teststate.o
 
-all:	$(LIBNAME) $(TESTNAME)
+all: $(LIBNAME)
+
+test: $(TESTNAME)
 
 $(TESTNAME): $(TESTSRC)
 	$(NVCC) $(NVCPPFLAGS) $(NVCFLAGS_TEST) $(NVLDFLAGS) $(LIBS_TEST) -o $(TESTNAME) $(TESTSRC)
 
 $(LIBNAME): $(LIBOBJ)
-	$(CC) -shared -Wl,-soname,$(LIBNAME) $(CFLAGS_LIBS) $(CPPFLAGS) $(LDFLAGS) $(LIBS_LIBS) -o $(LIBNAME) $(LIBOBJ)
+	$(CC) -fPIC -shared -Wl,-soname,$(LIBNAME) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) $(LIBS_LIBS) -o $(LIBNAME) $(LIBOBJ)
 
-aes_cuda.o: aes_cuda.cu
+aes_cuda.o: aes_cuda.cu cuda_common.cu
 	$(NVCC) $(NVCPPFLAGS) $(NVCFLAGS_LIBS) -c -o aes_cuda.o aes_cuda.cu 
 
-install: lib
+des_cuda.o: des_cuda.cu cuda_common.cu
+	$(NVCC) $(NVCPPFLAGS) $(NVCFLAGS_LIBS) -c -o des_cuda.o des_cuda.cu
+
+common.o: common.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -c -o common.o common.c
+
+cuda_common.o: cuda_common.cu cuda_common.h
+	$(NVCC) $(NVCPPFLAGS) $(NVCFLAGS_LIBS) -c -o cuda_common.o cuda_common.cu
+
+install: $(LIBNAME)
 	mkdir -p @prefix@/@ENGINEDIR@
 	cp $(LIBNAME) @prefix@/@ENGINEDIR@
 
@@ -69,4 +80,7 @@ clean:
 distclean: clean
 	rm -f config.* Makefile
 
-.PHONY: all clean distclean install
+tags:
+	/usr/bin/env ctags *.c *.h *.cu
+
+.PHONY: all clean distclean install tags

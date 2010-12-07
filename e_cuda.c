@@ -22,21 +22,25 @@
  */
 
 #include "aes_cuda.h"
-
-static int cuda_ciphers (ENGINE *e, const EVP_CIPHER **cipher, const int **nids, int nid);
-static int cuda_aes_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigned char *in_arg, size_t nbytes);
+#include "des_cuda.h"
+//#include "cuda_common.h"
+#include "common.h"
 
 #define DYNAMIC_ENGINE
 #define CUDA_ENGINE_ID		"cudamrg"
-#define CUDA_ENGINE_NAME	"cuda engine for AES encrypting/decrypting developed by MRG"
+#define CUDA_ENGINE_NAME	"OpenSSL engine for AES and DES with CUDA acceleration"
 #define CMD_SO_PATH		ENGINE_CMD_BASE
 #define CMD_VERBOSE		(ENGINE_CMD_BASE+1)
 #define CMD_QUIET		(ENGINE_CMD_BASE+2)
 #define CMD_BUFFER_SIZE		(ENGINE_CMD_BASE+3)
 
+static int cuda_ciphers (ENGINE *e, const EVP_CIPHER **cipher, const int **nids, int nid);
+static int cuda_aes_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigned char *in_arg, size_t nbytes);
+static int cuda_des_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigned char *in_arg, size_t nbytes);
+
 static int num_multiprocessors = 0;
 static int buffer_size = 0;
-static int verbose = 0;
+static int verbose = 2;
 static int quiet = 0;
 static int initialized = 0;
 static char *library_path=NULL;
@@ -61,10 +65,11 @@ int inc_verbose(void) {
 }
 
 int cuda_finish(ENGINE * engine) {
-#ifndef CPU
-	AES_cuda_finish();
-#else
-	AES_cuda_finish();
+//	TODO: One finish for both ciphers
+
+	//AES_cuda_finish();
+	DES_cuda_finish();
+#ifdef CPU
 	endTime=time(NULL);
 	//if (!quiet) fprintf(stdout,"\nTotal time: %g seconds\n",difftime(endTime,startTime));
 #endif
@@ -82,10 +87,11 @@ int cuda_init(ENGINE * engine) {
 	else 
 		verbosity=OUTPUT_NORMAL;
 	}
-#ifndef CPU
-	AES_cuda_init(&num_multiprocessors,buffer_size,verbosity);
-#else	
-	AES_cuda_init(&num_multiprocessors,buffer_size,verbosity);
+//	TODO: One init for both ciphers
+//	cuda_init(&num_multiprocessors,buffer_size,verbosity);
+//	AES_cuda_init(&num_multiprocessors,buffer_size,verbosity);
+	DES_cuda_init(&num_multiprocessors,buffer_size,verbosity);
+#ifdef CPU
 	startTime=time(NULL);
 #endif
 	initialized=1;
@@ -143,18 +149,6 @@ static int cuda_bind_helper(ENGINE * e) {
 	}
 }
 
-static ENGINE * ENGINE_cuda(void) {
-	ENGINE *eng = ENGINE_new();
-	if (!eng) {
-		return NULL;
-	}
-	if (!cuda_bind_helper(eng)) {
-		ENGINE_free(eng);
-		return NULL;
-	}
-	return eng;
-}
-
 static int cuda_bind_fn(ENGINE *e, const char *id) {
 	if (id && (strcmp(id, CUDA_ENGINE_ID) != 0)) {
 		if (!quiet) fprintf(stderr, "bad engine id\n");
@@ -172,44 +166,58 @@ IMPLEMENT_DYNAMIC_CHECK_FN()
 IMPLEMENT_DYNAMIC_BIND_FN(cuda_bind_fn)
 
 static int cuda_cipher_nids[] = {
+	NID_des_ecb,
+	NID_des_cbc,
 	NID_aes_128_ecb,
 	NID_aes_128_cbc,
-#if 0
-	NID_aes_128_cfb128,
-	NID_aes_128_ofb128,
-#endif
 	NID_aes_192_ecb,
 	NID_aes_192_cbc,
-#if 0
-	NID_aes_192_cfb128,
-	NID_aes_192_ofb128,
-#endif
 	NID_aes_256_ecb,
-	NID_aes_256_cbc,
-#if 0
-	NID_aes_256_cfb128,
-	NID_aes_256_ofb128,
-#endif
+	NID_aes_256_cbc
 };
 
 static int cuda_cipher_nids_num = (sizeof(cuda_cipher_nids)/sizeof(cuda_cipher_nids[0]));
 
-#define EVP_CIPHER_block_size_ECB	AES_BLOCK_SIZE
-#define EVP_CIPHER_block_size_CBC	AES_BLOCK_SIZE
-#if 0
-#define EVP_CIPHER_block_size_OFB	1
-#define EVP_CIPHER_block_size_CFB	1
+typedef struct cuda_aes_cipher_data { 
+	AES_KEY ks; 
+} cuda_aes_cipher_data;
+
+typedef struct cuda_des_cipher_data { 
+	DES_key_schedule ks; 
+} cuda_des_cipher_data;
+
+#ifdef CPU
+	DES_key_schedule des_ks;
 #endif
 
-typedef struct cuda_cipher_data { 
-	AES_KEY ks; 
-	} CUDA_CIPHER_DATA;
+static int cuda_des_init_key (EVP_CIPHER_CTX *ctx, const unsigned char *key, const unsigned char *iv, int enc){
+	if (!quiet && verbose) fprintf(stdout,"Start calculating DES key schedule...");
+	DES_key_schedule key_schedule;
+	
+	int ks = DES_set_key((const_DES_cblock *)key,&key_schedule);
+
+	if(ks == EXIT_FAILURE) {
+		if (!quiet && verbose) 
+			fprintf(stdout,"\nDES: Something went wrong creating the key schedule, error %d...\n", ks);
+		return 0;
+	}
+
+#ifndef CPU
+	DES_cuda_transfer_key_schedule(&key_schedule);
+#else
+	memcpy(&des_ks, &key_schedule, sizeof(DES_key_schedule));
+#endif
+	//DES_cuda_transfer_iv(iv);
+
+	if (!quiet && verbose) fprintf(stdout,"DONE!\n");
+	return 1;
+}
 
 static int cuda_aes_init_key (EVP_CIPHER_CTX *ctx, const unsigned char *key, const unsigned char *iv, int enc){
 	if (!quiet && verbose) fprintf(stdout,"Start calculating key schedule...");
-	CUDA_CIPHER_DATA *ccd;
+	cuda_aes_cipher_data *ccd;
 	int key_len = EVP_CIPHER_CTX_key_length(ctx) * 8;
-	ccd=(struct cuda_cipher_data *)(ctx->cipher_data);
+	ccd=(struct cuda_aes_cipher_data *)(ctx->cipher_data);
 	if (ctx->encrypt) {
 	switch(key_len) {
 		case 128:
@@ -264,56 +272,70 @@ static int cuda_aes_init_key (EVP_CIPHER_CTX *ctx, const unsigned char *key, con
 	return 1;
 }
 
-#define	DECLARE_AES_EVP(ksize,lmode,umode)	\
-static const EVP_CIPHER cuda_aes_##ksize##_##lmode = {	\
-	NID_aes_##ksize##_##lmode,	\
-	EVP_CIPHER_block_size_##umode,	\
-	AES_KEY_SIZE_##ksize,		\
-	AES_BLOCK_SIZE,			\
-	0 | EVP_CIPH_##umode##_MODE,	\
-	cuda_aes_init_key,		\
-	cuda_aes_ciphers,		\
-	NULL,				\
-	sizeof(struct cuda_cipher_data) + 16,	\
-	EVP_CIPHER_set_asn1_iv,		\
-	EVP_CIPHER_get_asn1_iv,		\
-	NULL,				\
-	NULL				\
+static int cuda_des_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigned char *in_arg, size_t nbytes) {
+	assert(in_arg && out_arg && ctx && nbytes);
+	size_t current=0;
+
+#ifndef CPU
+	int chunk;
+#endif
+
+	switch (EVP_CIPHER_CTX_mode(ctx)) {
+	case EVP_CIPH_ECB_MODE:
+		if (ctx->encrypt) {
+#ifdef CPU
+			while (nbytes!=current) {
+				DES_ecb_encrypt((const_DES_cblock *)(in_arg+current),(DES_cblock *)(out_arg+current),&des_ks,DES_ENCRYPT);
+				current+=DES_BLOCK_SIZE;
+			}
+#else
+			while (nbytes!=current) {
+				chunk=(nbytes-current)/(MAX_THREAD*STATE_THREAD_DES);
+				if(chunk>=1) {
+					DES_cuda_encrypt((in_arg+current),(out_arg+current),chunk*MAX_THREAD*STATE_THREAD_DES);
+					current+=chunk*MAX_THREAD*STATE_THREAD_DES;	
+				} else {
+					DES_cuda_encrypt((in_arg+current),(out_arg+current),(nbytes-current));
+					current+=(nbytes-current);
+				}
+			}
+#endif
+		} else {
+#ifdef CPU
+			while (nbytes!=current) {
+				DES_ecb_encrypt((const_DES_cblock *)(in_arg+current),(DES_cblock *)(out_arg+current),&des_ks,DES_DECRYPT);
+				current+=DES_BLOCK_SIZE;
+			}
+#else
+			while (nbytes!=current) {
+				chunk=(nbytes-current)/(MAX_THREAD*STATE_THREAD_DES);
+				if(chunk>=1) {
+					DES_cuda_decrypt((in_arg+current),(out_arg+current),chunk*MAX_THREAD*STATE_THREAD_DES);
+					current+=chunk*MAX_THREAD*STATE_THREAD_DES;	
+				} else {
+					DES_cuda_decrypt((in_arg+current),(out_arg+current),(nbytes-current));
+					current+=(nbytes-current);
+				}
+			}
+#endif
+			}
+		break;
+	default:
+		return 0;
+	}
+	return 1;
 }
-
-DECLARE_AES_EVP(128,ecb,ECB);
-DECLARE_AES_EVP(128,cbc,CBC);
-#if 0
-DECLARE_AES_EVP(128,cfb128,CFB);
-DECLARE_AES_EVP(128,ofb128,OFB);
-#endif
-DECLARE_AES_EVP(192,ecb,ECB);
-DECLARE_AES_EVP(192,cbc,CBC);
-#if 0
-DECLARE_AES_EVP(192,cfb128,CFB);
-DECLARE_AES_EVP(192,ofb128,OFB);
-#endif 
-DECLARE_AES_EVP(256,ecb,ECB);
-DECLARE_AES_EVP(256,cbc,CBC);
-#if 0
-DECLARE_AES_EVP(256,cfb128,CFB);
-DECLARE_AES_EVP(256,ofb128,OFB);
-#endif
-
 static int cuda_aes_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigned char *in_arg, size_t nbytes) {
 	// EVP_CIPHER_CTX is defined in include/openssl/evp.h
 	assert(in_arg && out_arg && ctx && nbytes);
 	size_t current=0;
-#if 0
-	int n;
-#endif
 #if defined CPU
 	//if (!quiet && verbose) fprintf(stdout,"C");
-	CUDA_CIPHER_DATA *ccd;
+	cuda_aes_cipher_data *ccd;
 	AES_KEY *ak;
 #elif defined CBC_ENC_CPU
 	//if (!quiet && verbose) fprintf(stdout,"G");
-	CUDA_CIPHER_DATA *ccd;
+	cuda_aes_cipher_data *ccd;
 	AES_KEY *ak;
 	int chunk;
 #else
@@ -324,7 +346,7 @@ static int cuda_aes_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const u
 	case EVP_CIPH_ECB_MODE:
 		if (ctx->encrypt) {
 #ifdef CPU
-			ccd=(struct cuda_cipher_data *)(ctx->cipher_data);
+			ccd=(struct cuda_aes_cipher_data *)(ctx->cipher_data);
 			ak=&ccd->ks;
 			while (nbytes!=current) {
 				AES_encrypt((in_arg+current),(out_arg+current),ak);
@@ -344,7 +366,7 @@ static int cuda_aes_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const u
 #endif
 		} else {
 #ifdef CPU
-			ccd=(struct cuda_cipher_data *)(ctx->cipher_data);
+			ccd=(struct cuda_aes_cipher_data *)(ctx->cipher_data);
 			ak=&ccd->ks;
 			while (nbytes!=current) {
 				AES_decrypt((in_arg+current),(out_arg+current),ak);
@@ -368,7 +390,7 @@ static int cuda_aes_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const u
 	case EVP_CIPH_CBC_MODE:
 		if (!ctx->encrypt) {
 #ifdef CPU
-			ccd=(struct cuda_cipher_data *)(ctx->cipher_data);
+			ccd=(struct cuda_aes_cipher_data *)(ctx->cipher_data);
 			ak=&ccd->ks;
 			AES_cbc_encrypt(in_arg,out_arg,nbytes,ak,ctx->iv,AES_DECRYPT);
 #else
@@ -385,7 +407,7 @@ static int cuda_aes_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const u
 #endif
 		} else {
 #if defined CPU || defined CBC_ENC_CPU
-			ccd=(struct cuda_cipher_data *)(ctx->cipher_data);
+			ccd=(struct cuda_aes_cipher_data *)(ctx->cipher_data);
 			ak=&ccd->ks;
 			AES_cbc_encrypt(in_arg,out_arg,nbytes,ak,ctx->iv,AES_ENCRYPT);
 #else
@@ -400,7 +422,7 @@ static int cuda_aes_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const u
 	case EVP_CIPH_CFB_MODE:
 		if (ctx->encrypt) {
 #ifdef CPU
-			ccd=(struct cuda_cipher_data *)(ctx->cipher_data);
+			ccd=(struct cuda_aes_cipher_data *)(ctx->cipher_data);
 			ak=&ccd->ks;
 			n=ctx->num;
 			while (nbytes--) {
@@ -426,7 +448,7 @@ static int cuda_aes_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const u
 	case EVP_CIPH_OFB_MODE:
 		if (ctx->encrypt) {
 #ifdef CPU
-			ccd=(struct cuda_cipher_data *)(ctx->cipher_data);
+			ccd=(struct cuda_aes_cipher_data *)(ctx->cipher_data);
 			ak=&ccd->ks;
 			n=ctx->num;
 			while (nbytes--) {
@@ -456,54 +478,72 @@ static int cuda_aes_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const u
 	return 1;
 }
 
+#define EVP_CIPHER_block_size_AES	AES_BLOCK_SIZE
+#define EVP_CIPHER_block_size_DES	DES_BLOCK_SIZE
+
+#define DECLARE_EVP(lciph,uciph,ksize,lmode,umode)            \
+static const EVP_CIPHER cuda_##lciph##_##ksize##_##lmode = {  \
+        NID_##lciph##_##ksize##_##lmode,                      \
+        uciph##_BLOCK_SIZE,                                   \
+        uciph##_KEY_SIZE_##ksize,                             \
+        uciph##_BLOCK_SIZE,                                   \
+        0 | EVP_CIPH_##umode##_MODE,                          \
+        cuda_##lciph##_init_key,                              \
+        cuda_##lciph##_ciphers,                               \
+        NULL,                                                 \
+        sizeof(struct cuda_aes_cipher_data) + 16,                 \
+        EVP_CIPHER_set_asn1_iv,                               \
+        EVP_CIPHER_get_asn1_iv,                               \
+        NULL,                                                 \
+        NULL                                                  \
+}
+
+#define cuda_des_64_ecb cuda_des_ecb
+#define cuda_des_64_cbc cuda_des_cbc
+#define NID_des_64_ecb NID_des_ecb
+#define NID_des_64_cbc NID_des_cbc
+
+DECLARE_EVP(des,DES,64,ecb,ECB);
+DECLARE_EVP(des,DES,64,cbc,CBC);
+
+DECLARE_EVP(aes,AES,128,ecb,ECB);
+DECLARE_EVP(aes,AES,128,cbc,CBC);
+DECLARE_EVP(aes,AES,192,ecb,ECB);
+DECLARE_EVP(aes,AES,192,cbc,CBC);
+DECLARE_EVP(aes,AES,256,ecb,ECB);
+DECLARE_EVP(aes,AES,256,cbc,CBC);
+
 static int cuda_ciphers(ENGINE *e, const EVP_CIPHER **cipher, const int **nids, int nid) {
+	// This is asked when staring 'openssl speed' but not 'openssl ciphers'. Strange...
 	if (!cipher) {
 		*nids = cuda_cipher_nids;
 		return cuda_cipher_nids_num;
 	}
 	switch (nid) {
+	  case NID_des_ecb:
+	    *cipher = &cuda_des_ecb;
+	    break;
+	  case NID_des_cbc:
+	    *cipher = &cuda_des_cbc;
+	    break;
 	  case NID_aes_128_ecb:
 	    *cipher = &cuda_aes_128_ecb;
 	    break;
 	  case NID_aes_128_cbc:
 	    *cipher = &cuda_aes_128_cbc;
 	    break;
-#if 0
-	  case NID_aes_128_cfb128:
-	    *cipher = &cuda_aes_128_cfb128;
-	    break;
-	  case NID_aes_128_ofb128:
-	    *cipher = &cuda_aes_128_ofb128;
-	    break;
-#endif
 	  case NID_aes_192_ecb:
 	    *cipher = &cuda_aes_192_ecb;
 	    break;
 	  case NID_aes_192_cbc:
 	    *cipher = &cuda_aes_192_cbc;
 	    break;
-#if 0
-	  case NID_aes_192_cfb128:
-	    *cipher = &cuda_aes_192_cfb128;
-	    break;
-	  case NID_aes_192_ofb128:
-	    *cipher = &cuda_aes_192_ofb128;
-	    break;
-#endif
 	  case NID_aes_256_ecb:
 	    *cipher = &cuda_aes_256_ecb;
 	    break;
 	  case NID_aes_256_cbc:
 	    *cipher = &cuda_aes_256_cbc;
 	    break;
-#if 0
-	  case NID_aes_256_cfb128:
-	    *cipher = &cuda_aes_256_cfb128;
-	    break;
-	  case NID_aes_256_ofb128:
-	    *cipher = &cuda_aes_256_ofb128;
-	    break;
-#endif
 	  default:
 	    *cipher = NULL;
 	    return 0;

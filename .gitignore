@@ -1,8 +1,11 @@
 Makefile
-aes_cuda.o
 config.log
 config.status
-e_cuda.o
-libcudamrg.so
+
+
 tags
 teststate
+
+*.swp
+*.o
+*.so
