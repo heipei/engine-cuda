@@ -31,14 +31,6 @@
 #include <openssl/engine.h>
 #include <cuda_runtime_api.h>
 
-#define MAX_THREAD		256
-#define STATE_THREAD		4
-
-#define DES_MAXNR		16
-#define DES_BLOCK_SIZE		8
-#define DES_KEY_SIZE		8
-#define DES_KEY_SIZE_64		8
-
 void DES_cuda_transfer_key_schedule(const DES_key_schedule *key);
 void DES_cuda_encrypt(const unsigned char *in, unsigned char *out,size_t nbytes);
 void DES_cuda_decrypt(const unsigned char *in, unsigned char *out,size_t nbytes);

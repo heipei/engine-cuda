@@ -991,17 +991,17 @@ extern "C" void AES_cuda_encrypt(const unsigned char *in, unsigned char *out, si
 	transferHostToDevice (&in, &d_s, &h_s, &nbytes);
 
 	if (output_verbosity==OUTPUT_VERBOSE) fprintf(stdout,"kernel execution...");
-	if ((nbytes%(MAX_THREAD*STATE_THREAD))==0) {
-		dim3 dimGrid(nbytes/(MAX_THREAD*STATE_THREAD));
-		dim3 dimBlock(STATE_THREAD,MAX_THREAD/STATE_THREAD);
+	if ((nbytes%(MAX_THREAD*STATE_THREAD_AES))==0) {
+		dim3 dimGrid(nbytes/(MAX_THREAD*STATE_THREAD_AES));
+		dim3 dimBlock(STATE_THREAD_AES,MAX_THREAD/STATE_THREAD_AES);
 		AESencKernel<<<dimGrid,dimBlock>>>(d_s);
 		_CUDA_N("kernel launch failure");
 		} else {
 			dim3 dimGrid(1);
 #if defined T_TABLE_CONSTANT
-			dim3 dimBlock(STATE_THREAD,nbytes/AES_BLOCK_SIZE);
+			dim3 dimBlock(STATE_THREAD_AES,nbytes/AES_BLOCK_SIZE);
 #else
-			dim3 dimBlock(STATE_THREAD,1024/AES_BLOCK_SIZE);
+			dim3 dimBlock(STATE_THREAD_AES,1024/AES_BLOCK_SIZE);
 #endif
 			AESencKernel<<<dimGrid,dimBlock>>>(d_s);
 			_CUDA_N("kernel launch failure");
@@ -1024,17 +1024,17 @@ extern "C" void AES_cuda_decrypt(const unsigned char *in, unsigned char *out,siz
 
 	if (output_verbosity==OUTPUT_VERBOSE) fprintf(stdout,"kernel execution...");
 
-	if ((nbytes%(MAX_THREAD*STATE_THREAD))==0) {
-		dim3 dimGrid(nbytes/(MAX_THREAD*STATE_THREAD));
-		dim3 dimBlock(STATE_THREAD,MAX_THREAD/STATE_THREAD);
+	if ((nbytes%(MAX_THREAD*STATE_THREAD_AES))==0) {
+		dim3 dimGrid(nbytes/(MAX_THREAD*STATE_THREAD_AES));
+		dim3 dimBlock(STATE_THREAD_AES,MAX_THREAD/STATE_THREAD_AES);
 		AESdecKernel<<<dimGrid,dimBlock>>>(d_s);
 		_CUDA_N("kernel launch failure");
 		} else {
 			dim3 dimGrid(1);
 #if defined T_TABLE_CONSTANT
-			dim3 dimBlock(STATE_THREAD,nbytes/AES_BLOCK_SIZE);
+			dim3 dimBlock(STATE_THREAD_AES,nbytes/AES_BLOCK_SIZE);
 #else
-			dim3 dimBlock(STATE_THREAD,1024/AES_BLOCK_SIZE);
+			dim3 dimBlock(STATE_THREAD_AES,1024/AES_BLOCK_SIZE);
 #endif
 			AESdecKernel<<<dimGrid,dimBlock>>>(d_s);
 			_CUDA_N("kernel launch failure");
@@ -1273,7 +1273,7 @@ __global__ void AESdecKernel_cbc(uint32_t in[],uint32_t out[],uint32_t iv[]) {
 		out[blockIdx.x*MAX_THREAD+threadIdx.x] = iv[threadIdx.x] ^ s[threadIdx.x];
 		else out[blockIdx.x*MAX_THREAD+threadIdx.x+4*threadIdx.y] = in[blockIdx.x*MAX_THREAD+(threadIdx.x+4*threadIdx.y)-4] ^
 										 s[threadIdx.x+4*threadIdx.y];
-	if(blockIdx.x==(gridDim.x-1) && threadIdx.y==(MAX_THREAD/STATE_THREAD-1))
+	if(blockIdx.x==(gridDim.x-1) && threadIdx.y==(MAX_THREAD/STATE_THREAD_AES-1))
 		iv[threadIdx.x]=in[blockIdx.x*MAX_THREAD+4*threadIdx.y+threadIdx.x];
 }
 
@@ -1368,7 +1368,7 @@ __global__ void AESdecKernel_cbc(uint32_t in[],uint32_t out[],uint32_t iv[]) {
 		out[blockIdx.x*MAX_THREAD+threadIdx.x] = iv[threadIdx.x] ^ s[threadIdx.x];
 		else out[blockIdx.x*MAX_THREAD+threadIdx.x+4*threadIdx.y] = in[blockIdx.x*MAX_THREAD+(threadIdx.x+4*threadIdx.y)-4] ^
 										 s[threadIdx.x+4*threadIdx.y];
-	if(blockIdx.x==(gridDim.x-1) && threadIdx.y==(MAX_THREAD/STATE_THREAD-1))
+	if(blockIdx.x==(gridDim.x-1) && threadIdx.y==(MAX_THREAD/STATE_THREAD_AES-1))
 		iv[threadIdx.x]=in[blockIdx.x*MAX_THREAD+4*threadIdx.y+threadIdx.x];
 	}
 
@@ -1391,17 +1391,17 @@ extern "C" void AES_cuda_decrypt_cbc(const unsigned char *in, unsigned char *out
 
 	if (output_verbosity==OUTPUT_VERBOSE) fprintf(stdout,"kernel execution...");
 
-	if ((nbytes%(MAX_THREAD*STATE_THREAD))==0) {
-		dim3 dimGrid(nbytes/(MAX_THREAD*STATE_THREAD));
-		dim3 dimBlock(STATE_THREAD,MAX_THREAD/STATE_THREAD);
+	if ((nbytes%(MAX_THREAD*STATE_THREAD_AES))==0) {
+		dim3 dimGrid(nbytes/(MAX_THREAD*STATE_THREAD_AES));
+		dim3 dimBlock(STATE_THREAD_AES,MAX_THREAD/STATE_THREAD_AES);
 		AESdecKernel_cbc<<<dimGrid,dimBlock>>>(d_s,d_out,d_iv);
 		_CUDA_N("kernel launch failure");
 		} else {
 			dim3 dimGrid(1);
 #if defined T_TABLE_CONSTANT
-			dim3 dimBlock(STATE_THREAD,nbytes/AES_BLOCK_SIZE);
+			dim3 dimBlock(STATE_THREAD_AES,nbytes/AES_BLOCK_SIZE);
 #else
-			dim3 dimBlock(STATE_THREAD,1024/AES_BLOCK_SIZE);
+			dim3 dimBlock(STATE_THREAD_AES,1024/AES_BLOCK_SIZE);
 #endif
 			AESdecKernel_cbc<<<dimGrid,dimBlock>>>(d_s,d_out,d_iv);
 			_CUDA_N("kernel launch failure");
@@ -1419,18 +1419,18 @@ extern "C" void AES_cuda_decrypt_cbc(const unsigned char *in, unsigned char *out
 
 #if defined T_TABLE_CONSTANT
 __global__ void AESencKernel_cbc(uint32_t state[],uint32_t iv[],size_t length) {
-	__shared__ uint32_t t[STATE_THREAD];
-	__shared__ uint32_t s[STATE_THREAD];
-	__shared__ uint32_t current[STATE_THREAD];
+	__shared__ uint32_t t[STATE_THREAD_AES];
+	__shared__ uint32_t s[STATE_THREAD_AES];
+	__shared__ uint32_t current[STATE_THREAD_AES];
 
 	current[threadIdx.x]=0;
 
 	while(current[threadIdx.x]!=length) {
-		t[threadIdx.x] = state[current[threadIdx.x]/STATE_THREAD+ threadIdx.x];
+		t[threadIdx.x] = state[current[threadIdx.x]/STATE_THREAD_AES+ threadIdx.x];
 
 		if(current[threadIdx.x]==0)
 			s[threadIdx.x]=iv[threadIdx.x] ^ t[threadIdx.x];
-			else s[threadIdx.x] = state[current[threadIdx.x]/STATE_THREAD+threadIdx.x-4] ^ t[threadIdx.x];
+			else s[threadIdx.x] = state[current[threadIdx.x]/STATE_THREAD_AES+threadIdx.x-4] ^ t[threadIdx.x];
 
 		s[threadIdx.x] = s[threadIdx.x] ^ tex1Dfetch(texref_dk,threadIdx.x);
 	
@@ -1495,19 +1495,19 @@ __global__ void AESencKernel_cbc(uint32_t state[],uint32_t iv[],size_t length) {
 				(Te0[(t[(2+threadIdx.x)%4] >> 16) & 0xff] & 0x00ff0000) ^ (Te1[(t[(3+threadIdx.x)%4] >> 24)       ] & 0xff000000) ^
 				tex1Dfetch(texref_dk,threadIdx.x+(tex1Dfetch(texref_r,0) << 2));
 
-		state[current[threadIdx.x]/STATE_THREAD+threadIdx.x] = s[threadIdx.x];
+		state[current[threadIdx.x]/STATE_THREAD_AES+threadIdx.x] = s[threadIdx.x];
 
 		current[threadIdx.x]+=AES_BLOCK_SIZE;
 		}
-	iv[threadIdx.x]=state[current[threadIdx.x]/STATE_THREAD+threadIdx.x-4];
+	iv[threadIdx.x]=state[current[threadIdx.x]/STATE_THREAD_AES+threadIdx.x-4];
 	}
 
 #else
 
 __global__ void AESencKernel_cbc(uint32_t state[],uint32_t iv[],size_t length) {
-	__shared__ uint32_t t[STATE_THREAD];
-	__shared__ uint32_t s[STATE_THREAD];
-	__shared__ uint32_t current[STATE_THREAD];
+	__shared__ uint32_t t[STATE_THREAD_AES];
+	__shared__ uint32_t s[STATE_THREAD_AES];
+	__shared__ uint32_t current[STATE_THREAD_AES];
 
 	__shared__ uint32_t Tes0[256];
 	__shared__ uint32_t Tes1[256];
@@ -1526,11 +1526,11 @@ __global__ void AESencKernel_cbc(uint32_t state[],uint32_t iv[],size_t length) {
 	current[threadIdx.x]=0;
 
 	while(current[threadIdx.x]!=length) {
-		t[threadIdx.x] = state[current[threadIdx.x]/STATE_THREAD+ threadIdx.x];
+		t[threadIdx.x] = state[current[threadIdx.x]/STATE_THREAD_AES+ threadIdx.x];
 
 		if(current[threadIdx.x]==0)
 			s[threadIdx.x]=iv[threadIdx.x] ^ t[threadIdx.x];
-			else s[threadIdx.x] = state[current[threadIdx.x]/STATE_THREAD+threadIdx.x-4] ^ t[threadIdx.x];
+			else s[threadIdx.x] = state[current[threadIdx.x]/STATE_THREAD_AES+threadIdx.x-4] ^ t[threadIdx.x];
 
 		s[threadIdx.x] = s[threadIdx.x] ^ tex1Dfetch(texref_dk,threadIdx.x);
 	
@@ -1595,11 +1595,11 @@ __global__ void AESencKernel_cbc(uint32_t state[],uint32_t iv[],size_t length) {
 				(Tes0[(t[(2+threadIdx.x)%4] >> 16) & 0xff] & 0x00ff0000) ^ (Tes1[(t[(3+threadIdx.x)%4] >> 24)       ] & 0xff000000) ^
 				tex1Dfetch(texref_dk,threadIdx.x+(tex1Dfetch(texref_r,0) << 2));
 
-		state[current[threadIdx.x]/STATE_THREAD+threadIdx.x] = s[threadIdx.x];
+		state[current[threadIdx.x]/STATE_THREAD_AES+threadIdx.x] = s[threadIdx.x];
 
 		current[threadIdx.x]+=AES_BLOCK_SIZE;
 		}
-	iv[threadIdx.x]=state[current[threadIdx.x]/STATE_THREAD+threadIdx.x-4];
+	iv[threadIdx.x]=state[current[threadIdx.x]/STATE_THREAD_AES+threadIdx.x-4];
 	}
 
 #endif
@@ -1616,7 +1616,7 @@ extern "C" void AES_cuda_encrypt_cbc(const unsigned char *in, unsigned char *out
 	if (output_verbosity==OUTPUT_VERBOSE) fprintf(stdout,"kernel execution...");
 
 	dim3 dimGrid(1);
-	dim3 dimBlock(STATE_THREAD);
+	dim3 dimBlock(STATE_THREAD_AES);
 	AESencKernel_cbc<<<dimGrid,dimBlock>>>(d_s,d_iv,nbytes);
 	_CUDA_N("kernel launch failure");
 

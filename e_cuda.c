@@ -40,7 +40,7 @@ static int cuda_des_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const u
 
 static int num_multiprocessors = 0;
 static int buffer_size = 0;
-static int verbose = 2;
+static int verbose = 0;
 static int quiet = 0;
 static int initialized = 0;
 static char *library_path=NULL;
@@ -278,6 +278,7 @@ static int cuda_des_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const u
 
 #ifndef CPU
 	int chunk;
+	int maxbytes;
 #endif
 
 	switch (EVP_CIPHER_CTX_mode(ctx)) {
@@ -290,10 +291,11 @@ static int cuda_des_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const u
 			}
 #else
 			while (nbytes!=current) {
-				chunk=(nbytes-current)/(MAX_THREAD*STATE_THREAD_DES);
+				maxbytes = num_multiprocessors*8*MAX_THREAD*STATE_THREAD_DES;
+				chunk=(nbytes-current)/maxbytes;
 				if(chunk>=1) {
-					DES_cuda_encrypt((in_arg+current),(out_arg+current),chunk*MAX_THREAD*STATE_THREAD_DES);
-					current+=chunk*MAX_THREAD*STATE_THREAD_DES;	
+					DES_cuda_encrypt((in_arg+current),(out_arg+current),maxbytes);
+					current+=maxbytes;	
 				} else {
 					DES_cuda_encrypt((in_arg+current),(out_arg+current),(nbytes-current));
 					current+=(nbytes-current);
@@ -354,10 +356,10 @@ static int cuda_aes_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const u
 				}
 #else
 			while (nbytes!=current) {
-				chunk=(nbytes-current)/(MAX_THREAD*STATE_THREAD);
+				chunk=(nbytes-current)/(8*MAX_THREAD*STATE_THREAD_AES);
 				if(chunk>=1) {
-					AES_cuda_encrypt((in_arg+current),(out_arg+current),chunk*MAX_THREAD*STATE_THREAD);
-					current+=chunk*MAX_THREAD*STATE_THREAD;	
+					AES_cuda_encrypt((in_arg+current),(out_arg+current),chunk*MAX_THREAD*STATE_THREAD_AES);
+					current+=chunk*MAX_THREAD*STATE_THREAD_AES;	
 					} else {
 						AES_cuda_encrypt((in_arg+current),(out_arg+current),(nbytes-current));
 						current+=(nbytes-current);
@@ -374,10 +376,10 @@ static int cuda_aes_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const u
 				}
 #else
 			while (nbytes!=current) {
-				chunk=(nbytes-current)/(MAX_THREAD*STATE_THREAD);
+				chunk=(nbytes-current)/(MAX_THREAD*STATE_THREAD_AES);
 				if(chunk>=1) {
-					AES_cuda_decrypt((in_arg+current),(out_arg+current),chunk*MAX_THREAD*STATE_THREAD);
-					current+=chunk*MAX_THREAD*STATE_THREAD;	
+					AES_cuda_decrypt((in_arg+current),(out_arg+current),chunk*MAX_THREAD*STATE_THREAD_AES);
+					current+=chunk*MAX_THREAD*STATE_THREAD_AES;	
 					} else {
 						AES_cuda_decrypt((in_arg+current),(out_arg+current),(nbytes-current));
 						current+=(nbytes-current);
@@ -395,10 +397,10 @@ static int cuda_aes_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const u
 			AES_cbc_encrypt(in_arg,out_arg,nbytes,ak,ctx->iv,AES_DECRYPT);
 #else
 			while (nbytes!=current) {
-				chunk=(nbytes-current)/(MAX_THREAD*STATE_THREAD);
+				chunk=(nbytes-current)/(MAX_THREAD*STATE_THREAD_AES);
 				if(chunk>=1) {
-					AES_cuda_decrypt_cbc((in_arg+current),(out_arg+current),chunk*MAX_THREAD*STATE_THREAD);
-					current+=chunk*MAX_THREAD*STATE_THREAD;	
+					AES_cuda_decrypt_cbc((in_arg+current),(out_arg+current),chunk*MAX_THREAD*STATE_THREAD_AES);
+					current+=chunk*MAX_THREAD*STATE_THREAD_AES;	
 					} else {
 						AES_cuda_decrypt_cbc((in_arg+current),(out_arg+current),(nbytes-current));
 						current+=(nbytes-current);

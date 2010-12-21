@@ -1,0 +1,4 @@
+- Same memory for in and out?
+- Non-blocking kernel calls?
+- Many calls to CudaMemcpy
+- warp serializing / gst uncoalesced (CUDA profiler)

@@ -10,12 +10,12 @@
 #include "common.h"
 #include "cuPrintf.cu"
 
-#define MAX_THREAD		256
-#define STATE_THREAD_DES	2	
+//#define MAX_THREAD		256
+//#define STATE_THREAD_DES	2	
 
-#define DES_MAXNR		8
-#define DES_BLOCK_SIZE		8
-#define DES_KEY_SIZE		8
+//#define DES_MAXNR		8
+//#define DES_BLOCK_SIZE		8
+//#define DES_KEY_SIZE		8
 
 __constant__ uint32_t des_d_sp[8][64]={
 {
@@ -167,12 +167,12 @@ __constant__ uint32_t des_d_sp[8][64]={
 __constant__ uint32_t des_rk[32];
 
 __device__ __shared__ uint32_t *des_d_s;
-__device__ uint32_t *des_d_iv;
-__device__ uint32_t *des_d_out;
+//__device__ uint32_t *des_d_iv;
+//__device__ uint32_t *des_d_out;
 
 uint8_t  *des_h_s;
-uint8_t  *des_h_out;
-uint8_t  *des_h_iv;
+//uint8_t  *des_h_out;
+//uint8_t  *des_h_iv;
 
 float des_elapsed;
 cudaEvent_t des_start,des_stop;
@@ -199,17 +199,13 @@ cudaEvent_t des_start,des_stop;
 
 #define	ROTATE(a,n)	(((a)>>(n))|((a)<<(32-(n))))
 
-#define LOAD_DATA_tmp(a,b,c,d,e,f) LOAD_DATA(a,b,c,d,e,f,g)
-#define LOAD_DATA(R,S,u,t,E0,E1,tmp) \
-	u=R^s[S  ]; \
-	t=R^s[S+1]
-
 #define PERM_OP(a,b,t,n,m) ((t)=((((a)>>(n))^(b))&(m)),\
 	(b)^=(t),\
 	(a)^=((t)<<(n)))
 
 #define D_ENCRYPT(LL,R,S) { \
-	LOAD_DATA_tmp(R,S,u,t,E0,E1); \
+	u=R^s[S  ]; \
+	t=R^s[S+1]; \
 	t=ROTATE(t,4); \
 	LL^= \
 	*(const uint32_t *)(des_SP      +((u     )&0xfc))^ \
@@ -269,16 +265,16 @@ extern "C" void DES_cuda_encrypt(const unsigned char *in, unsigned char *out, si
 
 	cudaError_t cudaerrno;
 	assert(in && out && nbytes);
-	int gridSize = 1;
-	dim3 dimBlock(1, nbytes/DES_BLOCK_SIZE, 1);
+	int gridSize = nbytes/MAX_THREAD+1;
+	dim3 dimBlock(MAX_THREAD, 1, 1);
 
 	transferHostToDevice(&in, &des_d_s, &des_h_s, &nbytes);
 
 	if ((nbytes%(MAX_THREAD*DES_BLOCK_SIZE))==0) {
-		gridSize = nbytes/(MAX_THREAD*DES_BLOCK_SIZE);
+		//gridSize = nbytes/(MAX_THREAD*DES_BLOCK_SIZE);
 		//dimBlock.x = nbytes/DES_BLOCK_SIZE;
 	} else {
-		dimBlock.y = 1024/DES_BLOCK_SIZE;
+		dimBlock.x = MAX_THREAD;
 	}
 
 	if (output_verbosity==OUTPUT_VERBOSE)
@@ -334,22 +330,22 @@ extern "C" void DES_cuda_finish() {
 #if CUDART_VERSION >= 2020
 	if(isIntegrated) {
 		_CUDA(cudaFreeHost(des_h_s));
-		_CUDA(cudaFreeHost(des_h_out));
-		_CUDA(cudaFreeHost(des_h_iv));
+		//_CUDA(cudaFreeHost(des_h_out));
+		//_CUDA(cudaFreeHost(des_h_iv));
 	} else {
 		_CUDA(cudaFree(des_d_s));
-		_CUDA(cudaFree(des_d_out));
-		_CUDA(cudaFree(des_d_iv));
+		//_CUDA(cudaFree(des_d_out));
+		//_CUDA(cudaFree(des_d_iv));
 	}
 #else	
 	_CUDA(cudaFree(des_d_s));
-	_CUDA(cudaFree(des_d_out));
-	_CUDA(cudaFree(des_d_iv));
+	//_CUDA(cudaFree(des_d_out));
+	//_CUDA(cudaFree(des_d_iv));
 #endif
 #else
 	_CUDA(cudaFree(des_d_s));
-	_CUDA(cudaFree(des_d_out));
-	_CUDA(cudaFree(des_d_iv));
+	//_CUDA(cudaFree(des_d_out));
+	//_CUDA(cudaFree(des_d_iv));
 #endif	
 
 	_CUDA(cudaEventRecord(des_stop,0));
@@ -386,44 +382,44 @@ extern "C" void DES_cuda_init(int *nm, int buffer_size_engine, int output_kind) 
 		_CUDA(cudaSetDeviceFlags(cudaDeviceMapHost));
         	if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"Using zero-copy memory.\n");
         	_CUDA(cudaHostAlloc((void**)&des_h_s,buffer_size,cudaHostAllocMapped));
-		_CUDA(cudaHostAlloc((void**)&des_h_out,buffer_size,cudaHostAllocMapped));
-		_CUDA(cudaHostAlloc((void**)&des_h_iv,buffer_size,cudaHostAllocMapped));
+		//_CUDA(cudaHostAlloc((void**)&des_h_out,buffer_size,cudaHostAllocMapped));
+		//_CUDA(cudaHostAlloc((void**)&des_h_iv,buffer_size,cudaHostAllocMapped));
 		transferHostToDevice = transferHostToDevice_ZEROCOPY;		// set memory transfer function
 		transferDeviceToHost = transferDeviceToHost_ZEROCOPY;		// set memory transfer function
 		_CUDA(cudaHostGetDevicePointer(&des_d_s,des_h_s, 0));
-		_CUDA(cudaHostGetDevicePointer(&des_d_out,des_h_out, 0));
-		_CUDA(cudaHostGetDevicePointer(&des_d_iv,des_h_iv, 0));
+		//_CUDA(cudaHostGetDevicePointer(&des_d_out,des_h_out, 0));
+		//_CUDA(cudaHostGetDevicePointer(&des_d_iv,des_h_iv, 0));
 	} else {
 		//pinned memory mode - use special function to get OS-pinned memory
 		_CUDA(cudaHostAlloc( (void**)&des_h_s, buffer_size, cudaHostAllocDefault));
-		_CUDA(cudaHostAlloc( (void**)&des_h_out, buffer_size, cudaHostAllocDefault));
-		_CUDA(cudaHostAlloc( (void**)&des_h_iv, buffer_size, cudaHostAllocDefault));
+		//_CUDA(cudaHostAlloc( (void**)&des_h_out, buffer_size, cudaHostAllocDefault));
+		//_CUDA(cudaHostAlloc( (void**)&des_h_iv, buffer_size, cudaHostAllocDefault));
 		if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"Using pinned memory: cudaHostAllocDefault.\n");
 		transferHostToDevice = transferHostToDevice_PINNED;	// set memory transfer function
 		transferDeviceToHost = transferDeviceToHost_PINNED;	// set memory transfer function
 		_CUDA(cudaMalloc((void **)&des_d_s,buffer_size));
-		_CUDA(cudaMalloc((void **)&des_d_out,buffer_size));
-		_CUDA(cudaMalloc((void **)&des_d_iv,DES_BLOCK_SIZE));
+		//_CUDA(cudaMalloc((void **)&des_d_out,buffer_size));
+		//_CUDA(cudaMalloc((void **)&des_d_iv,DES_BLOCK_SIZE));
 	}
 #else
         //pinned memory mode - use special function to get OS-pinned memory
         _CUDA(cudaMallocHost((void**)&h_s, buffer_size));
-        _CUDA(cudaMallocHost((void**)&h_out, buffer_size));
-        _CUDA(cudaMallocHost((void**)&h_iv, buffer_size));
+        //_CUDA(cudaMallocHost((void**)&h_out, buffer_size));
+        //_CUDA(cudaMallocHost((void**)&h_iv, buffer_size));
         if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"Using pinned memory: cudaHostAllocDefault.\n");
 	transferHostToDevice = transferHostToDevice_PINNED;			// set memory transfer function
 	transferDeviceToHost = transferDeviceToHost_PINNED;			// set memory transfer function
 	_CUDA(cudaMalloc((void **)&des_d_s,buffer_size));
-	_CUDA(cudaMalloc((void **)&des_d_out,buffer_size));
-        _CUDA(cudaMalloc((void **)&des_d_iv,DES_BLOCK_SIZE));
+	//_CUDA(cudaMalloc((void **)&des_d_out,buffer_size));
+        //_CUDA(cudaMalloc((void **)&des_d_iv,DES_BLOCK_SIZE));
 #endif
 #else
         if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"Using pageable memory.\n");
 	transferHostToDevice = transferHostToDevice_PAGEABLE;			// set memory transfer function
 	transferDeviceToHost = transferDeviceToHost_PAGEABLE;			// set memory transfer function
 	_CUDA(cudaMalloc((void **)&des_d_s,buffer_size));
-	_CUDA(cudaMalloc((void **)&des_d_out,buffer_size));
-        _CUDA(cudaMalloc((void **)&des_d_iv,DES_BLOCK_SIZE));
+	//_CUDA(cudaMalloc((void **)&des_d_out,buffer_size));
+        //_CUDA(cudaMalloc((void **)&des_d_iv,DES_BLOCK_SIZE));
 #endif
 
 	if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"The current buffer size is %d.\n\n", buffer_size);

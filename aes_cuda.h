@@ -31,17 +31,6 @@
 #include <openssl/engine.h>
 #include <cuda_runtime_api.h>
 
-#define MAX_THREAD		256
-#define STATE_THREAD		4
-
-#define AES_KEY_SIZE_128	16
-#define AES_KEY_SIZE_192	24
-#define AES_KEY_SIZE_256	32
-
-#define OUTPUT_QUIET		0
-#define OUTPUT_NORMAL		1
-#define OUTPUT_VERBOSE		2
-
 void AES_cuda_transfer_key(AES_KEY *key);
 void AES_cuda_encrypt(const unsigned char *in, unsigned char *out,size_t nbytes);
 void AES_cuda_decrypt(const unsigned char *in, unsigned char *out,size_t nbytes);
