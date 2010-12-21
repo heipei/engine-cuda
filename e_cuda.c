@@ -23,7 +23,6 @@
 
 #include "aes_cuda.h"
 #include "des_cuda.h"
-//#include "cuda_common.h"
 #include "common.h"
 
 #define DYNAMIC_ENGINE
@@ -294,10 +293,10 @@ static int cuda_des_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const u
 				maxbytes = num_multiprocessors*8*MAX_THREAD*STATE_THREAD_DES;
 				chunk=(nbytes-current)/maxbytes;
 				if(chunk>=1) {
-					DES_cuda_encrypt((in_arg+current),(out_arg+current),maxbytes);
+					DES_cuda_crypt((in_arg+current),(out_arg+current),maxbytes,DES_ENCRYPT);
 					current+=maxbytes;	
 				} else {
-					DES_cuda_encrypt((in_arg+current),(out_arg+current),(nbytes-current));
+					DES_cuda_crypt((in_arg+current),(out_arg+current),(nbytes-current),DES_ENCRYPT);
 					current+=(nbytes-current);
 				}
 			}
@@ -310,17 +309,18 @@ static int cuda_des_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const u
 			}
 #else
 			while (nbytes!=current) {
-				chunk=(nbytes-current)/(MAX_THREAD*STATE_THREAD_DES);
+				maxbytes = num_multiprocessors*8*MAX_THREAD*STATE_THREAD_DES;
+				chunk=(nbytes-current)/maxbytes;
 				if(chunk>=1) {
-					DES_cuda_decrypt((in_arg+current),(out_arg+current),chunk*MAX_THREAD*STATE_THREAD_DES);
-					current+=chunk*MAX_THREAD*STATE_THREAD_DES;	
+					DES_cuda_crypt((in_arg+current),(out_arg+current),maxbytes,DES_DECRYPT);
+					current+=maxbytes;	
 				} else {
-					DES_cuda_decrypt((in_arg+current),(out_arg+current),(nbytes-current));
+					DES_cuda_crypt((in_arg+current),(out_arg+current),(nbytes-current),DES_DECRYPT);
 					current+=(nbytes-current);
 				}
 			}
 #endif
-			}
+		}
 		break;
 	default:
 		return 0;
