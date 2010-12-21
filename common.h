@@ -22,6 +22,8 @@
 #define DES_KEY_SIZE		8
 #define DES_KEY_SIZE_64		8
 
+#define TX blockIdx.x * (blockDim.x * blockDim.y) + (blockDim.y * threadIdx.x) + threadIdx.y
+
 const char *byte_to_binary(int);
 void tobinary(unsigned char);
 char *int2bin(unsigned int, char*, int);

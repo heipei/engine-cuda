@@ -10,8 +10,6 @@
 #include "common.h"
 #include "cuPrintf.cu"
 
-#define TX blockIdx.x * (blockDim.x * blockDim.y) + (blockDim.y * threadIdx.x) + threadIdx.y
-
 __constant__ uint32_t des_d_sp[8][64]={
 {
 /* nibble 0 */
@@ -159,13 +157,12 @@ __constant__ uint32_t des_d_sp[8][64]={
 0x20000000L, 0x20800080L, 0x00020000L, 0x00820080L,
 }};
 
-__constant__ uint64_t des_rk[16];
+__constant__ uint64_t s[16];
 
 __device__ __constant__ uint64_t *des_d_s;
 //__device__ uint32_t *des_d_iv;
 
 uint8_t  *des_h_s;
-//uint8_t  *des_h_out;
 
 float des_elapsed;
 cudaEvent_t des_start,des_stop;
@@ -220,8 +217,6 @@ __global__ void DESencKernel(uint64_t *data) {
 	unsigned int t,u;
 	unsigned char *des_SP = (unsigned char *) (&des_d_sp);
 
-	uint64_t *s=des_rk;
-
 	IP(right,left);
 
 	left=ROTATE(left,29);
@@ -252,50 +247,47 @@ __global__ void DESencKernel(uint64_t *data) {
 }
 
 __global__ void DESdecKernel(uint64_t *data) {
-	uint32_t tx = blockIdx.x * (blockDim.x * blockDim.y) + (blockDim.y * threadIdx.x) + threadIdx.y;
 	
-	uint32_t right = data[2*tx];
-	uint32_t left = data[2*tx+1];
+	uint64_t load = data[TX];
+	uint32_t right = load;
+	uint32_t left = load>>32;
 
 	unsigned int t,u;
 	unsigned char *des_SP = (unsigned char *) (&des_d_sp);
-
-	uint64_t *s=des_rk;
 
 	IP(right,left);
 
 	left=ROTATE(left,29);
 	right=ROTATE(right,29);
 
-	D_ENCRYPT(left,right,30); /*  16 */
-	D_ENCRYPT(right,left,28); /*  15 */
-	D_ENCRYPT(left,right,26); /*  14 */
-	D_ENCRYPT(right,left,24); /*  13 */
-	D_ENCRYPT(left,right,22); /*  12 */
-	D_ENCRYPT(right,left,20); /*  11 */
-	D_ENCRYPT(left,right,18); /*  10 */
-	D_ENCRYPT(right,left,16); /*  9 */
-	D_ENCRYPT(left,right,14); /*  8 */
-	D_ENCRYPT(right,left,12); /*  7 */
-	D_ENCRYPT(left,right,10); /*  6 */
-	D_ENCRYPT(right,left, 8); /*  5 */
-	D_ENCRYPT(left,right, 6); /*  4 */
-	D_ENCRYPT(right,left, 4); /*  3 */
-	D_ENCRYPT(left,right, 2); /*  2 */
+	D_ENCRYPT(left,right,15); /*  16 */
+	D_ENCRYPT(right,left,14); /*  15 */
+	D_ENCRYPT(left,right,13); /*  14 */
+	D_ENCRYPT(right,left,12); /*  13 */
+	D_ENCRYPT(left,right,11); /*  12 */
+	D_ENCRYPT(right,left,10); /*  11 */
+	D_ENCRYPT(left,right, 9); /*  10 */
+	D_ENCRYPT(right,left, 8); /*  9 */
+	D_ENCRYPT(left,right, 7); /*  8 */
+	D_ENCRYPT(right,left, 6); /*  7 */
+	D_ENCRYPT(left,right, 5); /*  6 */
+	D_ENCRYPT(right,left, 4); /*  5 */
+	D_ENCRYPT(left,right, 3); /*  4 */
+	D_ENCRYPT(right,left, 2); /*  3 */
+	D_ENCRYPT(left,right, 1); /*  2 */
 	D_ENCRYPT(right,left, 0); /*  1 */
 
 	left=ROTATE(left,3);
 	right=ROTATE(right,3);
 
 	FP(right,left);
-	data[2*tx]=left;
-	data[2*tx+1]=right;
+	data[TX]=left|((uint64_t)right)<<32;
 }
 
 extern "C" void DES_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc) {
 	assert(in && out && nbytes);
 	cudaError_t cudaerrno;
-	int gridSize = nbytes/MAX_THREAD+1;
+	int gridSize = nbytes/(MAX_THREAD*2)+1;
 	dim3 dimBlock(MAX_THREAD, 1, 1);
 
 	transferHostToDevice(&in, (uint32_t **)&des_d_s, &des_h_s, &nbytes);
@@ -328,7 +320,7 @@ extern "C" void DES_cuda_transfer_key_schedule(DES_key_schedule *ks) {
 	assert(ks);
 	cudaError_t cudaerrno;
 	size_t ks_size = sizeof(DES_key_schedule);
-	_CUDA(cudaMemcpyToSymbolAsync(des_rk,ks,ks_size,0,cudaMemcpyHostToDevice));
+	_CUDA(cudaMemcpyToSymbolAsync(s,ks,ks_size,0,cudaMemcpyHostToDevice));
 }
 
 extern "C" void DES_cuda_finish() {
@@ -392,48 +384,33 @@ extern "C" void DES_cuda_init(int *nm, int buffer_size_engine, int output_kind) 
 		_CUDA(cudaSetDeviceFlags(cudaDeviceMapHost));
         	if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"Using zero-copy memory.\n");
         	_CUDA(cudaHostAlloc((void**)&des_h_s,buffer_size,cudaHostAllocMapped));
-		//_CUDA(cudaHostAlloc((void**)&des_h_out,buffer_size,cudaHostAllocMapped));
-		//_CUDA(cudaHostAlloc((void**)&des_h_iv,buffer_size,cudaHostAllocMapped));
 		transferHostToDevice = transferHostToDevice_ZEROCOPY;		// set memory transfer function
 		transferDeviceToHost = transferDeviceToHost_ZEROCOPY;		// set memory transfer function
 		_CUDA(cudaHostGetDevicePointer(&des_d_s,des_h_s, 0));
-		//_CUDA(cudaHostGetDevicePointer(&des_d_out,des_h_out, 0));
-		//_CUDA(cudaHostGetDevicePointer(&des_d_iv,des_h_iv, 0));
 	} else {
 		//pinned memory mode - use special function to get OS-pinned memory
 		_CUDA(cudaHostAlloc( (void**)&des_h_s, buffer_size, cudaHostAllocDefault));
-		//_CUDA(cudaHostAlloc( (void**)&des_h_out, buffer_size, cudaHostAllocDefault));
-		//_CUDA(cudaHostAlloc( (void**)&des_h_iv, buffer_size, cudaHostAllocDefault));
 		if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"Using pinned memory: cudaHostAllocDefault.\n");
 		transferHostToDevice = transferHostToDevice_PINNED;	// set memory transfer function
 		transferDeviceToHost = transferDeviceToHost_PINNED;	// set memory transfer function
 		_CUDA(cudaMalloc((void **)&des_d_s,buffer_size));
-		//_CUDA(cudaMalloc((void **)&des_d_out,buffer_size));
-		//_CUDA(cudaMalloc((void **)&des_d_iv,DES_BLOCK_SIZE));
 	}
 #else
         //pinned memory mode - use special function to get OS-pinned memory
         _CUDA(cudaMallocHost((void**)&h_s, buffer_size));
-        //_CUDA(cudaMallocHost((void**)&h_out, buffer_size));
-        //_CUDA(cudaMallocHost((void**)&h_iv, buffer_size));
         if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"Using pinned memory: cudaHostAllocDefault.\n");
 	transferHostToDevice = transferHostToDevice_PINNED;			// set memory transfer function
 	transferDeviceToHost = transferDeviceToHost_PINNED;			// set memory transfer function
 	_CUDA(cudaMalloc((void **)&des_d_s,buffer_size));
-	//_CUDA(cudaMalloc((void **)&des_d_out,buffer_size));
-        //_CUDA(cudaMalloc((void **)&des_d_iv,DES_BLOCK_SIZE));
 #endif
 #else
         if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"Using pageable memory.\n");
 	transferHostToDevice = transferHostToDevice_PAGEABLE;			// set memory transfer function
 	transferDeviceToHost = transferDeviceToHost_PAGEABLE;			// set memory transfer function
 	_CUDA(cudaMalloc((void **)&des_d_s,buffer_size));
-	//_CUDA(cudaMalloc((void **)&des_d_out,buffer_size));
-        //_CUDA(cudaMalloc((void **)&des_d_iv,DES_BLOCK_SIZE));
 #endif
 
 	if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"The current buffer size is %d.\n\n", buffer_size);
-	_CUDA(cudaMalloc((void **)&des_rk, (int) sizeof(DES_key_schedule)));
 
 	_CUDA(cudaEventCreate(&des_start));
 	_CUDA(cudaEventCreate(&des_stop));

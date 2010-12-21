@@ -11,4 +11,4 @@ openssl enc -e -des-ecb -nosalt -v -in o.in -out o.ref -K "010101F10101F1F1"
 #xxd o.ref|head
 echo -e "\nMD5SUM:"
 md5sum o.des o.ref
-#rm -rf o.ref o.des
+rm -rf o.ref o.des

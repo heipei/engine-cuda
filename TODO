@@ -1,4 +1,11 @@
-- Same memory for in and out?
+== General ==
 - Non-blocking kernel calls?
-- Many calls to CudaMemcpy
+- Many calls to CudaMemcpy, where from?
+- Single Init / Finish for CUDA
+
+== DES ==
+- CBC
+- Same memory for in and out?
 - warp serializing / gst uncoalesced (CUDA profiler)
+- des_SP into texture memory (or shared memory) because access to it is _never_ coalesced?
+

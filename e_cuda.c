@@ -274,59 +274,38 @@ static int cuda_aes_init_key (EVP_CIPHER_CTX *ctx, const unsigned char *key, con
 static int cuda_des_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigned char *in_arg, size_t nbytes) {
 	assert(in_arg && out_arg && ctx && nbytes);
 	size_t current=0;
-
-#ifndef CPU
-	int chunk;
-	int maxbytes;
-#endif
+	int mode;
 
 	switch (EVP_CIPHER_CTX_mode(ctx)) {
 	case EVP_CIPH_ECB_MODE:
-		if (ctx->encrypt) {
+		mode = ctx->encrypt ? DES_ENCRYPT : DES_DECRYPT; 
 #ifdef CPU
-			while (nbytes!=current) {
-				DES_ecb_encrypt((const_DES_cblock *)(in_arg+current),(DES_cblock *)(out_arg+current),&des_ks,DES_ENCRYPT);
-				current+=DES_BLOCK_SIZE;
-			}
-#else
-			while (nbytes!=current) {
-				maxbytes = num_multiprocessors*8*MAX_THREAD*STATE_THREAD_DES;
-				chunk=(nbytes-current)/maxbytes;
-				if(chunk>=1) {
-					DES_cuda_crypt((in_arg+current),(out_arg+current),maxbytes,DES_ENCRYPT);
-					current+=maxbytes;	
-				} else {
-					DES_cuda_crypt((in_arg+current),(out_arg+current),(nbytes-current),DES_ENCRYPT);
-					current+=(nbytes-current);
-				}
-			}
-#endif
-		} else {
-#ifdef CPU
-			while (nbytes!=current) {
-				DES_ecb_encrypt((const_DES_cblock *)(in_arg+current),(DES_cblock *)(out_arg+current),&des_ks,DES_DECRYPT);
-				current+=DES_BLOCK_SIZE;
-			}
-#else
-			while (nbytes!=current) {
-				maxbytes = num_multiprocessors*8*MAX_THREAD*STATE_THREAD_DES;
-				chunk=(nbytes-current)/maxbytes;
-				if(chunk>=1) {
-					DES_cuda_crypt((in_arg+current),(out_arg+current),maxbytes,DES_DECRYPT);
-					current+=maxbytes;	
-				} else {
-					DES_cuda_crypt((in_arg+current),(out_arg+current),(nbytes-current),DES_DECRYPT);
-					current+=(nbytes-current);
-				}
-			}
-#endif
+		while (nbytes!=current) {
+			DES_ecb_encrypt((const_DES_cblock *)(in_arg+current),(DES_cblock *)(out_arg+current),&des_ks,mode);
+			current+=DES_BLOCK_SIZE;
 		}
+#else
+		int chunk;
+		int maxbytes = 8388608/1024;
+		while (nbytes!=current) {
+			//maxbytes = num_multiprocessors*8*MAX_THREAD*STATE_THREAD_DES;
+			chunk=(nbytes-current)/maxbytes;
+			if(chunk>=1) {
+				DES_cuda_crypt((in_arg+current),(out_arg+current),maxbytes,mode);
+				current+=maxbytes;	
+			} else {
+				DES_cuda_crypt((in_arg+current),(out_arg+current),(nbytes-current),mode);
+				current+=(nbytes-current);
+			}
+		}
+#endif
 		break;
 	default:
 		return 0;
 	}
 	return 1;
 }
+
 static int cuda_aes_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigned char *in_arg, size_t nbytes) {
 	// EVP_CIPHER_CTX is defined in include/openssl/evp.h
 	assert(in_arg && out_arg && ctx && nbytes);
@@ -493,7 +472,7 @@ static const EVP_CIPHER cuda_##lciph##_##ksize##_##lmode = {  \
         cuda_##lciph##_init_key,                              \
         cuda_##lciph##_ciphers,                               \
         NULL,                                                 \
-        sizeof(struct cuda_aes_cipher_data) + 16,                 \
+        sizeof(struct cuda_aes_cipher_data) + 16,             \
         EVP_CIPHER_set_asn1_iv,                               \
         EVP_CIPHER_get_asn1_iv,                               \
         NULL,                                                 \
@@ -516,7 +495,6 @@ DECLARE_EVP(aes,AES,256,ecb,ECB);
 DECLARE_EVP(aes,AES,256,cbc,CBC);
 
 static int cuda_ciphers(ENGINE *e, const EVP_CIPHER **cipher, const int **nids, int nid) {
-	// This is asked when staring 'openssl speed' but not 'openssl ciphers'. Strange...
 	if (!cipher) {
 		*nids = cuda_cipher_nids;
 		return cuda_cipher_nids_num;

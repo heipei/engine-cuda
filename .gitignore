@@ -6,6 +6,23 @@ config.status
 tags
 teststate
 
+*.cpp1.ii
+*.cpp2.i
+*.cpp3.i
+*.cpp4.ii
+*.cu.cpp
+*.cudafe1.c
+*.cudafe1.cpp
+*.cudafe1.gpu
+*.cudafe1.stub.c
+*.cudafe2.c
+*.cudafe2.gpu
+*.cudafe2.stub.c
+*.fatbin.c
+*.hash
+*.ptx
+*.sm_*.cubin
+
 *.swp
 *.o
 *.so
