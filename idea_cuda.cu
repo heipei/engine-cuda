@@ -126,7 +126,7 @@ extern "C" void IDEA_cuda_crypt(const unsigned char *in, unsigned char *out, siz
 	}
 
 	if (output_verbosity==OUTPUT_VERBOSE)
-		fprintf(stdout,"Starting IDEA kernel for %d bytes with (%d, (%d, %d))...\n", nbytes, gridSize, dimBlock.x, dimBlock.y);
+		fprintf(stdout,"Starting IDEA kernel for %zu bytes with (%d, (%d, %d))...\n", nbytes, gridSize, dimBlock.x, dimBlock.y);
 
 	if(enc == IDEA_ENCRYPT) {
 		IDEAencKernel<<<gridSize,dimBlock>>>(idea_device_data);
@@ -136,7 +136,7 @@ extern "C" void IDEA_cuda_crypt(const unsigned char *in, unsigned char *out, siz
 		_CUDA_N("IDEA decryption kernel could not be launched!");
 	}
 
-	transferDeviceToHost(&out, (uint32_t **)&idea_device_data, &idea_host_data, &nbytes);
+	transferDeviceToHost(&out, (uint32_t **)&idea_device_data, &idea_host_data, &idea_host_data, &nbytes);
 }
 
 extern "C" void IDEA_cuda_transfer_key_schedule(IDEA_KEY_SCHEDULE *ks) {

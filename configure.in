@@ -32,7 +32,6 @@ AC_LANG_C
 AC_PROG_MAKE_SET
 
 CFLAGS=" -O3 -Wall"
-CFLAGS_TEST="$CFLAGS"
 
 AC_ARG_WITH([cudatoolkitpath],AS_HELP_STRING([--with-cudatoolkitpath],[prefix where cuda is installed (default=/usr/local/cuda)]),
 [
@@ -76,7 +75,7 @@ AC_ARG_ENABLE([debug],[AS_HELP_STRING([--enable-debug],[enable debug support (de
 [CFLAGS="$(echo $CFLAGS|sed s/-O./-g/)";NVCFLAGS="$NVCFLAGS -g -G"],[CFLAGS="$CFLAGS";NVCFLAGS="$NVCFLAGS"])
 
 AC_ARG_ENABLE([gprof],[AS_HELP_STRING([--enable-gprof],[enable gprof support (default=disabled)])],
-[CFLAGS="$(echo $CFLAGS|sed s/-O./-pg/)"],[CFLAGS="$CFLAGS"])
+[CFLAGS="$(echo $CFLAGS|sed s/-O./-pg/)";NVCFLAGS="$NVCFLAGS -pg"],[CFLAGS="$CFLAGS";NVCFLAGS="$NVCFLAGS"])
 
 AC_ARG_ENABLE([quiet],[AS_HELP_STRING([--enable-quiet],[no output except warning and error (default=disabled)])],
 [NVCFLAGS="$NVCFLAGS"],[NVCFLAGS="$NVCFLAGS --ptxas-options=-v"])
@@ -106,6 +105,7 @@ AC_CHECK_HEADERS([cuda_runtime_api.h],,AC_MSG_ERROR(cuda_runtime_api.h required)
 AC_CHECK_LIB([crypto],AES_set_encrypt_key,[LIBS="-lcrypto";LIBS_TEST="-lcrypto"],[AC_MSG_ERROR([Cannot find crypto library])])
 AC_CHECK_LIB([cudart],cudaGetDeviceCount,[LIBS="$LIBS -lcudart"],[AC_MSG_ERROR([Cannot find cuda runtime library])])
 
+CFLAGS_TEST="$CFLAGS"
 CFLAGS="$CFLAGS -fPIC"
 
 AC_SUBST(NVCC)

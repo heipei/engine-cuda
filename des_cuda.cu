@@ -324,7 +324,7 @@ extern "C" void DES_cuda_crypt(const unsigned char *in, unsigned char *out, size
 	}
 
 	if (output_verbosity==OUTPUT_VERBOSE)
-		fprintf(stdout,"Starting DES kernel for %d bytes with (%d, (%d, %d))...\n", nbytes, gridSize, dimBlock.x, dimBlock.y);
+		fprintf(stdout,"Starting DES kernel for %zu bytes with (%d, (%d, %d))...\n", nbytes, gridSize, dimBlock.x, dimBlock.y);
 
 	if(enc == DES_ENCRYPT) {
 		DESencKernel<<<gridSize,dimBlock>>>(des_d_s);
@@ -334,7 +334,7 @@ extern "C" void DES_cuda_crypt(const unsigned char *in, unsigned char *out, size
 		_CUDA_N("DES decryption kernel could not be launched!");
 	}
 
-	transferDeviceToHost(&out, (uint32_t **)&des_d_s, &des_h_s, &nbytes);
+	transferDeviceToHost(&out, (uint32_t **)&des_d_s, &des_h_s, &des_h_s, &nbytes);
 }
 
 extern "C" void DES_cuda_transfer_key_schedule(DES_key_schedule *ks) {

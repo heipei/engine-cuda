@@ -654,7 +654,7 @@ texture <unsigned int,1,cudaReadModeElementType> texref_dk;
 texture <int,1,cudaReadModeElementType> texref_r; 
 
 void (*transferHostToDevice) (const unsigned char  **input, uint32_t **deviceMem, uint8_t **hostMem, size_t *size);
-void (*transferDeviceToHost) (      unsigned char **output, uint32_t **deviceMem, uint8_t **hostMem, size_t *size);
+void (*transferDeviceToHost) (      unsigned char **output, uint32_t **deviceMem, uint8_t **hostMemS, uint8_t **hostMemOUT, size_t *size);
 
 #if defined T_TABLE_CONSTANT
 __global__ void AESencKernel(uint32_t state[]) {
@@ -1007,7 +1007,7 @@ extern "C" void AES_cuda_encrypt(const unsigned char *in, unsigned char *out, si
 			_CUDA_N("kernel launch failure");
 			}
 
-	transferDeviceToHost (&out, &d_s, &h_s, &nbytes);
+	transferDeviceToHost (&out, &d_s, &h_s, &h_s, &nbytes);
 	
 	if (output_verbosity==OUTPUT_VERBOSE) fprintf(stdout,"done!\n");
 }
@@ -1040,7 +1040,7 @@ extern "C" void AES_cuda_decrypt(const unsigned char *in, unsigned char *out,siz
 			_CUDA_N("kernel launch failure");
 			}
 
-	transferDeviceToHost (&out, &d_s, &h_s, &nbytes);
+	transferDeviceToHost (&out, &d_s, &h_s, &h_s, &nbytes);
 	
 	if (output_verbosity==OUTPUT_VERBOSE) fprintf(stdout,"done!\n");
 	}
@@ -1273,8 +1273,8 @@ __global__ void AESdecKernel_cbc(uint32_t in[],uint32_t out[],uint32_t iv[]) {
 		out[blockIdx.x*MAX_THREAD+threadIdx.x] = iv[threadIdx.x] ^ s[threadIdx.x];
 		else out[blockIdx.x*MAX_THREAD+threadIdx.x+4*threadIdx.y] = in[blockIdx.x*MAX_THREAD+(threadIdx.x+4*threadIdx.y)-4] ^
 										 s[threadIdx.x+4*threadIdx.y];
-	if(blockIdx.x==(gridDim.x-1) && threadIdx.y==(MAX_THREAD/STATE_THREAD_AES-1))
-		iv[threadIdx.x]=in[blockIdx.x*MAX_THREAD+4*threadIdx.y+threadIdx.x];
+//	if(blockIdx.x==(gridDim.x-1) && threadIdx.y==(blockDim.y-1))
+//		iv[threadIdx.x]=in[blockIdx.x*MAX_THREAD+4*threadIdx.y+threadIdx.x];
 }
 
 #else
@@ -1368,8 +1368,8 @@ __global__ void AESdecKernel_cbc(uint32_t in[],uint32_t out[],uint32_t iv[]) {
 		out[blockIdx.x*MAX_THREAD+threadIdx.x] = iv[threadIdx.x] ^ s[threadIdx.x];
 		else out[blockIdx.x*MAX_THREAD+threadIdx.x+4*threadIdx.y] = in[blockIdx.x*MAX_THREAD+(threadIdx.x+4*threadIdx.y)-4] ^
 										 s[threadIdx.x+4*threadIdx.y];
-	if(blockIdx.x==(gridDim.x-1) && threadIdx.y==(MAX_THREAD/STATE_THREAD_AES-1))
-		iv[threadIdx.x]=in[blockIdx.x*MAX_THREAD+4*threadIdx.y+threadIdx.x];
+//	if(blockIdx.x==(gridDim.x-1) && threadIdx.y==(blockDim.y-1))
+//		iv[threadIdx.x]=in[blockIdx.x*MAX_THREAD+4*threadIdx.y+threadIdx.x];
 	}
 
 #endif
@@ -1407,7 +1407,7 @@ extern "C" void AES_cuda_decrypt_cbc(const unsigned char *in, unsigned char *out
 			_CUDA_N("kernel launch failure");
 			}
 
-	transferDeviceToHost(&out, &d_out, &h_s, &nbytes);
+	transferDeviceToHost(&out, &d_out, &h_s, &h_out, &nbytes);
 
 	if (output_verbosity==OUTPUT_VERBOSE) fprintf(stdout,"done!\n");
 	}
@@ -1620,7 +1620,7 @@ extern "C" void AES_cuda_encrypt_cbc(const unsigned char *in, unsigned char *out
 	AESencKernel_cbc<<<dimGrid,dimBlock>>>(d_s,d_iv,nbytes);
 	_CUDA_N("kernel launch failure");
 
-	transferDeviceToHost(&out, &d_s, &h_s, &nbytes);
+	transferDeviceToHost(&out, &d_s, &h_s, &h_s, &nbytes);
 
 	if (output_verbosity==OUTPUT_VERBOSE) fprintf(stdout,"done!\n");
 	}

@@ -284,9 +284,9 @@ static int cuda_aes_init_key (EVP_CIPHER_CTX *ctx, const unsigned char *key, con
 			return 0;
 		}
 	}
-	
+#ifndef CBC_ENC_CPU
 	AES_cuda_transfer_iv(iv);
-
+#endif
 	if (!quiet && verbose) fprintf(stdout,"DONE!\n");
 	return 1;
 }
@@ -433,11 +433,15 @@ static int cuda_aes_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const u
 			while (nbytes!=current) {
 				chunk=(nbytes-current)/(MAX_THREAD*STATE_THREAD_AES);
 				if(chunk>=1) {
+					AES_cuda_transfer_iv(ctx->iv);
 					AES_cuda_decrypt_cbc((in_arg+current),(out_arg+current),chunk*MAX_THREAD*STATE_THREAD_AES);
 					current+=chunk*MAX_THREAD*STATE_THREAD_AES;	
+					memcpy(ctx->iv,(in_arg+current-AES_BLOCK_SIZE),AES_BLOCK_SIZE);
 					} else {
+						AES_cuda_transfer_iv(ctx->iv);
 						AES_cuda_decrypt_cbc((in_arg+current),(out_arg+current),(nbytes-current));
 						current+=(nbytes-current);
+						memcpy(ctx->iv,(in_arg+current-AES_BLOCK_SIZE),AES_BLOCK_SIZE);
 					}
 				}
 #endif

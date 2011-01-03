@@ -6,14 +6,16 @@
 #include <common.h>
 
 #ifndef PAGEABLE
-extern "C" void transferHostToDevice_PINNED (const unsigned char **input, uint32_t **deviceMem, uint8_t **hostMem, size_t *size) {
+extern "C" void transferHostToDevice_PINNED   (const unsigned char **input, uint32_t **deviceMem, uint8_t **hostMem, size_t *size) {
 	cudaError_t cudaerrno;
 	memcpy(*hostMem,*input,*size);
         _CUDA(cudaMemcpyAsync(*deviceMem, *hostMem, *size, cudaMemcpyHostToDevice, 0));
 }
 #if CUDART_VERSION >= 2020
 extern "C" void transferHostToDevice_ZEROCOPY (const unsigned char **input, uint32_t **deviceMem, uint8_t **hostMem, size_t *size) {
+	//cudaError_t cudaerrno;
 	memcpy(*hostMem,*input,*size);
+	//_CUDA(cudaHostGetDevicePointer(&d_s,h_s, 0));
 }
 #endif
 #else
@@ -22,26 +24,28 @@ extern "C" void transferHostToDevice_PAGEABLE (const unsigned char **input, uint
 	_CUDA(cudaMemcpy(*deviceMem, *input, *size, cudaMemcpyHostToDevice));
 }
 #endif
+
 #ifndef PAGEABLE
-extern "C" void transferDeviceToHost_PINNED   (unsigned char **output, uint32_t **deviceMem, uint8_t **hostMem, size_t *size) {
+extern "C" void transferDeviceToHost_PINNED   (unsigned char **output, uint32_t **deviceMem, uint8_t **hostMemS, uint8_t **hostMemOUT, size_t *size) {
 	cudaError_t cudaerrno;
-        _CUDA(cudaMemcpyAsync(*hostMem, *deviceMem, *size, cudaMemcpyDeviceToHost, 0));
+        _CUDA(cudaMemcpyAsync(*hostMemS, *deviceMem, *size, cudaMemcpyDeviceToHost, 0));
 	_CUDA(cudaThreadSynchronize());
-	memcpy(*output,*hostMem,*size);
+	memcpy(*output,*hostMemS,*size);
 }
 #if CUDART_VERSION >= 2020
-extern "C" void transferDeviceToHost_ZEROCOPY (unsigned char **output, uint32_t **deviceMem, uint8_t **hostMem, size_t *size) {
+extern "C" void transferDeviceToHost_ZEROCOPY (unsigned char **output, uint32_t **deviceMem, uint8_t **hostMemS, uint8_t **hostMemOUT, size_t *size) {
 	cudaError_t cudaerrno;
 	_CUDA(cudaThreadSynchronize());
-	memcpy(*output,*hostMem,*size);
+	memcpy(*output,*hostMemOUT,*size);
 }
 #endif
 #else
-extern "C" void transferDeviceToHost_PAGEABLE (unsigned char **output, uint32_t **deviceMem, uint8_t **hostMem, size_t *size) {
+extern "C" void transferDeviceToHost_PAGEABLE (unsigned char **output, uint32_t **deviceMem, uint8_t **hostMemS, uint8_t **hostMemOUT, size_t *size) {
 	cudaError_t cudaerrno;
 	_CUDA(cudaMemcpy(*output,*deviceMem,*size, cudaMemcpyDeviceToHost));
 }
 #endif
+
 
 void checkCUDADevice(struct cudaDeviceProp *deviceProp, int output_verbosity) {
 	int deviceCount;

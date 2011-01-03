@@ -33,8 +33,8 @@ NVCPPFLAGS= @NVCPPFLAGS@
 
 CFLAGS= @CFLAGS@
 
-NVCFLAGS_LIBS = @NVCFLAGS@ --compiler-options '-Wall -fPIC'
-NVCFLAGS_TEST = @NVCFLAGS@ --compiler-options '-Wall'
+NVCFLAGS_LIBS = @NVCFLAGS@ --compiler-options '@CFLAGS@'
+NVCFLAGS_TEST = @NVCFLAGS@ --compiler-options '@CFLAGS_TEST@'
 
 LIBS_TEST = @LIBS_TEST@
 LIBS_LIBS = @LIBS@
@@ -78,7 +78,7 @@ install: $(LIBNAME)
 	cp $(LIBNAME) @prefix@/@ENGINEDIR@
 
 clean:
-	rm -f *.o *.obj tags core .pure .nfs* *.old *.bak fluff *.linkinfo *.so *.a teststate
+	rm -f *.o *.obj lib tags core .pure *.out .nfs* *.old *.bak fluff *.linkinfo *.so *.a teststate
 	rm -f *.cpp1.ii *.cpp2.i *.cpp3.i *.cpp4.ii *.cu.cpp *.cudafe1.c *.cudafe1.cpp *.cudafe1.gpu 
 	rm -f *.cudafe1.stub.c *.cudafe2.c *.cudafe2.gpu *.cudafe2.stub.c *.fatbin.c *.hash *.ptx *.sm_11.cubin
 
