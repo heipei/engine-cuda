@@ -1,11 +1,14 @@
 == General ==
+- Testing framework
 - Non-blocking kernel calls?
 - Many calls to CudaMemcpy, where from?
 - Single Init / Finish for CUDA
+- Adjust buffersize to device memory
 
 == DES ==
 - CBC
 - Same memory for in and out?
-- warp serializing / gst uncoalesced (CUDA profiler)
+- warp serializing / gst uncoalesced (CUDA profiler): bank conflicts. shared memory or texture memory?
+- warp serializing also on s (round key)
 - des_SP into texture memory (or shared memory) because access to it is _never_ coalesced?
 

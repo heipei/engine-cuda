@@ -10,7 +10,7 @@
 #include "common.h"
 #include "cuPrintf.cu"
 
-__constant__ uint32_t des_d_sp[8][64]={
+__constant__ uint32_t des_d_sp_c[8][64]={
 {
 /* nibble 0 */
 0x02080800L, 0x00080000L, 0x02000002L, 0x02080802L,
@@ -157,12 +157,14 @@ __constant__ uint32_t des_d_sp[8][64]={
 0x20000000L, 0x20800080L, 0x00020000L, 0x00820080L,
 }};
 
-__constant__ uint64_t s[16];
+__shared__ uint32_t des_d_sp[8][64];
+
+__constant__ uint64_t cs[16];
+__shared__ uint64_t s[16];
 
 __device__ __constant__ uint64_t *des_d_s;
-//__device__ uint32_t *des_d_iv;
-
 uint8_t  *des_h_s;
+//__device__ uint32_t *des_d_iv;
 
 float des_elapsed;
 cudaEvent_t des_start,des_stop;
@@ -210,10 +212,19 @@ cudaEvent_t des_start,des_stop;
 
 __global__ void DESencKernel(uint64_t *data) {
 	
+	if(threadIdx.x < 16)
+		s[threadIdx.x] = cs[threadIdx.x];
+
+	// Careful: Based on the assumption of a constant 128 threads!
+	((uint32_t *)des_d_sp)[threadIdx.x] = ((uint32_t *)des_d_sp_c)[threadIdx.x];
+	((uint32_t *)des_d_sp)[threadIdx.x+128] = ((uint32_t *)des_d_sp_c)[threadIdx.x+128];
+	((uint32_t *)des_d_sp)[threadIdx.x+256] = ((uint32_t *)des_d_sp_c)[threadIdx.x+256];
+	((uint32_t *)des_d_sp)[threadIdx.x+384] = ((uint32_t *)des_d_sp_c)[threadIdx.x+384];
+
 	uint64_t load = data[TX];
 	uint32_t right = load;
 	uint32_t left = load>>32;
-
+	
 	unsigned int t,u;
 	unsigned char *des_SP = (unsigned char *) (&des_d_sp);
 
@@ -222,22 +233,22 @@ __global__ void DESencKernel(uint64_t *data) {
 	left=ROTATE(left,29);
 	right=ROTATE(right,29);
 
-	D_ENCRYPT(left,right, 0); /*  1 */
-	D_ENCRYPT(right,left, 1); /*  2 */
-	D_ENCRYPT(left,right, 2); /*  3 */
-	D_ENCRYPT(right,left, 3); /*  4 */
-	D_ENCRYPT(left,right, 4); /*  5 */
-	D_ENCRYPT(right,left, 5); /*  6 */
-	D_ENCRYPT(left,right, 6); /*  7 */
-	D_ENCRYPT(right,left, 7); /*  8 */
-	D_ENCRYPT(left,right, 8); /*  9 */
-	D_ENCRYPT(right,left, 9); /*  10 */
-	D_ENCRYPT(left,right,10); /*  11 */
-	D_ENCRYPT(right,left,11); /*  12 */
-	D_ENCRYPT(left,right,12); /*  13 */
-	D_ENCRYPT(right,left,13); /*  14 */
-	D_ENCRYPT(left,right,14); /*  15 */
-	D_ENCRYPT(right,left,15); /*  16 */
+	D_ENCRYPT(left,right, 0);
+	D_ENCRYPT(right,left, 1);
+	D_ENCRYPT(left,right, 2);
+	D_ENCRYPT(right,left, 3);
+	D_ENCRYPT(left,right, 4);
+	D_ENCRYPT(right,left, 5);
+	D_ENCRYPT(left,right, 6);
+	D_ENCRYPT(right,left, 7);
+	D_ENCRYPT(left,right, 8);
+	D_ENCRYPT(right,left, 9);
+	D_ENCRYPT(left,right,10);
+	D_ENCRYPT(right,left,11);
+	D_ENCRYPT(left,right,12);
+	D_ENCRYPT(right,left,13);
+	D_ENCRYPT(left,right,14);
+	D_ENCRYPT(right,left,15);
 
 	left=ROTATE(left,3);
 	right=ROTATE(right,3);
@@ -248,6 +259,14 @@ __global__ void DESencKernel(uint64_t *data) {
 
 __global__ void DESdecKernel(uint64_t *data) {
 	
+	if(threadIdx.x < 16)
+		s[threadIdx.x] = cs[threadIdx.x];
+
+	((uint32_t *)des_d_sp)[threadIdx.x] = ((uint32_t *)des_d_sp_c)[threadIdx.x];
+	((uint32_t *)des_d_sp)[threadIdx.x+128] = ((uint32_t *)des_d_sp_c)[threadIdx.x+128];
+	((uint32_t *)des_d_sp)[threadIdx.x+256] = ((uint32_t *)des_d_sp_c)[threadIdx.x+256];
+	((uint32_t *)des_d_sp)[threadIdx.x+384] = ((uint32_t *)des_d_sp_c)[threadIdx.x+384];
+
 	uint64_t load = data[TX];
 	uint32_t right = load;
 	uint32_t left = load>>32;
@@ -287,22 +306,20 @@ __global__ void DESdecKernel(uint64_t *data) {
 extern "C" void DES_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc) {
 	assert(in && out && nbytes);
 	cudaError_t cudaerrno;
-	int gridSize = nbytes/(MAX_THREAD*2)+1;
+	int gridSize;
 	dim3 dimBlock(MAX_THREAD, 1, 1);
 
 	transferHostToDevice(&in, (uint32_t **)&des_d_s, &des_h_s, &nbytes);
 
 	if ((nbytes%(MAX_THREAD*DES_BLOCK_SIZE))==0) {
-		//gridSize = nbytes/(MAX_THREAD*DES_BLOCK_SIZE);
-		//dimBlock.x = nbytes/DES_BLOCK_SIZE;
+		gridSize = nbytes/(MAX_THREAD*2);
 	} else {
-		dimBlock.x = MAX_THREAD;
+		gridSize = nbytes/(MAX_THREAD*2)+1;
 	}
 
 	if (output_verbosity==OUTPUT_VERBOSE)
 		fprintf(stdout,"Starting DES kernel with (%d, (%d, %d))...\n", gridSize, dimBlock.x, dimBlock.y);
 
-	//cudaPrintfInit();
 	if(enc == DES_ENCRYPT) {
 		DESencKernel<<<gridSize,dimBlock>>>(des_d_s);
 		_CUDA_N("DES encryption kernel could not be launched!");
@@ -310,8 +327,6 @@ extern "C" void DES_cuda_crypt(const unsigned char *in, unsigned char *out, size
 		DESdecKernel<<<gridSize,dimBlock>>>(des_d_s);
 		_CUDA_N("DES decryption kernel could not be launched!");
 	}
-	//cudaPrintfDisplay(stdout,true);
-	//cudaPrintfEnd();
 
 	transferDeviceToHost(&out, (uint32_t **)&des_d_s, &des_h_s, &nbytes);
 }
@@ -320,7 +335,7 @@ extern "C" void DES_cuda_transfer_key_schedule(DES_key_schedule *ks) {
 	assert(ks);
 	cudaError_t cudaerrno;
 	size_t ks_size = sizeof(DES_key_schedule);
-	_CUDA(cudaMemcpyToSymbolAsync(s,ks,ks_size,0,cudaMemcpyHostToDevice));
+	_CUDA(cudaMemcpyToSymbolAsync(cs,ks,ks_size,0,cudaMemcpyHostToDevice));
 }
 
 extern "C" void DES_cuda_finish() {
@@ -332,21 +347,17 @@ extern "C" void DES_cuda_finish() {
 #if CUDART_VERSION >= 2020
 	if(isIntegrated) {
 		_CUDA(cudaFreeHost(des_h_s));
-		//_CUDA(cudaFreeHost(des_h_out));
 		//_CUDA(cudaFreeHost(des_h_iv));
 	} else {
 		_CUDA(cudaFree(des_d_s));
-		//_CUDA(cudaFree(des_d_out));
 		//_CUDA(cudaFree(des_d_iv));
 	}
 #else	
 	_CUDA(cudaFree(des_d_s));
-	//_CUDA(cudaFree(des_d_out));
 	//_CUDA(cudaFree(des_d_iv));
 #endif
 #else
 	_CUDA(cudaFree(des_d_s));
-	//_CUDA(cudaFree(des_d_out));
 	//_CUDA(cudaFree(des_d_iv));
 #endif	
 

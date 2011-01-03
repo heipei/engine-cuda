@@ -286,7 +286,7 @@ static int cuda_des_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const u
 		}
 #else
 		int chunk;
-		int maxbytes = 8388608/1024;
+		int maxbytes = 16777216/1024;
 		while (nbytes!=current) {
 			//maxbytes = num_multiprocessors*8*MAX_THREAD*STATE_THREAD_DES;
 			chunk=(nbytes-current)/maxbytes;

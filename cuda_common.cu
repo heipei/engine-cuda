@@ -10,19 +10,17 @@ extern "C" void transferHostToDevice_PINNED (const unsigned char **input, uint32
 	cudaError_t cudaerrno;
 	memcpy(*hostMem,*input,*size);
         _CUDA(cudaMemcpyAsync(*deviceMem, *hostMem, *size, cudaMemcpyHostToDevice, 0));
-	}
+}
 #if CUDART_VERSION >= 2020
 extern "C" void transferHostToDevice_ZEROCOPY (const unsigned char **input, uint32_t **deviceMem, uint8_t **hostMem, size_t *size) {
-	//cudaError_t cudaerrno;
 	memcpy(*hostMem,*input,*size);
-	//_CUDA(cudaHostGetDevicePointer(&d_s,h_s, 0));
-	}
+}
 #endif
 #else
 extern "C" void transferHostToDevice_PAGEABLE (const unsigned char **input, uint32_t **deviceMem, uint8_t **hostMem, size_t *size) {
 	cudaError_t cudaerrno;
 	_CUDA(cudaMemcpy(*deviceMem, *input, *size, cudaMemcpyHostToDevice));
-	}
+}
 #endif
 #ifndef PAGEABLE
 extern "C" void transferDeviceToHost_PINNED   (unsigned char **output, uint32_t **deviceMem, uint8_t **hostMem, size_t *size) {
@@ -30,19 +28,19 @@ extern "C" void transferDeviceToHost_PINNED   (unsigned char **output, uint32_t 
         _CUDA(cudaMemcpyAsync(*hostMem, *deviceMem, *size, cudaMemcpyDeviceToHost, 0));
 	_CUDA(cudaThreadSynchronize());
 	memcpy(*output,*hostMem,*size);
-	}
+}
 #if CUDART_VERSION >= 2020
 extern "C" void transferDeviceToHost_ZEROCOPY (unsigned char **output, uint32_t **deviceMem, uint8_t **hostMem, size_t *size) {
 	cudaError_t cudaerrno;
 	_CUDA(cudaThreadSynchronize());
 	memcpy(*output,*hostMem,*size);
-	}
+}
 #endif
 #else
 extern "C" void transferDeviceToHost_PAGEABLE (unsigned char **output, uint32_t **deviceMem, uint8_t **hostMem, size_t *size) {
 	cudaError_t cudaerrno;
 	_CUDA(cudaMemcpy(*output,*deviceMem,*size, cudaMemcpyDeviceToHost));
-	}
+}
 #endif
 
 void checkCUDADevice(struct cudaDeviceProp *deviceProp, int output_verbosity) {
@@ -74,40 +72,4 @@ void checkCUDADevice(struct cudaDeviceProp *deviceProp, int output_verbosity) {
 #endif
 		fprintf(stdout,"\n");
 		}
-}
-
-extern "C" void tobinary(unsigned char i) {
-	unsigned char r=i%2;
-	if(i>=2) { 
-		tobinary(i/2);
-	}
-	putchar('0'+r); 
-}
-
-extern "C" const char *byte_to_binary(int x) {
-	static char b[9];
-	b[0] = '\0';
-
-	int z;
-	for (z = 256; z > 0; z >>= 1) {
-		strcat(b, ((x & z) == z) ? "1" : "0");
-	}
-
-	return b;
-}
-
-// buffer must have length >= sizeof(int) + 1
-// Write to the buffer backwards so that the binary representation
-// is in the correct order i.e.  the LSB is on the far right
-// instead of the far left of the printed string
-extern "C" char *int2bin(unsigned int a, char *buffer, int buf_size) {
-    buffer += (buf_size - 1);
-
-    for (int i = 31; i >= 0; i--) {
-        *buffer-- = (a & 1) + '0';
-
-        a >>= 1;
-    }
-
-    return buffer;
 }
