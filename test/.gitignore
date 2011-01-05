@@ -1,2 +1,4 @@
 sample.in
 des.*
+*.out
+*.out*

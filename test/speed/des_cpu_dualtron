@@ -1,0 +1,24 @@
+Doing des-ecb for 3s on 16 size blocks: 8566654 des-ecb's in 2.97s
+Doing des-ecb for 3s on 64 size blocks: 2176829 des-ecb's in 2.93s
+Doing des-ecb for 3s on 256 size blocks: 540345 des-ecb's in 2.94s
+Doing des-ecb for 3s on 1024 size blocks: 134997 des-ecb's in 2.94s
+Doing des-ecb for 3s on 2048 size blocks: 69277 des-ecb's in 3.00s
+Doing des-ecb for 3s on 4096 size blocks: 34584 des-ecb's in 2.99s
+Doing des-ecb for 3s on 8192 size blocks: 17266 des-ecb's in 3.00s
+Doing des-ecb for 3s on 16384 size blocks: 8559 des-ecb's in 3.00s
+Doing des-ecb for 3s on 32768 size blocks: 4285 des-ecb's in 3.00s
+Doing des-ecb for 3s on 65536 size blocks: 2139 des-ecb's in 3.00s
+Doing des-ecb for 3s on 131072 size blocks: 1066 des-ecb's in 3.00s
+Doing des-ecb for 3s on 262144 size blocks: 533 des-ecb's in 3.00s
+Doing des-ecb for 3s on 524288 size blocks: 267 des-ecb's in 3.00s
+Doing des-ecb for 3s on 1048576 size blocks: 131 des-ecb's in 2.95s
+Doing des-ecb for 3s on 2097152 size blocks: 66 des-ecb's in 2.98s
+Doing des-ecb for 3s on 4194304 size blocks: 33 des-ecb's in 2.99s
+Doing des-ecb for 3s on 8388608 size blocks: 17 des-ecb's in 3.07s
+OpenSSL 1.0.0b 16 Nov 2010
+built on: Wed Dec  1 21:52:12 CET 2010
+options:bn(64,64) rc4(8x,char) des(idx,cisc,16,int) aes(partial) idea(int) blowfish(idx) 
+compiler: gcc -DOPENSSL_THREADS -D_REENTRANT -DDSO_DLFCN -DHAVE_DLFCN_H -m64 -DL_ENDIAN -DTERMIO -O3 -Wall -DMD32_REG_T=int -DOPENSSL_IA32_SSE2 -DOPENSSL_BN_ASM_MONT -DSHA1_ASM -DSHA256_ASM -DSHA512_ASM -DMD5_ASM -DAES_ASM -DWHIRLPOOL_ASM
+The 'numbers' are in 1000s of bytes per second processed.
+type             16 bytes     64 bytes    256 bytes   1024 bytes   2048 bytes   4096 bytes   8192 bytes  16384 bytes  32768 bytes  65536 bytes 131072 bytes 262144 bytes 524288 bytes1048576 bytes2097152 bytes4194304 bytes8388608 bytes
+des-ecb          46150.32k    47548.48k    47050.45k    47019.36k    47293.10k    47376.61k    47147.69k    46743.55k    46803.63k    46727.17k    46574.25k    46574.25k    46661.63k    46563.88k    46446.99k    46291.65k    46451.58k

@@ -8,7 +8,7 @@
 #include <openssl/des.h>
 #include "cuda_common.h"
 #include "common.h"
-#include "lib/cuPrintf.cu"
+//#include "lib/cuPrintf.cu"
 
 __constant__ uint32_t des_d_sp_c[8][64]={
 {
@@ -212,10 +212,13 @@ cudaEvent_t des_start,des_stop;
 
 __global__ void DESencKernel(uint64_t *data) {
 	
-	if(threadIdx.x < 16)
-		s[threadIdx.x] = cs[threadIdx.x];
+	//if(threadIdx.x < 16)
+		s[threadIdx.x%16] = cs[threadIdx.x%16];
+	//__syncthreads();
 
 	// Careful: Based on the assumption of a constant 128 threads!
+	// What happens for kernel calls with less than 128 threads, like the final padding 8-byte call?
+	// It seems to work, but might be because of a strange race condition. Watch out!
 	((uint32_t *)des_d_sp)[threadIdx.x] = ((uint32_t *)des_d_sp_c)[threadIdx.x];
 	((uint32_t *)des_d_sp)[threadIdx.x+128] = ((uint32_t *)des_d_sp_c)[threadIdx.x+128];
 	((uint32_t *)des_d_sp)[threadIdx.x+256] = ((uint32_t *)des_d_sp_c)[threadIdx.x+256];
@@ -310,15 +313,18 @@ extern "C" void DES_cuda_crypt(const unsigned char *in, unsigned char *out, size
 	dim3 dimBlock(MAX_THREAD, 1, 1);
 
 	transferHostToDevice(&in, (uint32_t **)&des_d_s, &des_h_s, &nbytes);
-
+	
+	// TODO: MAX_THREAD*4 because DES encrypts 4 bytes at once!
 	if ((nbytes%(MAX_THREAD*DES_BLOCK_SIZE))==0) {
-		gridSize = nbytes/(MAX_THREAD*2);
+		gridSize = nbytes/(MAX_THREAD*DES_BLOCK_SIZE);
 	} else {
-		gridSize = nbytes/(MAX_THREAD*2)+1;
+		if (nbytes < MAX_THREAD*DES_BLOCK_SIZE)
+			dimBlock.x = nbytes / 8;
+		gridSize = nbytes/(MAX_THREAD*DES_BLOCK_SIZE)+1;
 	}
 
 	if (output_verbosity==OUTPUT_VERBOSE)
-		fprintf(stdout,"Starting DES kernel with (%d, (%d, %d))...\n", gridSize, dimBlock.x, dimBlock.y);
+		fprintf(stdout,"Starting DES kernel for %d bytes with (%d, (%d, %d))...\n", nbytes, gridSize, dimBlock.x, dimBlock.y);
 
 	if(enc == DES_ENCRYPT) {
 		DESencKernel<<<gridSize,dimBlock>>>(des_d_s);

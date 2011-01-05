@@ -42,10 +42,10 @@ LIBS_LIBS = @LIBS@
 LIBNAME = libcudamrg.so
 TESTNAME= teststate
 
-LIBSRC = e_cuda.c aes_cuda.cu des_cuda.cu cuda_common.cu common.c
+LIBSRC = e_cuda.c aes_cuda.cu des_cuda.cu idea_cuda.cu cuda_common.cu common.c
 TESTSRC= teststate.c aes_cuda.cu
 
-LIBOBJ = e_cuda.o aes_cuda.o des_cuda.o cuda_common.o common.o
+LIBOBJ = e_cuda.o aes_cuda.o des_cuda.o idea_cuda.o cuda_common.o common.o
 TESTOBJ= aes_cuda.o teststate.o
 
 all: $(LIBNAME)
@@ -63,6 +63,9 @@ aes_cuda.o: aes_cuda.cu cuda_common.cu
 
 des_cuda.o: des_cuda.cu cuda_common.cu
 	$(NVCC) $(NVCPPFLAGS) $(NVCFLAGS_LIBS) -c -o des_cuda.o des_cuda.cu
+
+idea_cuda.o: idea_cuda.cu cuda_common.cu
+	$(NVCC) $(NVCPPFLAGS) $(NVCFLAGS_LIBS) -c -o idea_cuda.o idea_cuda.cu
 
 common.o: common.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -c -o common.o common.c
