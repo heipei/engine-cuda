@@ -8,7 +8,7 @@
 #include <openssl/des.h>
 #include "cuda_common.h"
 #include "common.h"
-#include "cuPrintf.cu"
+#include "lib/cuPrintf.cu"
 
 __constant__ uint32_t des_d_sp_c[8][64]={
 {

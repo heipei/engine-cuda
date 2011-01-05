@@ -4,6 +4,7 @@
 - Many calls to CudaMemcpy, where from?
 - Single Init / Finish for CUDA
 - Adjust buffersize to device memory
+- cuPrintf inclusion OK?
 
 == DES ==
 - CBC
