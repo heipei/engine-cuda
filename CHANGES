@@ -2,7 +2,7 @@
 Engine_cudamrg CHANGES
  _______________
 
- Changes between 0.1.0 and 0.1.1  [01 Nov 2010]
+ Changes between 0.1.0 and 0.1.1  [10 Jan 2011]
 
   *) Optimized support for integrated GPU.
      [Paolo Margara <paolo.margara@gmail.com>]
@@ -10,7 +10,7 @@ Engine_cudamrg CHANGES
   *) Build process simplified.
      [Paolo Margara <paolo.margara@gmail.com>]
 
-  *) Generic code cleanup and many optimizations.
+  *) Generic code cleanup, bug fixes and many optimizations.
      [Paolo Margara <paolo.margara@gmail.com>]
 
   *) Now encryption for AES CBC mode are computed by the cpu.
@@ -21,7 +21,7 @@ Engine_cudamrg CHANGES
      If you want you can re-enable it on the configure command line.
      [Paolo Margara <paolo.margara@gmail.com>]
 
-  *) Performance improvement from 5% to 30% depending from your hardware
+  *) Performance improvement from 6% to 12% depending from your hardware
      configuration.
      [Paolo Margara <paolo.margara@gmail.com>]
 
