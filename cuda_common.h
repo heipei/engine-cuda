@@ -4,6 +4,22 @@
 static int __attribute__((unused)) output_verbosity;
 static int __attribute__((unused)) isIntegrated;
 
+#define n2l(c,l)        (l =((unsigned long)(*(c)))<<24L, \
+                         l|=((unsigned long)(*(c+1)))<<16L, \
+                         l|=((unsigned long)(*(c+2)))<< 8L, \
+                         l|=((unsigned long)(*(c+3))))
+
+#define flip64(a)	(a= \
+			((a & 0x00000000000000FF) << 56) | \
+			((a & 0x000000000000FF00) << 40) | \
+			((a & 0x0000000000FF0000) << 24) | \
+			((a & 0x00000000FF000000) << 8)  | \
+			((a & 0x000000FF00000000) >> 8)  | \
+			((a & 0x0000FF0000000000) >> 24) | \
+			((a & 0x00FF000000000000) >> 40) | \
+			((a & 0xFF00000000000000) >> 56))
+
+
 #define _CUDA(call) {																	\
 	call;				                                												\
 	cudaerrno=cudaGetLastError();																	\

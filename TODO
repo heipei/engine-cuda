@@ -14,5 +14,7 @@
 - warp serializing also on s (round key)
 - des_SP into texture memory (or shared memory) because access to it is _never_ coalesced?
 
+== BF ==
+
 == IDEA ==
 - Bring down register use to increase occupancy

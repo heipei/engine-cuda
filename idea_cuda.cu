@@ -8,7 +8,7 @@
 #include <cuda_runtime_api.h>
 #include "cuda_common.h"
 #include "common.h"
-#include "lib/cuPrintf.cu"
+//#include "lib/cuPrintf.cu"
 
 __constant__ uint64_t idea_constant_schedule[27];
 __shared__ IDEA_KEY_SCHEDULE idea_schedule;
@@ -27,21 +27,6 @@ ul=__umul24(a,b); \
 	} \
 	else \
 		r=(-(int)a-b+1); /* assuming a or b is 0 and in range */ 
-
-#define n2l(c,l)        (l =((unsigned long)(*(c)))<<24L, \
-                         l|=((unsigned long)(*(c+1)))<<16L, \
-                         l|=((unsigned long)(*(c+2)))<< 8L, \
-                         l|=((unsigned long)(*(c+3))))
-
-#define flip64(a)	(a= \
-			((a & 0x00000000000000FF) << 56) | \
-			((a & 0x000000000000FF00) << 40) | \
-			((a & 0x0000000000FF0000) << 24) | \
-			((a & 0x00000000FF000000) << 8)  | \
-			((a & 0x000000FF00000000) >> 8)  | \
-			((a & 0x0000FF0000000000) >> 24) | \
-			((a & 0x00FF000000000000) >> 40) | \
-			((a & 0xFF00000000000000) >> 56))
 
 #define E_IDEA(num) \
 	x1&=0xffff; \

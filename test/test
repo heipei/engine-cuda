@@ -1,38 +1,47 @@
 #!/usr/bin/env zsh
 
+SIZE=100
 # TODO: Use getopt or zparseopts
 
 if [[ $ARGC -le 1 ]]; then
-	echo "> Usage: ./test.sh <algo> <file>"
-	echo "> Or:    ./test.sh <algo> sample.in <filesize> (filesize in MB)"
+	echo "> Usage: ./test.sh <algo> <file> <key>"
 	echo "> algo in {des-ecb,idea-ecb,aes-ecb}"
 	exit 0
 fi
 
+KEY="010101F10101F1F1"
+if [[ -n $3 ]]; then
+	KEY=$3;
+fi
+
 make -s -j5 -C ..
 
-if [[ $1 == "sample.in" && ! -e sample.in ]]; then;
-	echo "Creating a $3MB sample.in file..."
+if [[ $2 == "sample.in" && ! -e sample.in ]]; then;
+	echo "Creating a $SIZE MB sample.in file..."
 	dd bs=1048576 count=$2 if=/dev/urandom of=sample.in
 fi
 
 echo "==== $1 tests ===="
 echo ">> CUDA encryption"
 echo "---------------"
-time openssl enc -engine cudamrg -e -$1 -nosalt -v -in sample.in -out $1.out.cudamrg -bufsize 8388608 -K "010101F10101F1F1" 2>/dev/null 
+time openssl enc -engine cudamrg -e -$1 -nosalt -nopad -v -in sample.in -out $1.out.gpu -bufsize 8388608 -K "$KEY" 2>/dev/null 
 echo -e "\n>> CPU encryption"
 echo "--------------"
-time openssl enc -e -$1 -nosalt -v -in sample.in -out $1.out.cpu -K "010101F10101F1F1" 2>/dev/null
+time openssl enc -e -$1 -nosalt -nopad -v -in sample.in -out $1.out.cpu -K "$KEY" 2>/dev/null
 
 CHKCPU=`cksum $1.out.cpu|awk {'print $1'}`
-CHKCUDA=`cksum $1.out.cudamrg|awk {'print $1'}`
+CHKCUDA=`cksum $1.out.gpu|awk {'print $1'}`
 
 echo ""
 if [[ $CHKCPU != $CHKCUDA ]]; then
 	echo ">> CAUTION: cksum mismatch!"
 	echo ">> CPU: $CHKCPU; CUDA: $CHKCUDA"
+	echo ">> XXD CPU:"
+	xxd $1.out.cpu|head
+	echo ">> XXD GPU:"
+	xxd $1.out.gpu|head
 else
 	echo ">> CKSUM matches"
+	rm -rf $1.out.gpu $1.out.cpu
 fi
 
-#rm -rf $1.out.cudamrg $1.out.cpu

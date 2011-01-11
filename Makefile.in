@@ -42,10 +42,11 @@ LIBS_LIBS = @LIBS@
 LIBNAME = libcudamrg.so
 TESTNAME= teststate
 
-LIBSRC = e_cuda.c aes_cuda.cu des_cuda.cu idea_cuda.cu cuda_common.cu common.c
+COMMONSRC = common.h common.c cuda_common.h cuda_common.cu
 TESTSRC= teststate.c aes_cuda.cu
 
-LIBOBJ = e_cuda.o aes_cuda.o des_cuda.o idea_cuda.o cuda_common.o common.o
+LIBOBJ = e_cuda.o common.o
+LIBOBJ_CUDA = aes_cuda.o des_cuda.o idea_cuda.o bf_cuda.o cuda_common.o 
 TESTOBJ= aes_cuda.o teststate.o
 
 all: $(LIBNAME)
@@ -55,32 +56,23 @@ test: $(TESTNAME)
 $(TESTNAME): $(TESTSRC)
 	$(NVCC) $(NVCPPFLAGS) $(NVCFLAGS_TEST) $(NVLDFLAGS) $(LIBS_TEST) -o $(TESTNAME) $(TESTSRC)
 
-$(LIBNAME): $(LIBOBJ)
-	$(CC) -fPIC -shared -Wl,-soname,$(LIBNAME) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) $(LIBS_LIBS) -o $(LIBNAME) $(LIBOBJ)
+$(LIBNAME): $(LIBOBJ) $(LIBOBJ_CUDA)
+	$(CC) -fPIC -shared -Wl,-soname,$(LIBNAME) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) $(LIBS_LIBS) -o $(LIBNAME) $(LIBOBJ) $(LIBOBJ_CUDA)
 
-aes_cuda.o: aes_cuda.cu cuda_common.cu
-	$(NVCC) $(NVCPPFLAGS) $(NVCFLAGS_LIBS) -c -o aes_cuda.o aes_cuda.cu 
+$(LIBOBJ_CUDA): %.o: %.cu $(COMMONSRC)
+	$(NVCC) $(NVCPPFLAGS) $(NVCFLAGS_LIBS) -c -o $@ $<
 
-des_cuda.o: des_cuda.cu cuda_common.cu
-	$(NVCC) $(NVCPPFLAGS) $(NVCFLAGS_LIBS) -c -o des_cuda.o des_cuda.cu
-
-idea_cuda.o: idea_cuda.cu cuda_common.cu
-	$(NVCC) $(NVCPPFLAGS) $(NVCFLAGS_LIBS) -c -o idea_cuda.o idea_cuda.cu
-
-common.o: common.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -c -o common.o common.c
-
-cuda_common.o: cuda_common.cu cuda_common.h
-	$(NVCC) $(NVCPPFLAGS) $(NVCFLAGS_LIBS) -c -o cuda_common.o cuda_common.cu
+$(LIBOBJ): %.o: %.c $(COMMONSRC)
+	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -c -o $@ $<
 
 install: $(LIBNAME)
 	mkdir -p @prefix@/@ENGINEDIR@
 	cp $(LIBNAME) @prefix@/@ENGINEDIR@
 
 clean:
-	rm -f *.o *.obj lib tags core .pure *.out .nfs* *.old *.bak fluff *.linkinfo *.so *.a teststate
+	rm -f *.o *.obj tags core .pure *.out .nfs* *.old *.bak fluff *.linkinfo *.so *.a teststate
 	rm -f *.cpp1.ii *.cpp2.i *.cpp3.i *.cpp4.ii *.cu.cpp *.cudafe1.c *.cudafe1.cpp *.cudafe1.gpu 
-	rm -f *.cudafe1.stub.c *.cudafe2.c *.cudafe2.gpu *.cudafe2.stub.c *.fatbin.c *.hash *.ptx *.sm_11.cubin
+	rm -f *.cudafe1.stub.c *.cudafe2.c *.cudafe2.gpu *.cudafe2.stub.c *.fatbin.c *.hash *.ptx *.sm_*.cubin
 
 distclean: clean
 	rm -f config.* Makefile

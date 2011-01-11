@@ -26,6 +26,10 @@
 #define IDEA_KEY_SIZE		8
 #define IDEA_KEY_SIZE_64	8
 
+#define BF_BLOCK_SIZE		8
+#define BF_KEY_SIZE_64		8
+#define BF_KEY_SIZE_128		16
+
 #define TX blockIdx.x * (blockDim.x * blockDim.y) + (blockDim.y * threadIdx.x) + threadIdx.y
 
 #endif
