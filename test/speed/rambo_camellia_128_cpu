@@ -1,0 +1,24 @@
+Doing camellia-128-ecb for 3s on 16 size blocks: 26502412 camellia-128-ecb's in 2.99s
+Doing camellia-128-ecb for 3s on 64 size blocks: 6963210 camellia-128-ecb's in 2.99s
+Doing camellia-128-ecb for 3s on 256 size blocks: 1778962 camellia-128-ecb's in 2.99s
+Doing camellia-128-ecb for 3s on 1024 size blocks: 443878 camellia-128-ecb's in 3.00s
+Doing camellia-128-ecb for 3s on 2048 size blocks: 223052 camellia-128-ecb's in 2.99s
+Doing camellia-128-ecb for 3s on 4096 size blocks: 111425 camellia-128-ecb's in 2.99s
+Doing camellia-128-ecb for 3s on 8192 size blocks: 55720 camellia-128-ecb's in 2.98s
+Doing camellia-128-ecb for 3s on 16384 size blocks: 27860 camellia-128-ecb's in 2.99s
+Doing camellia-128-ecb for 3s on 32768 size blocks: 13919 camellia-128-ecb's in 2.99s
+Doing camellia-128-ecb for 3s on 65536 size blocks: 6961 camellia-128-ecb's in 2.99s
+Doing camellia-128-ecb for 3s on 131072 size blocks: 3480 camellia-128-ecb's in 2.99s
+Doing camellia-128-ecb for 3s on 262144 size blocks: 1739 camellia-128-ecb's in 2.99s
+Doing camellia-128-ecb for 3s on 524288 size blocks: 869 camellia-128-ecb's in 2.99s
+Doing camellia-128-ecb for 3s on 1048576 size blocks: 435 camellia-128-ecb's in 3.00s
+Doing camellia-128-ecb for 3s on 2097152 size blocks: 218 camellia-128-ecb's in 3.00s
+Doing camellia-128-ecb for 3s on 4194304 size blocks: 109 camellia-128-ecb's in 3.00s
+Doing camellia-128-ecb for 3s on 8388608 size blocks: 55 camellia-128-ecb's in 3.02s
+OpenSSL 1.0.0b 16 Nov 2010
+built on: Tue Dec 14 19:45:32 CET 2010
+options:bn(64,64) rc4(1x,char) des(idx,cisc,16,int) aes(partial) idea(int) blowfish(idx) 
+compiler: gcc -DOPENSSL_THREADS -D_REENTRANT -DDSO_DLFCN -DHAVE_DLFCN_H -fPIC -m64 -DL_ENDIAN -DTERMIO -O3 -Wall -DMD32_REG_T=int -DOPENSSL_IA32_SSE2 -DOPENSSL_BN_ASM_MONT -DSHA1_ASM -DSHA256_ASM -DSHA512_ASM -DMD5_ASM -DAES_ASM -DWHIRLPOOL_ASM
+The 'numbers' are in 1000s of bytes per second processed.
+type             16 bytes     64 bytes    256 bytes   1024 bytes   2048 bytes   4096 bytes   8192 bytes  16384 bytes  32768 bytes  65536 bytes 131072 bytes 262144 bytes 524288 bytes1048576 bytes2097152 bytes4194304 bytes8388608 bytes
+camellia-128-ecb   141818.93k   149045.30k   152312.47k   151510.36k   152779.43k   152641.07k   153173.91k   152661.62k   152541.07k   152573.95k   152552.03k   152464.35k   152376.68k   152043.52k   152393.05k   152393.05k   152772.66k

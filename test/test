@@ -17,8 +17,8 @@ fi
 make -s -j5 -C ..
 
 if [[ $2 == "sample.in" && ! -e sample.in ]]; then;
-	echo "Creating a $SIZE MB sample.in file..."
-	dd bs=1048576 count=$2 if=/dev/urandom of=sample.in
+	echo "Creating a 100 MB sample.in file..."
+	dd bs=1048576 count=100 if=/dev/urandom of=sample.in
 fi
 
 echo "==== $1 tests ===="
