@@ -46,7 +46,7 @@ COMMONSRC = common.h common.c cuda_common.h cuda_common.cu
 TESTSRC= teststate.c aes_cuda.cu
 
 LIBOBJ = e_cuda.o common.o
-LIBOBJ_CUDA = aes_cuda.o des_cuda.o idea_cuda.o bf_cuda.o cuda_common.o 
+LIBOBJ_CUDA = aes_cuda.o des_cuda.o idea_cuda.o bf_cuda.o cmll_cuda.o cuda_common.o 
 TESTOBJ= aes_cuda.o teststate.o
 
 all: $(LIBNAME)

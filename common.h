@@ -30,6 +30,16 @@
 #define BF_KEY_SIZE_64		8
 #define BF_KEY_SIZE_128		16
 
-#define TX blockIdx.x * (blockDim.x * blockDim.y) + (blockDim.y * threadIdx.x) + threadIdx.y
+#define CMLL_BLOCK_SIZE		16
+#define CMLL_KEY_SIZE_128	16
+#define CMLL_KEY_SIZE_192	24
+#define CMLL_KEY_SIZE_256	32
+
+#define CAMELLIA_BLOCK_SIZE	16
+#define CAMELLIA_KEY_SIZE_128	16
+#define CAMELLIA_KEY_SIZE_192	24
+#define CAMELLIA_KEY_SIZE_256	32
+
+#define TX (blockIdx.x * (blockDim.x * blockDim.y) + (blockDim.y * threadIdx.x) + threadIdx.y)
 
 #endif

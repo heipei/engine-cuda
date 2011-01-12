@@ -24,10 +24,10 @@ fi
 echo "==== $1 tests ===="
 echo ">> CUDA encryption"
 echo "---------------"
-time openssl enc -engine cudamrg -e -$1 -nosalt -nopad -v -in sample.in -out $1.out.gpu -bufsize 8388608 -K "$KEY" 2>/dev/null 
+time openssl enc -engine cudamrg -e -$1 -nosalt -nopad -v -in $2 -out $1.out.gpu -bufsize 8388608 -K "$KEY"
 echo -e "\n>> CPU encryption"
 echo "--------------"
-time openssl enc -e -$1 -nosalt -nopad -v -in sample.in -out $1.out.cpu -K "$KEY" 2>/dev/null
+time openssl enc -e -$1 -nosalt -nopad -v -in $2 -out $1.out.cpu -K "$KEY"
 
 CHKCPU=`cksum $1.out.cpu|awk {'print $1'}`
 CHKCUDA=`cksum $1.out.gpu|awk {'print $1'}`

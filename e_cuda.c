@@ -25,6 +25,7 @@
 #include "des_cuda.h"
 #include "idea_cuda.h"
 #include "bf_cuda.h"
+#include "cmll_cuda.h"
 #include "common.h"
 
 #define DYNAMIC_ENGINE
@@ -40,6 +41,7 @@ static int cuda_aes_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const u
 static int cuda_des_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigned char *in_arg, size_t nbytes);
 static int cuda_bf_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigned char *in_arg, size_t nbytes);
 static int cuda_idea_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigned char *in_arg, size_t nbytes);
+static int cuda_camellia_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigned char *in_arg, size_t nbytes);
 
 static int num_multiprocessors = 0;
 static int buffer_size = 0;
@@ -73,7 +75,8 @@ int cuda_finish(ENGINE * engine) {
 	//AES_cuda_finish();
 	//DES_cuda_finish();
 	//IDEA_cuda_finish();
-	BF_cuda_finish();
+	//BF_cuda_finish();
+	CMLL_cuda_finish();
 #ifdef CPU
 	endTime=time(NULL);
 	//if (!quiet) fprintf(stdout,"\nTotal time: %g seconds\n",difftime(endTime,startTime));
@@ -98,7 +101,8 @@ int cuda_init(ENGINE * engine) {
 //	AES_cuda_init(&num_multiprocessors,buffer_size,verbosity);
 //	DES_cuda_init(&num_multiprocessors,buffer_size,verbosity);
 //	IDEA_cuda_init(&num_multiprocessors,buffer_size,verbosity);
-	BF_cuda_init(&num_multiprocessors,buffer_size,verbosity);
+//	BF_cuda_init(&num_multiprocessors,buffer_size,verbosity);
+	CMLL_cuda_init(&num_multiprocessors,buffer_size,verbosity);
 #ifdef CPU
 	startTime=time(NULL);
 #endif
@@ -176,6 +180,7 @@ IMPLEMENT_DYNAMIC_BIND_FN(cuda_bind_fn)
 static int cuda_cipher_nids[] = {
 	NID_bf_ecb,
 	NID_bf_cbc,
+	NID_camellia_128_ecb,
 	NID_des_ecb,
 	NID_des_cbc,
 	NID_idea_ecb,
@@ -201,7 +206,22 @@ typedef struct cuda_des_cipher_data {
 #ifdef CPU
 	DES_key_schedule des_ks;
 	BF_KEY bf_ks;
+	CAMELLIA_KEY cmll_ks;
 #endif
+
+static int cuda_camellia_init_key (EVP_CIPHER_CTX *ctx, const unsigned char *key, const unsigned char *iv, int enc){
+	if (!quiet && verbose) fprintf(stdout,"Start calculating Camellia key schedule...\n");
+	CAMELLIA_KEY key_schedule;
+	
+	Camellia_set_key(key,ctx->key_len*8,&key_schedule);
+
+#ifndef CPU
+	CMLL_cuda_transfer_key_schedule(&key_schedule);
+#else
+	memcpy(&cmll_ks, &key_schedule, sizeof(CAMELLIA_KEY));
+#endif
+	return 1;
+}
 
 static int cuda_bf_init_key (EVP_CIPHER_CTX *ctx, const unsigned char *key, const unsigned char *iv, int enc){
 	if (!quiet && verbose) fprintf(stdout,"Start calculating Blowfish key schedule...\n");
@@ -310,6 +330,41 @@ static int cuda_aes_init_key (EVP_CIPHER_CTX *ctx, const unsigned char *key, con
 	AES_cuda_transfer_iv(iv);
 #endif
 	if (!quiet && verbose) fprintf(stdout,"DONE!\n");
+	return 1;
+}
+
+static int cuda_camellia_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigned char *in_arg, size_t nbytes) {
+	assert(in_arg && out_arg && ctx && nbytes);
+	size_t current=0;
+	int mode;
+
+	switch (EVP_CIPHER_CTX_mode(ctx)) {
+	case EVP_CIPH_ECB_MODE:
+		mode = ctx->encrypt ? CAMELLIA_ENCRYPT : CAMELLIA_DECRYPT;
+#ifdef CPU
+		while (nbytes!=current) {
+			Camellia_ecb_encrypt((in_arg+current),(out_arg+current),&cmll_ks,mode);
+			current+=CMLL_BLOCK_SIZE;
+		}
+#else
+		int chunk;
+		int maxbytes = 8388608;
+		while (nbytes!=current) {
+			//maxbytes = num_multiprocessors*8*MAX_THREAD*STATE_THREAD_BF;
+			chunk=(nbytes-current)/maxbytes;
+			if(chunk>=1) {
+				CMLL_cuda_crypt((in_arg+current),(out_arg+current),maxbytes,mode);
+				current+=maxbytes;	
+			} else {
+				CMLL_cuda_crypt((in_arg+current),(out_arg+current),(nbytes-current),mode);
+				current+=(nbytes-current);
+			}
+		}
+#endif
+		break;
+	default:
+		return 0;
+	}
 	return 1;
 }
 
@@ -618,6 +673,9 @@ DECLARE_EVP(des,DES,64,cbc,CBC);
 DECLARE_EVP(bf,BF,128,ecb,ECB);
 DECLARE_EVP(bf,BF,128,cbc,CBC);
 
+DECLARE_EVP(camellia,CAMELLIA,128,ecb,ECB);
+DECLARE_EVP(camellia,CAMELLIA,128,cbc,CBC);
+
 DECLARE_EVP(idea,IDEA,64,ecb,ECB);
 DECLARE_EVP(idea,IDEA,64,cbc,CBC);
 
@@ -645,6 +703,12 @@ static int cuda_ciphers(ENGINE *e, const EVP_CIPHER **cipher, const int **nids, 
 	    break;
 	  case NID_bf_cbc:
 	    *cipher = &cuda_bf_cbc;
+	    break;
+	  case NID_camellia_128_ecb:
+	    *cipher = &cuda_camellia_128_ecb;
+	    break;
+	  case NID_camellia_128_cbc:
+	    *cipher = &cuda_camellia_128_cbc;
 	    break;
 	  case NID_idea_ecb:
 	    *cipher = &cuda_idea_ecb;
