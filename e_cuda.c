@@ -1,5 +1,5 @@
 /**
- * @version 0.1.1 (2010)
+ * @version 0.1.2 (2010)
  * @author Paolo Margara <paolo.margara@gmail.com>
  * 
  * Copyright 2010 Paolo Margara
@@ -282,21 +282,24 @@ static int cuda_aes_init_key (EVP_CIPHER_CTX *ctx, const unsigned char *key, con
 	if (ctx->encrypt) {
 	switch(key_len) {
 		case 128:
+#ifdef CPU
 			if(AES_set_encrypt_key(key,128,&ccd->ks)!=0) return 0;
-#ifndef CPU
-			AES_cuda_transfer_key(&ccd->ks);
+#else
+			if(AES_cuda_set_encrypt_key(key,128,&ccd->ks)!=0) return 0;
 #endif
 			break;
 		case 192:
+#ifdef CPU
 			if(AES_set_encrypt_key(key,192,&ccd->ks)!=0) return 0;
-#ifndef CPU
-			AES_cuda_transfer_key(&ccd->ks);
+#else
+			if(AES_cuda_set_encrypt_key(key,192,&ccd->ks)!=0) return 0;
 #endif
 			break;
 		case 256:
+#ifdef CPU
 			if(AES_set_encrypt_key(key,256,&ccd->ks)!=0) return 0;
-#ifndef CPU
-			AES_cuda_transfer_key(&ccd->ks);
+#else
+			if(AES_cuda_set_encrypt_key(key,256,&ccd->ks)!=0) return 0;
 #endif
 			break;
 		default:
@@ -305,21 +308,24 @@ static int cuda_aes_init_key (EVP_CIPHER_CTX *ctx, const unsigned char *key, con
 	} else {
 	switch(key_len) {
 		case 128:
+#ifdef CPU
 			if(AES_set_decrypt_key(key,128,&ccd->ks)!=0) return 0;
-#ifndef CPU
-			AES_cuda_transfer_key(&ccd->ks);
+#else
+			if(AES_cuda_set_decrypt_key(key,128,&ccd->ks)!=0) return 0;
 #endif
 			break;
 		case 192:
+#ifdef CPU
 			if(AES_set_decrypt_key(key,192,&ccd->ks)!=0) return 0;
-#ifndef CPU
-			AES_cuda_transfer_key(&ccd->ks);
+#else
+			if(AES_cuda_set_decrypt_key(key,192,&ccd->ks)!=0) return 0;
 #endif
 			break;
 		case 256:
+#ifdef CPU
 			if(AES_set_decrypt_key(key,256,&ccd->ks)!=0) return 0;
-#ifndef CPU
-			AES_cuda_transfer_key(&ccd->ks);
+#else
+			if(AES_cuda_set_decrypt_key(key,256,&ccd->ks)!=0) return 0;
 #endif
 			break;
 		default:

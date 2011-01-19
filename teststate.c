@@ -1,5 +1,5 @@
 /**
- * @version 0.1.1 (2010) - Copyright (c) 2010.
+ * @version 0.1.2 (2010) - Copyright (c) 2010.
  *
  * @author Paolo Margara <paolo.margara@gmail.com>
  *
@@ -23,6 +23,7 @@
  */
 
 #include "aes_cuda.h"
+//#include <openssl/aes.h>
 
 int main(int argc, char **argv) {
 	/* AES Test vector */
@@ -138,15 +139,15 @@ int main(int argc, char **argv) {
 
 	/* Encrypt with a 128bit key */
 	printf("Press any key to start encrypting with a 128bit key...\n");
-	AES_set_encrypt_key((unsigned char*) key128, 128, ak);
 	/* GPU work */
-	AES_cuda_transfer_key(ak);
+	AES_cuda_set_encrypt_key((unsigned char*) key128, 128, ak);
 	AES_cuda_encrypt((unsigned char*) input, out, AES_BLOCK_SIZE);
 	printf("output GPU: ");
 	for (i = 0; i < AES_BLOCK_SIZE; i++)
 		printf("%x", out[i]);
 	printf("\n");
 	/* CPU work */
+	AES_set_encrypt_key((unsigned char*) key128, 128, ak);
 	AES_encrypt((unsigned char*) input, out, ak);
 	printf("output CPU: ");
 	for (i = 0; i < AES_BLOCK_SIZE; i++)
@@ -155,15 +156,15 @@ int main(int argc, char **argv) {
 
 	/* Encrypt with a 192bit key */
 	printf("\nPress any key to start encrypting with a 192bit key...\n");
-	AES_set_encrypt_key((unsigned char*) key192, 192, ak);
 	/* GPU work */
-	AES_cuda_transfer_key(ak);
+	AES_cuda_set_encrypt_key((unsigned char*) key192, 192, ak);
 	AES_cuda_encrypt((unsigned char*) input, out, AES_BLOCK_SIZE);
 	printf("output GPU: ");
 	for (i = 0; i < AES_BLOCK_SIZE; i++)
 		printf("%x", out[i]);
 	printf("\n");
 	/* CPU work */
+	AES_set_encrypt_key((unsigned char*) key192, 192, ak);
 	AES_encrypt((unsigned char*) input, out, ak);
 	printf("output CPU: ");
 	for (i = 0; i < AES_BLOCK_SIZE; i++)
@@ -172,15 +173,15 @@ int main(int argc, char **argv) {
 
 	/* Encrypt with a 256bit key */
 	printf("\nPress any key to start encrypting with a 256bit key...\n");
-	AES_set_encrypt_key((unsigned char*) key256, 256, ak);
 	/* GPU work */
-	AES_cuda_transfer_key(ak);
+	AES_cuda_set_encrypt_key((unsigned char*) key256, 256, ak);
 	AES_cuda_encrypt((unsigned char*) input, out, AES_BLOCK_SIZE);
 	printf("output GPU: ");
 	for (i = 0; i < AES_BLOCK_SIZE; i++)
 		printf("%x", out[i]);
 	printf("\n");
 	/* CPU work */
+	AES_set_encrypt_key((unsigned char*) key256, 256, ak);
 	AES_encrypt((unsigned char*) input, out, ak);
 	printf("output CPU: ");
 	for (i = 0; i < AES_BLOCK_SIZE; i++)
@@ -188,15 +189,15 @@ int main(int argc, char **argv) {
 
 	/* Decrypt with a 128bit key */
 	printf("\n\nPress any key to start decrypting with a 128bit key...\n");
-	AES_set_decrypt_key((unsigned char*) key128, 128, ak);
 	/* GPU work */
-	AES_cuda_transfer_key(ak);
+	AES_cuda_set_decrypt_key((unsigned char*) key128, 128, ak);
 	AES_cuda_decrypt((unsigned char*) input, out, AES_BLOCK_SIZE);
 	printf("output GPU: ");
 	for (i = 0; i < AES_BLOCK_SIZE; i++)
 		printf("%x", out[i]);
 	printf("\n");
 	/* CPU work */
+	AES_set_decrypt_key((unsigned char*) key128, 128, ak);
 	AES_decrypt((unsigned char*) input, out, ak);
 	printf("output CPU: ");
 	for (i = 0; i < AES_BLOCK_SIZE; i++)
@@ -205,15 +206,15 @@ int main(int argc, char **argv) {
 
 	/* Decrypt with a 192bit key */
 	printf("\nPress any key to start decrypting with a 192bit key...\n");
-	AES_set_decrypt_key((unsigned char*) key192, 192, ak);
 	/* GPU work */
-	AES_cuda_transfer_key(ak);
+	AES_cuda_set_decrypt_key((unsigned char*) key192, 192, ak);
 	AES_cuda_decrypt((unsigned char*) input, out, AES_BLOCK_SIZE);
 	printf("output GPU: ");
 	for (i = 0; i < AES_BLOCK_SIZE; i++)
 		printf("%x", out[i]);
 	printf("\n");
 	/* CPU work */
+	AES_set_decrypt_key((unsigned char*) key192, 192, ak);
 	AES_decrypt((unsigned char*) input, out, ak);
 	printf("output CPU: ");
 	for (i = 0; i < AES_BLOCK_SIZE; i++)
@@ -222,15 +223,15 @@ int main(int argc, char **argv) {
 
 	/* Decrypt with a 256bit key */
 	printf("\nPress any key to start decrypting with a 256bit key...\n");
-	AES_set_decrypt_key((unsigned char*) key256, 256, ak);
 	/* GPU work */
-	AES_cuda_transfer_key(ak);
+	AES_cuda_set_decrypt_key((unsigned char*) key256, 256, ak);
 	AES_cuda_decrypt((unsigned char*) input, out, AES_BLOCK_SIZE);
 	printf("output GPU: ");
 	for (i = 0; i < AES_BLOCK_SIZE; i++)
 		printf("%x", out[i]);
 	printf("\n");
 	/* CPU work */
+	AES_set_decrypt_key((unsigned char*) key256, 256, ak);
 	AES_decrypt((unsigned char*) input, out, ak);
 	printf("output CPU: ");
 	for (i = 0; i < AES_BLOCK_SIZE; i++)
@@ -240,9 +241,8 @@ int main(int argc, char **argv) {
 #ifndef CBC_ENC_CPU
 	/* Encrypt with a 128bit key CBC */
 	printf("\nPress any key to start encrypting with a 128bit key CBC...\n");
-	AES_set_encrypt_key((unsigned char*) key128_cbc, 128, ak);
 	/* GPU work*/
-	AES_cuda_transfer_key(ak);
+	AES_cuda_set_encrypt_key((unsigned char*) key128_cbc, 128, ak);
 	AES_cuda_transfer_iv(iv_cbc);
 	AES_cuda_encrypt_cbc(plaintext_cbc,out,AES_BLOCK_SIZE);
 	printf("output GPU: ");
@@ -250,6 +250,7 @@ int main(int argc, char **argv) {
 		printf("%x", out[i]);
 	printf("\n");
 	/* CPU work */
+	AES_set_encrypt_key((unsigned char*) key128_cbc, 128, ak);
 	memcpy(iv_cbc_tmp,iv_cbc,AES_BLOCK_SIZE*sizeof(uint8_t)); 
 	AES_cbc_encrypt(plaintext_cbc,out,AES_BLOCK_SIZE,ak,iv_cbc_tmp,AES_ENCRYPT);
 	printf("output CPU: ");
@@ -260,9 +261,8 @@ int main(int argc, char **argv) {
 //
 	/* Decrypt with a 128bit key CBC */
 	printf("\nPress any key to start decrypting with a 128bit key CBC...\n");
-	AES_set_decrypt_key((unsigned char*) key128_cbc, 128, ak);
 	/* GPU work*/
-	AES_cuda_transfer_key(ak);
+	AES_cuda_set_decrypt_key((unsigned char*) key128_cbc, 128, ak);
 	AES_cuda_transfer_iv(iv_cbc);
 	AES_cuda_decrypt_cbc(ciphertextcbc128,out,AES_BLOCK_SIZE);
 	printf("output GPU: ");
@@ -270,6 +270,7 @@ int main(int argc, char **argv) {
 		printf("%x", out[i]);
 	printf("\n");
 	/* CPU work */
+	AES_set_decrypt_key((unsigned char*) key128_cbc, 128, ak);
 	memcpy(iv_cbc_tmp,iv_cbc,AES_BLOCK_SIZE*sizeof(uint8_t)); 
 	AES_cbc_encrypt(ciphertextcbc128,out,AES_BLOCK_SIZE,ak,iv_cbc_tmp,AES_DECRYPT);
 	printf("output CPU: ");
@@ -280,9 +281,8 @@ int main(int argc, char **argv) {
 #ifndef CBC_ENC_CPU
 	/* Encrypt with a 192bit key CBC */
 	printf("\nPress any key to start encrypting with a 192bit key CBC...\n");
-	AES_set_encrypt_key((unsigned char*) key192_cbc, 192, ak);
 	/* GPU work*/
-	AES_cuda_transfer_key(ak);
+	AES_cuda_set_encrypt_key((unsigned char*) key192_cbc, 192, ak);
 	AES_cuda_transfer_iv(iv_cbc);
 	AES_cuda_encrypt_cbc(plaintext_cbc,out,AES_BLOCK_SIZE);
 	printf("output GPU: ");
@@ -290,6 +290,7 @@ int main(int argc, char **argv) {
 		printf("%x", out[i]);
 	printf("\n");
 	/* CPU work */
+	AES_set_encrypt_key((unsigned char*) key192_cbc, 192, ak);
 	memcpy(iv_cbc_tmp,iv_cbc,AES_BLOCK_SIZE*sizeof(uint8_t)); 
 	AES_cbc_encrypt(plaintext_cbc,out,AES_BLOCK_SIZE,ak,iv_cbc_tmp,AES_ENCRYPT);
 	printf("output CPU: ");
@@ -300,9 +301,8 @@ int main(int argc, char **argv) {
 //
 	/* Decrypt with a 192bit key CBC */
 	printf("\nPress any key to start decrypting with a 192bit key CBC...\n");
-	AES_set_decrypt_key((unsigned char*) key192_cbc, 192, ak);
 	/* GPU work*/
-	AES_cuda_transfer_key(ak);
+	AES_cuda_set_decrypt_key((unsigned char*) key192_cbc, 192, ak);
 	AES_cuda_transfer_iv(iv_cbc);
 	AES_cuda_decrypt_cbc(ciphertextcbc192,out,AES_BLOCK_SIZE);
 	printf("output GPU: ");
@@ -310,6 +310,7 @@ int main(int argc, char **argv) {
 		printf("%x", out[i]);
 	printf("\n");
 	/* CPU work */
+	AES_set_decrypt_key((unsigned char*) key192_cbc, 192, ak);
 	memcpy(iv_cbc_tmp,iv_cbc,AES_BLOCK_SIZE*sizeof(uint8_t)); 
 	AES_cbc_encrypt(ciphertextcbc192,out,AES_BLOCK_SIZE,ak,iv_cbc_tmp,AES_DECRYPT);
 	printf("output CPU: ");
@@ -320,9 +321,8 @@ int main(int argc, char **argv) {
 #ifndef CBC_ENC_CPU
 	/* Encrypt with a 256bit key CBC */
 	printf("\nPress any key to start encrypting with a 256bit key CBC...\n");
-	AES_set_encrypt_key((unsigned char*) key256_cbc, 256, ak);
 	/* GPU work*/
-	AES_cuda_transfer_key(ak);
+	AES_cuda_set_encrypt_key((unsigned char*) key256_cbc, 256, ak);
 	AES_cuda_transfer_iv(iv_cbc);
 	AES_cuda_encrypt_cbc(plaintext_cbc,out,AES_BLOCK_SIZE);
 	printf("output GPU: ");
@@ -330,6 +330,7 @@ int main(int argc, char **argv) {
 		printf("%x", out[i]);
 	printf("\n");
 	/* CPU work */
+	AES_set_encrypt_key((unsigned char*) key256_cbc, 256, ak);
 	memcpy(iv_cbc_tmp,iv_cbc,AES_BLOCK_SIZE*sizeof(uint8_t)); 
 	AES_cbc_encrypt(plaintext_cbc,out,AES_BLOCK_SIZE,ak,iv_cbc_tmp,AES_ENCRYPT);
 	printf("output CPU: ");
@@ -340,9 +341,8 @@ int main(int argc, char **argv) {
 //
 	/* Decrypt with a 256bit key CBC */
 	printf("\nPress any key to start decrypting with a 256bit key CBC...\n");
-	AES_set_decrypt_key((unsigned char*) key256_cbc, 256, ak);
 	/* GPU work*/
-	AES_cuda_transfer_key(ak);
+	AES_cuda_set_decrypt_key((unsigned char*) key256_cbc, 256, ak);
 	AES_cuda_transfer_iv(iv_cbc);
 	AES_cuda_decrypt_cbc(ciphertextcbc256,out,AES_BLOCK_SIZE);
 	printf("output GPU: ");
@@ -350,6 +350,7 @@ int main(int argc, char **argv) {
 		printf("%x", out[i]);
 	printf("\n");
 	/* CPU work */
+	AES_set_decrypt_key((unsigned char*) key256_cbc, 256, ak);
 	memcpy(iv_cbc_tmp,iv_cbc,AES_BLOCK_SIZE*sizeof(uint8_t)); 
 	AES_cbc_encrypt(ciphertextcbc256,out,AES_BLOCK_SIZE,ak,iv_cbc_tmp,AES_DECRYPT);
 	printf("output CPU: ");

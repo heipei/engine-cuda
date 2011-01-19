@@ -2,6 +2,12 @@
 Engine_cudamrg CHANGES
  _______________
 
+ Changes between 0.1.1 and 0.1.2  [?? ??? 2011]
+
+  *) Fixed issue n°1, some endian releted issue and removed dependency
+     from libcrypto.
+     [Paolo Margara <paolo.margara@gmail.com>]
+
  Changes between 0.1.0 and 0.1.1  [10 Jan 2011]
 
   *) Optimized support for integrated GPU.

@@ -1,5 +1,5 @@
 /**
- * @version 0.1.0 - Copyright (c) 2010.
+ * @version 0.1.1 - Copyright (c) 2010.
  *
  * @author Paolo Margara <paolo.margara@gmail.com>
  *
@@ -31,13 +31,18 @@
 #include <openssl/engine.h>
 #include <cuda_runtime_api.h>
 
-void AES_cuda_transfer_key(AES_KEY *key);
+
+int AES_cuda_set_encrypt_key(const unsigned char *userKey, int bits, AES_KEY *key);
+int AES_cuda_set_decrypt_key(const unsigned char *userKey, int bits, AES_KEY *key);
+
 void AES_cuda_encrypt(const unsigned char *in, unsigned char *out,size_t nbytes);
 void AES_cuda_decrypt(const unsigned char *in, unsigned char *out,size_t nbytes);
 
 void AES_cuda_transfer_iv(const unsigned char *iv);
-void AES_cuda_decrypt_cbc(const unsigned char *in, unsigned char *out,size_t nbytes);
+#ifndef CBC_ENC_CPU
 void AES_cuda_encrypt_cbc(const unsigned char *in, unsigned char *out,size_t nbytes);
+#endif
+void AES_cuda_decrypt_cbc(const unsigned char *in, unsigned char *out,size_t nbytes);
 
 void AES_cuda_init(int* nm,int buffer_size_engine,int verbosity);
 void AES_cuda_finish();
