@@ -21,3 +21,7 @@
 
 == Camellia ==
 - Try shared instead of constant memory, as usual
+
+== CAST ==
+- Occupancy limited by huge S-Tabels
+- What are S-Tabels 4-7 used for?

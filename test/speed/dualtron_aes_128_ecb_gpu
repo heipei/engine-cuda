@@ -1,0 +1,30 @@
+Doing aes-128-ecb for 3s on 16 size blocks: 66215 aes-128-ecb's in 3.00s
+Doing aes-128-ecb for 3s on 64 size blocks: 57731 aes-128-ecb's in 3.00s
+Doing aes-128-ecb for 3s on 256 size blocks: 58705 aes-128-ecb's in 3.00s
+Doing aes-128-ecb for 3s on 1024 size blocks: 58403 aes-128-ecb's in 3.00s
+Doing aes-128-ecb for 3s on 2048 size blocks: 57160 aes-128-ecb's in 3.00s
+Doing aes-128-ecb for 3s on 4096 size blocks: 30212 aes-128-ecb's in 3.00s
+Doing aes-128-ecb for 3s on 8192 size blocks: 7033 aes-128-ecb's in 3.00s
+Doing aes-128-ecb for 3s on 16384 size blocks: 4240 aes-128-ecb's in 3.00s
+Doing aes-128-ecb for 3s on 32768 size blocks: 2987 aes-128-ecb's in 3.00s
+Doing aes-128-ecb for 3s on 65536 size blocks: 2282 aes-128-ecb's in 3.00s
+Doing aes-128-ecb for 3s on 131072 size blocks: 1670 aes-128-ecb's in 3.00s
+Doing aes-128-ecb for 3s on 262144 size blocks: 1178 aes-128-ecb's in 3.00s
+Doing aes-128-ecb for 3s on 524288 size blocks: 779 aes-128-ecb's in 3.01s
+Doing aes-128-ecb for 3s on 1048576 size blocks: 467 aes-128-ecb's in 3.00s
+Doing aes-128-ecb for 3s on 2097152 size blocks: 259 aes-128-ecb's in 3.00s
+Doing aes-128-ecb for 3s on 4194304 size blocks: 138 aes-128-ecb's in 3.01s
+Doing aes-128-ecb for 3s on 8388608 size blocks: 71 aes-128-ecb's in 3.03s
+Successfully found 1 CUDA devices (CUDART_VERSION 3020).
+Using pinned memory: cudaHostAllocDefault.
+The current buffer size is 8388608.
+
+OpenSSL 1.0.0b 16 Nov 2010
+built on: Wed Dec  1 21:52:12 CET 2010
+options:bn(64,64) rc4(8x,char) des(idx,cisc,16,int) aes(partial) idea(int) blowfish(idx) 
+compiler: gcc -DOPENSSL_THREADS -D_REENTRANT -DDSO_DLFCN -DHAVE_DLFCN_H -m64 -DL_ENDIAN -DTERMIO -O3 -Wall -DMD32_REG_T=int -DOPENSSL_IA32_SSE2 -DOPENSSL_BN_ASM_MONT -DSHA1_ASM -DSHA256_ASM -DSHA512_ASM -DMD5_ASM -DAES_ASM -DWHIRLPOOL_ASM
+The 'numbers' are in 1000s of bytes per second processed.
+type             16 bytes     64 bytes    256 bytes   1024 bytes   2048 bytes   4096 bytes   8192 bytes  16384 bytes  32768 bytes  65536 bytes 131072 bytes 262144 bytes 524288 bytes1048576 bytes2097152 bytes4194304 bytes8388608 bytes
+aes-128-ecb        353.15k     1231.59k     5009.49k    19934.89k    39021.23k    41249.45k    19204.78k    23156.05k    32626.01k    49851.05k    72963.41k   102935.21k   135687.82k   163228.33k   181054.12k   192296.99k   196564.74k
+
+Total time: 51074.968750 milliseconds

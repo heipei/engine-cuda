@@ -30,6 +30,9 @@
 #define BF_KEY_SIZE_64		8
 #define BF_KEY_SIZE_128		16
 
+#define CAST_BLOCK_SIZE		8
+#define CAST_KEY_SIZE_128	16
+
 #define CMLL_BLOCK_SIZE		16
 #define CMLL_KEY_SIZE_128	16
 #define CMLL_KEY_SIZE_192	24
