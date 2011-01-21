@@ -4,6 +4,10 @@
 - Single Init / Finish for CUDA (Only block-size needed)
 - Adjust buffersize to device memory
 - cuPrintf inclusion OK?
+- get rid of CPU_ONLY stuff
+- Timing only for certain preprocessor definition
+- Streams
+- Rambo is capped at 800MB/s, why?
 
 == DES ==
 - CBC
@@ -23,5 +27,4 @@
 - Try shared instead of constant memory, as usual
 
 == CAST ==
-- Occupancy limited by huge S-Tabels
-- What are S-Tabels 4-7 used for?
+- Occupancy limited by huge S-Tables

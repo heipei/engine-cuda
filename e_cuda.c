@@ -205,64 +205,6 @@ typedef struct cuda_aes_cipher_data {
 	AES_KEY ks; 
 } cuda_aes_cipher_data;
 
-typedef struct cuda_des_cipher_data { 
-	DES_key_schedule ks; 
-} cuda_des_cipher_data;
-
-// TODO: Generalized init function
-static int cuda_cast_init_key (EVP_CIPHER_CTX *ctx, const unsigned char *key, const unsigned char *iv, int enc){
-	if (!quiet && verbose) fprintf(stdout,"Start calculating CAST key schedule...\n");
-	CAST_KEY key_schedule;
-	
-	CAST_set_key(&key_schedule,ctx->key_len*8,key);
-
-	CAST_cuda_transfer_key_schedule(&key_schedule);
-	return 1;
-}
-
-static int cuda_camellia_init_key (EVP_CIPHER_CTX *ctx, const unsigned char *key, const unsigned char *iv, int enc){
-	if (!quiet && verbose) fprintf(stdout,"Start calculating Camellia key schedule...\n");
-	CAMELLIA_KEY key_schedule;
-	
-	Camellia_set_key(key,ctx->key_len*8,&key_schedule);
-
-	CMLL_cuda_transfer_key_schedule(&key_schedule);
-	return 1;
-}
-
-static int cuda_bf_init_key (EVP_CIPHER_CTX *ctx, const unsigned char *key, const unsigned char *iv, int enc){
-	if (!quiet && verbose) fprintf(stdout,"Start calculating Blowfish key schedule...\n");
-	BF_KEY key_schedule;
-	
-	BF_set_key(&key_schedule,ctx->key_len,key);
-
-	BF_cuda_transfer_key_schedule(&key_schedule);
-	return 1;
-}
-
-static int cuda_idea_init_key (EVP_CIPHER_CTX *ctx, const unsigned char *key, const unsigned char *iv, int enc){
-	if (!quiet && verbose) fprintf(stdout,"Start calculating IDEA key schedule...\n");
-	IDEA_KEY_SCHEDULE key_schedule;
-	
-	idea_set_encrypt_key(key,&key_schedule);
-
-	IDEA_cuda_transfer_key_schedule(&key_schedule);
-	return 1;
-}
-
-static int cuda_des_init_key (EVP_CIPHER_CTX *ctx, const unsigned char *key, const unsigned char *iv, int enc){
-	if (!quiet && verbose) fprintf(stdout,"Start calculating DES key schedule...");
-	DES_key_schedule key_schedule;
-	
-	DES_set_key((const_DES_cblock *)key,&key_schedule);
-
-	DES_cuda_transfer_key_schedule(&key_schedule);
-	//DES_cuda_transfer_iv(iv);
-
-	if (!quiet && verbose) fprintf(stdout,"DONE!\n");
-	return 1;
-}
-
 static int cuda_aes_init_key (EVP_CIPHER_CTX *ctx, const unsigned char *key, const unsigned char *iv, int enc){
 	if (!quiet && verbose) fprintf(stdout,"Start calculating key schedule...");
 	cuda_aes_cipher_data *ccd;
@@ -324,10 +266,57 @@ static int cuda_aes_init_key (EVP_CIPHER_CTX *ctx, const unsigned char *key, con
 #ifndef CBC_ENC_CPU
 	AES_cuda_transfer_iv(iv);
 #endif
+	return 1;
+}
+
+static int cuda_init_key(EVP_CIPHER_CTX *ctx, const unsigned char *key, const unsigned char *iv, int enc) {
+	switch ((ctx->cipher)->nid) {
+	  case NID_des_ecb:
+	  case NID_des_cbc:
+	    if (!quiet && verbose) fprintf(stdout,"Start calculating DES key schedule...");
+	    DES_key_schedule des_key_schedule;
+	    DES_set_key((const_DES_cblock *)key,&des_key_schedule);
+	    DES_cuda_transfer_key_schedule(&des_key_schedule);
+	    break;
+	  case NID_bf_ecb:
+	  case NID_bf_cbc:
+	    break;
+	  case NID_cast5_ecb:
+	    if (!quiet && verbose) fprintf(stdout,"Start calculating CAST key schedule...\n");
+	    CAST_KEY cast_key_schedule;
+	    CAST_set_key(&cast_key_schedule,ctx->key_len*8,key);
+	    CAST_cuda_transfer_key_schedule(&cast_key_schedule);
+	    break;
+	  case NID_camellia_128_ecb:
+	  case NID_camellia_128_cbc:
+	    if (!quiet && verbose) fprintf(stdout,"Start calculating Camellia key schedule...\n");
+	    CAMELLIA_KEY cmll_key_schedule;
+	    Camellia_set_key(key,ctx->key_len*8,&cmll_key_schedule);
+	    CMLL_cuda_transfer_key_schedule(&cmll_key_schedule);
+	    break;
+	  case NID_idea_ecb:
+	  case NID_idea_cbc:
+	    if (!quiet && verbose) fprintf(stdout,"Start calculating IDEA key schedule...\n");
+	    IDEA_KEY_SCHEDULE idea_key_schedule;
+	    idea_set_encrypt_key(key,&idea_key_schedule);
+	    IDEA_cuda_transfer_key_schedule(&idea_key_schedule);
+	    break;
+	  case NID_aes_128_ecb:
+	  case NID_aes_128_cbc:
+	  case NID_aes_192_ecb:
+	  case NID_aes_192_cbc:
+	  case NID_aes_256_ecb:
+	  case NID_aes_256_cbc:
+	    cuda_aes_init_key(ctx, key, iv, enc);
+	    break;
+	  default:
+	    return 0;
+	}
 	if (!quiet && verbose) fprintf(stdout,"DONE!\n");
 	return 1;
 }
 
+// TODO: General ciphers function
 static int cuda_cast_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigned char *in_arg, size_t nbytes) {
 	assert(in_arg && out_arg && ctx && nbytes);
 	size_t current=0;
@@ -633,7 +622,7 @@ static const EVP_CIPHER cuda_##lciph##_##ksize##_##lmode = {  \
         uciph##_KEY_SIZE_##ksize,                             \
         uciph##_BLOCK_SIZE,                                   \
         0 | EVP_CIPH_##umode##_MODE,                          \
-        cuda_##lciph##_init_key,                              \
+        cuda_init_key,                                        \
         cuda_##lciph##_ciphers,                               \
         NULL,                                                 \
         sizeof(struct cuda_aes_cipher_data) + 16,             \
