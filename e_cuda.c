@@ -38,12 +38,8 @@
 #define CMD_BUFFER_SIZE		(ENGINE_CMD_BASE+3)
 
 static int cuda_ciphers (ENGINE *e, const EVP_CIPHER **cipher, const int **nids, int nid);
+static int cuda_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigned char *in_arg, size_t nbytes);
 static int cuda_aes_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigned char *in_arg, size_t nbytes);
-static int cuda_des_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigned char *in_arg, size_t nbytes);
-static int cuda_bf_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigned char *in_arg, size_t nbytes);
-static int cuda_idea_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigned char *in_arg, size_t nbytes);
-static int cuda_camellia_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigned char *in_arg, size_t nbytes);
-static int cuda_cast_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigned char *in_arg, size_t nbytes);
 
 static int num_multiprocessors = 0;
 static int buffer_size = 0;
@@ -51,7 +47,7 @@ static int verbose = 0;
 static int quiet = 0;
 static int initialized = 0;
 static char *library_path=NULL;
-int maxbytes = 8388608;
+static int maxbytes = 8388608;
 
 #ifdef CPU
 static time_t startTime,endTime;
@@ -184,13 +180,10 @@ IMPLEMENT_DYNAMIC_BIND_FN(cuda_bind_fn)
 
 static int cuda_cipher_nids[] = {
 	NID_bf_ecb,
-	NID_bf_cbc,
 	NID_camellia_128_ecb,
 	NID_cast5_ecb,
 	NID_des_ecb,
-	NID_des_cbc,
 	NID_idea_ecb,
-	NID_idea_cbc,
 	NID_aes_128_ecb,
 	NID_aes_128_cbc,
 	NID_aes_192_ecb,
@@ -280,9 +273,13 @@ static int cuda_init_key(EVP_CIPHER_CTX *ctx, const unsigned char *key, const un
 	    break;
 	  case NID_bf_ecb:
 	  case NID_bf_cbc:
+	    if (!quiet && verbose) fprintf(stdout,"Start calculating Blowfish key schedule...\n");
+	    BF_KEY key_schedule;
+	    BF_set_key(&key_schedule,ctx->key_len,key);
+	    BF_cuda_transfer_key_schedule(&key_schedule);
 	    break;
 	  case NID_cast5_ecb:
-	    if (!quiet && verbose) fprintf(stdout,"Start calculating CAST key schedule...\n");
+	    if (!quiet && verbose) fprintf(stdout,"Start calculating CAST5 key schedule...\n");
 	    CAST_KEY cast_key_schedule;
 	    CAST_set_key(&cast_key_schedule,ctx->key_len*8,key);
 	    CAST_cuda_transfer_key_schedule(&cast_key_schedule);
@@ -313,142 +310,6 @@ static int cuda_init_key(EVP_CIPHER_CTX *ctx, const unsigned char *key, const un
 	    return 0;
 	}
 	if (!quiet && verbose) fprintf(stdout,"DONE!\n");
-	return 1;
-}
-
-// TODO: General ciphers function
-static int cuda_cast_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigned char *in_arg, size_t nbytes) {
-	assert(in_arg && out_arg && ctx && nbytes);
-	size_t current=0;
-	int mode;
-
-	switch (EVP_CIPHER_CTX_mode(ctx)) {
-	case EVP_CIPH_ECB_MODE:
-		mode = ctx->encrypt ? CAST_ENCRYPT : CAST_DECRYPT;
-		int chunk;
-		while (nbytes!=current) {
-			//maxbytes = num_multiprocessors*8*MAX_THREAD*STATE_THREAD_BF;
-			chunk=(nbytes-current)/maxbytes;
-			if(chunk>=1) {
-				CAST_cuda_crypt((in_arg+current),(out_arg+current),maxbytes,mode);
-				current+=maxbytes;	
-			} else {
-				CAST_cuda_crypt((in_arg+current),(out_arg+current),(nbytes-current),mode);
-				current+=(nbytes-current);
-			}
-		}
-		break;
-	default:
-		return 0;
-	}
-	return 1;
-}
-
-static int cuda_camellia_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigned char *in_arg, size_t nbytes) {
-	assert(in_arg && out_arg && ctx && nbytes);
-	size_t current=0;
-	int mode;
-
-	switch (EVP_CIPHER_CTX_mode(ctx)) {
-	case EVP_CIPH_ECB_MODE:
-		mode = ctx->encrypt ? CAMELLIA_ENCRYPT : CAMELLIA_DECRYPT;
-		int chunk;
-		while (nbytes!=current) {
-			//maxbytes = num_multiprocessors*8*MAX_THREAD*STATE_THREAD_BF;
-			chunk=(nbytes-current)/maxbytes;
-			if(chunk>=1) {
-				CMLL_cuda_crypt((in_arg+current),(out_arg+current),maxbytes,mode);
-				current+=maxbytes;	
-			} else {
-				CMLL_cuda_crypt((in_arg+current),(out_arg+current),(nbytes-current),mode);
-				current+=(nbytes-current);
-			}
-		}
-		break;
-	default:
-		return 0;
-	}
-	return 1;
-}
-
-static int cuda_bf_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigned char *in_arg, size_t nbytes) {
-	assert(in_arg && out_arg && ctx && nbytes);
-	size_t current=0;
-	int mode;
-
-	switch (EVP_CIPHER_CTX_mode(ctx)) {
-	case EVP_CIPH_ECB_MODE:
-		mode = ctx->encrypt ? BF_ENCRYPT : BF_DECRYPT;
-		int chunk;
-		while (nbytes!=current) {
-			//maxbytes = num_multiprocessors*8*MAX_THREAD*STATE_THREAD_BF;
-			chunk=(nbytes-current)/maxbytes;
-			if(chunk>=1) {
-				BF_cuda_crypt((in_arg+current),(out_arg+current),maxbytes,mode);
-				current+=maxbytes;	
-			} else {
-				BF_cuda_crypt((in_arg+current),(out_arg+current),(nbytes-current),mode);
-				current+=(nbytes-current);
-			}
-		}
-		break;
-	default:
-		return 0;
-	}
-	return 1;
-}
-
-static int cuda_idea_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigned char *in_arg, size_t nbytes) {
-	assert(in_arg && out_arg && ctx && nbytes);
-	size_t current=0;
-	int mode;
-
-	switch (EVP_CIPHER_CTX_mode(ctx)) {
-	case EVP_CIPH_ECB_MODE:
-		mode = ctx->encrypt ? IDEA_ENCRYPT : IDEA_DECRYPT;
-		int chunk;
-		while (nbytes!=current) {
-			//maxbytes = num_multiprocessors*8*MAX_THREAD*STATE_THREAD_IDEA;
-			chunk=(nbytes-current)/maxbytes;
-			if(chunk>=1) {
-				IDEA_cuda_crypt((in_arg+current),(out_arg+current),maxbytes,mode);
-				current+=maxbytes;	
-			} else {
-				IDEA_cuda_crypt((in_arg+current),(out_arg+current),(nbytes-current),mode);
-				current+=(nbytes-current);
-			}
-		}
-		break;
-	default:
-		return 0;
-	}
-	return 1;
-}
-
-static int cuda_des_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigned char *in_arg, size_t nbytes) {
-	assert(in_arg && out_arg && ctx && nbytes);
-	size_t current=0;
-	int mode;
-
-	switch (EVP_CIPHER_CTX_mode(ctx)) {
-	case EVP_CIPH_ECB_MODE:
-		mode = ctx->encrypt ? DES_ENCRYPT : DES_DECRYPT; 
-		int chunk;
-		while (nbytes!=current) {
-			//maxbytes = num_multiprocessors*8*MAX_THREAD*STATE_THREAD_DES;
-			chunk=(nbytes-current)/maxbytes;
-			if(chunk>=1) {
-				DES_cuda_crypt((in_arg+current),(out_arg+current),maxbytes,mode);
-				current+=maxbytes;	
-			} else {
-				DES_cuda_crypt((in_arg+current),(out_arg+current),(nbytes-current),mode);
-				current+=(nbytes-current);
-			}
-		}
-		break;
-	default:
-		return 0;
-	}
 	return 1;
 }
 
@@ -609,11 +470,94 @@ static int cuda_aes_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const u
 	return 1;
 }
 
-#define EVP_CIPHER_block_size_AES	AES_BLOCK_SIZE
-#define EVP_CIPHER_block_size_DES	DES_BLOCK_SIZE
-#define EVP_CIPHER_block_size_BF	BF_BLOCK_SIZE
-#define EVP_CIPHER_block_size_IDEA	IDEA_BLOCK_SIZE
-#define EVP_CIPHER_block_size_CAST	CAST_BLOCK_SIZE
+static int cuda_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigned char *in_arg, size_t nbytes) {
+	assert(in_arg && out_arg && ctx && nbytes);
+	size_t current=0;
+	int chunk;
+
+	switch(EVP_CIPHER_CTX_nid(ctx)) {
+	  case NID_des_ecb:
+	    while (nbytes!=current) {
+	      chunk=(nbytes-current)/maxbytes;
+	      if(chunk>=1) {
+	        DES_cuda_crypt((in_arg+current),(out_arg+current),maxbytes,ctx->encrypt);
+	        current+=maxbytes;  
+	      } else {
+	        DES_cuda_crypt((in_arg+current),(out_arg+current),(nbytes-current),ctx->encrypt);
+	        current+=(nbytes-current);
+	      }
+	    }
+	    break;
+
+	  //case NID_bf_cbc:
+	  case NID_bf_ecb:
+	    while (nbytes!=current) {
+	      chunk=(nbytes-current)/maxbytes;
+	      if(chunk>=1) {
+	        BF_cuda_crypt((in_arg+current),(out_arg+current),maxbytes,ctx->encrypt);
+	        current+=maxbytes;  
+	      } else {
+	        BF_cuda_crypt((in_arg+current),(out_arg+current),(nbytes-current),ctx->encrypt);
+	        current+=(nbytes-current);
+	      }
+	    }
+	    break;
+	  
+	  case NID_cast5_ecb:
+	    while (nbytes!=current) {
+	      chunk=(nbytes-current)/maxbytes;
+	      if(chunk>=1) {
+	        CAST_cuda_crypt((in_arg+current),(out_arg+current),maxbytes,ctx->encrypt);
+	        current+=maxbytes;  
+	      } else {
+	        CAST_cuda_crypt((in_arg+current),(out_arg+current),(nbytes-current),ctx->encrypt);
+	        current+=(nbytes-current);
+	      }
+	    }
+	    break;
+	  
+	  //case NID_camellia_128_cbc:
+	  case NID_camellia_128_ecb:
+	    while (nbytes!=current) {
+	      chunk=(nbytes-current)/maxbytes;
+	      if(chunk>=1) {
+	        CMLL_cuda_crypt((in_arg+current),(out_arg+current),maxbytes,ctx->encrypt);
+	        current+=maxbytes;  
+	      } else {
+	        CMLL_cuda_crypt((in_arg+current),(out_arg+current),(nbytes-current),ctx->encrypt);
+	        current+=(nbytes-current);
+	      }
+	    }
+	    break;
+	  
+	  //case NID_idea_cbc:
+	  case NID_idea_ecb:
+	    while (nbytes!=current) {
+	      chunk=(nbytes-current)/maxbytes;
+	      if(chunk>=1) {
+	        IDEA_cuda_crypt((in_arg+current),(out_arg+current),maxbytes,ctx->encrypt);
+	        current+=maxbytes;  
+	      } else {
+	        IDEA_cuda_crypt((in_arg+current),(out_arg+current),(nbytes-current),ctx->encrypt);
+	        current+=(nbytes-current);
+	      }
+	    }
+	    break;
+	  
+	  case NID_aes_128_ecb:
+	  case NID_aes_128_cbc:
+	  case NID_aes_192_ecb:
+	  case NID_aes_192_cbc:
+	  case NID_aes_256_ecb:
+	  case NID_aes_256_cbc:
+	    return cuda_aes_ciphers(ctx,out_arg,in_arg,nbytes);
+	    break;
+	  default:
+	    return 0;
+	}
+
+	return 1;
+}
 
 #define DECLARE_EVP(lciph,uciph,ksize,lmode,umode)            \
 static const EVP_CIPHER cuda_##lciph##_##ksize##_##lmode = {  \
@@ -623,7 +567,7 @@ static const EVP_CIPHER cuda_##lciph##_##ksize##_##lmode = {  \
         uciph##_BLOCK_SIZE,                                   \
         0 | EVP_CIPH_##umode##_MODE,                          \
         cuda_init_key,                                        \
-        cuda_##lciph##_ciphers,                               \
+        cuda_crypt,                                           \
         NULL,                                                 \
         sizeof(struct cuda_aes_cipher_data) + 16,             \
         EVP_CIPHER_set_asn1_iv,                               \
@@ -651,19 +595,11 @@ static const EVP_CIPHER cuda_##lciph##_##ksize##_##lmode = {  \
 #define NID_idea_64_ecb NID_idea_ecb
 #define NID_idea_64_cbc NID_idea_cbc
 
-DECLARE_EVP(des,DES,64,ecb,ECB);
-DECLARE_EVP(des,DES,64,cbc,CBC);
-
 DECLARE_EVP(bf,BF,128,ecb,ECB);
-DECLARE_EVP(bf,BF,128,cbc,CBC);
-
-DECLARE_EVP(cast,CAST,128,ecb,ECB);
-
 DECLARE_EVP(camellia,CAMELLIA,128,ecb,ECB);
-DECLARE_EVP(camellia,CAMELLIA,128,cbc,CBC);
-
+DECLARE_EVP(cast,CAST,128,ecb,ECB);
+DECLARE_EVP(des,DES,64,ecb,ECB);
 DECLARE_EVP(idea,IDEA,64,ecb,ECB);
-DECLARE_EVP(idea,IDEA,64,cbc,CBC);
 
 DECLARE_EVP(aes,AES,128,ecb,ECB);
 DECLARE_EVP(aes,AES,128,cbc,CBC);
@@ -678,32 +614,20 @@ static int cuda_ciphers(ENGINE *e, const EVP_CIPHER **cipher, const int **nids, 
 		return cuda_cipher_nids_num;
 	}
 	switch (nid) {
-	  case NID_des_ecb:
-	    *cipher = &cuda_des_ecb;
-	    break;
-	  case NID_des_cbc:
-	    *cipher = &cuda_des_cbc;
-	    break;
 	  case NID_bf_ecb:
 	    *cipher = &cuda_bf_ecb;
-	    break;
-	  case NID_bf_cbc:
-	    *cipher = &cuda_bf_cbc;
-	    break;
-	  case NID_cast5_ecb:
-	    *cipher = &cuda_cast5_ecb;
 	    break;
 	  case NID_camellia_128_ecb:
 	    *cipher = &cuda_camellia_128_ecb;
 	    break;
-	  case NID_camellia_128_cbc:
-	    *cipher = &cuda_camellia_128_cbc;
+	  case NID_cast5_ecb:
+	    *cipher = &cuda_cast5_ecb;
+	    break;
+	  case NID_des_ecb:
+	    *cipher = &cuda_des_ecb;
 	    break;
 	  case NID_idea_ecb:
 	    *cipher = &cuda_idea_ecb;
-	    break;
-	  case NID_idea_cbc:
-	    *cipher = &cuda_idea_cbc;
 	    break;
 	  case NID_aes_128_ecb:
 	    *cipher = &cuda_aes_128_ecb;
