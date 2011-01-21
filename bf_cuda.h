@@ -32,11 +32,8 @@
 #include <cuda_runtime_api.h>
 
 void BF_cuda_transfer_key_schedule(const BF_KEY *key);
-void BF_cuda_crypt(const unsigned char *in, unsigned char *out,size_t nbytes, int);
+void BF_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, uint8_t **host_data, uint64_t **device_data);
 
 void BF_cuda_transfer_iv(const unsigned char *iv);
 void BF_cuda_decrypt_cbc(const unsigned char *in, unsigned char *out,size_t nbytes);
 void BF_cuda_encrypt_cbc(const unsigned char *in, unsigned char *out,size_t nbytes);
-
-void BF_cuda_init(int* nm,int buffer_size_engine,int verbosity);
-void BF_cuda_finish();

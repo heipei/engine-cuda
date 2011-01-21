@@ -45,4 +45,6 @@
 
 #define TX (blockIdx.x * (blockDim.x * blockDim.y) + (blockDim.y * threadIdx.x) + threadIdx.y)
 
+void cuda_device_init(int *nm, int buffer_size, int output_verbosity, uint8_t **host_data, uint64_t **device_data);
+void cuda_device_finish(uint8_t *host_data, uint64_t *device_data);
 #endif

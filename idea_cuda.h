@@ -32,11 +32,8 @@
 #include <cuda_runtime_api.h>
 
 void IDEA_cuda_transfer_key_schedule(const IDEA_KEY_SCHEDULE *key);
-void IDEA_cuda_crypt(const unsigned char *in, unsigned char *out,size_t nbytes, int);
+void IDEA_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, uint8_t **host_data, uint64_t **device_data);
 
 void IDEA_cuda_transfer_iv(const unsigned char *iv);
 void IDEA_cuda_decrypt_cbc(const unsigned char *in, unsigned char *out,size_t nbytes);
 void IDEA_cuda_encrypt_cbc(const unsigned char *in, unsigned char *out,size_t nbytes);
-
-void IDEA_cuda_init(int* nm,int buffer_size_engine,int verbosity);
-void IDEA_cuda_finish();

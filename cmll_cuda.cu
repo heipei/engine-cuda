@@ -314,13 +314,13 @@ __global__ void CMLLdecKernel(uint64_t *data) {
 	
 }
 
-extern "C" void CMLL_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc) {
+extern "C" void CMLL_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, uint8_t **host_data, uint64_t **device_data) {
 	assert(in && out && nbytes);
 	cudaError_t cudaerrno;
 	int gridSize;
 	dim3 dimBlock(MAX_THREAD, 1, 1);
 
-	transferHostToDevice(&in, (uint32_t **)&cmll_device_data, &cmll_host_data, &nbytes);
+	transferHostToDevice(&in, (uint32_t **)device_data, host_data, &nbytes);
 
 	if ((nbytes%(MAX_THREAD*CMLL_BLOCK_SIZE))==0) {
 		gridSize = nbytes/(MAX_THREAD*CMLL_BLOCK_SIZE);
@@ -335,16 +335,16 @@ extern "C" void CMLL_cuda_crypt(const unsigned char *in, unsigned char *out, siz
 
 	//cudaPrintfInit();
 	if(enc == CAMELLIA_ENCRYPT) {
-		CMLLencKernel<<<gridSize,dimBlock>>>(cmll_device_data);
+		CMLLencKernel<<<gridSize,dimBlock>>>(*device_data);
 		_CUDA_N("CMLL encryption kernel could not be launched!");
 	} else {
-		CMLLdecKernel<<<gridSize,dimBlock>>>(cmll_device_data);
+		CMLLdecKernel<<<gridSize,dimBlock>>>(*device_data);
 		_CUDA_N("CMLL decryption kernel could not be launched!");
 	}
 	//cudaPrintfDisplay(stdout, true);
 	//cudaPrintfEnd();
 
-	transferDeviceToHost(&out, (uint32_t **)&cmll_device_data, &cmll_host_data, &cmll_host_data, &nbytes);
+	transferDeviceToHost(&out, (uint32_t **)device_data, host_data, host_data, &nbytes);
 }
 
 extern "C" void CMLL_cuda_transfer_key_schedule(CAMELLIA_KEY *ks) {
@@ -354,96 +354,6 @@ extern "C" void CMLL_cuda_transfer_key_schedule(CAMELLIA_KEY *ks) {
 	_CUDA(cudaMemcpyToSymbolAsync(cmll_constant_schedule,ks,ks_size,0,cudaMemcpyHostToDevice));
 }
 
-extern "C" void CMLL_cuda_finish() {
-	cudaError_t cudaerrno;
-
-	if (output_verbosity>=OUTPUT_NORMAL) fprintf(stdout, "\nDone. Finishing up CMLL\n");
-
-#ifndef PAGEABLE 
-#if CUDART_VERSION >= 2020
-	if(isIntegrated) {
-		_CUDA(cudaFreeHost(cmll_host_data));
-		//_CUDA(cudaFreeHost(cmll_h_iv));
-	} else {
-		_CUDA(cudaFree(cmll_device_data));
-		//_CUDA(cudaFree(cmll_d_iv));
-	}
-#else	
-	_CUDA(cudaFree(cmll_device_data));
-	//_CUDA(cudaFree(cmll_d_iv));
-#endif
-#else
-	_CUDA(cudaFree(cmll_device_data));
-	//_CUDA(cudaFree(cmll_d_iv));
-#endif	
-
-	_CUDA(cudaEventRecord(cmll_stop,0));
-	_CUDA(cudaEventSynchronize(cmll_stop));
-	_CUDA(cudaEventElapsedTime(&cmll_elapsed,cmll_start,cmll_stop));
-
-	if (output_verbosity>=OUTPUT_NORMAL) fprintf(stdout,"\nTotal time: %f milliseconds\n",cmll_elapsed);	
-}
-
-extern "C" void CMLL_cuda_init(int *nm, int buffer_size_engine, int output_kind) {
-	assert(nm);
-	cudaError_t cudaerrno;
-   	int buffer_size;
-	cudaDeviceProp deviceProp;
-    	
-	output_verbosity=output_kind;
-
-	checkCUDADevice(&deviceProp, output_verbosity);
-	
-	if(buffer_size_engine==0)
-		buffer_size=MAX_CHUNK_SIZE;
-	else 
-		buffer_size=buffer_size_engine;
-	
-#if CUDART_VERSION >= 2000
-	*nm=deviceProp.multiProcessorCount;
-#endif
-
-#ifndef PAGEABLE 
-#if CUDART_VERSION >= 2020
-	isIntegrated=deviceProp.integrated;
-	if(isIntegrated) {
-        	//zero-copy memory mode - use special function to get OS-pinned memory
-		_CUDA(cudaSetDeviceFlags(cudaDeviceMapHost));
-        	if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"Using zero-copy memory.\n");
-        	_CUDA(cudaHostAlloc((void**)&cmll_host_data,buffer_size,cudaHostAllocMapped));
-		transferHostToDevice = transferHostToDevice_ZEROCOPY;		// set memory transfer function
-		transferDeviceToHost = transferDeviceToHost_ZEROCOPY;		// set memory transfer function
-		_CUDA(cudaHostGetDevicePointer(&cmll_device_data,cmll_host_data, 0));
-	} else {
-		//pinned memory mode - use special function to get OS-pinned memory
-		_CUDA(cudaHostAlloc( (void**)&cmll_host_data, buffer_size, cudaHostAllocDefault));
-		if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"Using pinned memory: cudaHostAllocDefault.\n");
-		transferHostToDevice = transferHostToDevice_PINNED;	// set memory transfer function
-		transferDeviceToHost = transferDeviceToHost_PINNED;	// set memory transfer function
-		_CUDA(cudaMalloc((void **)&cmll_device_data,buffer_size));
-	}
-#else
-        //pinned memory mode - use special function to get OS-pinned memory
-        _CUDA(cudaMallocHost((void**)&h_s, buffer_size));
-        if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"Using pinned memory: cudaHostAllocDefault.\n");
-	transferHostToDevice = transferHostToDevice_PINNED;			// set memory transfer function
-	transferDeviceToHost = transferDeviceToHost_PINNED;			// set memory transfer function
-	_CUDA(cudaMalloc((void **)&cmll_device_data,buffer_size));
-#endif
-#else
-        if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"Using pageable memory.\n");
-	transferHostToDevice = transferHostToDevice_PAGEABLE;			// set memory transfer function
-	transferDeviceToHost = transferDeviceToHost_PAGEABLE;			// set memory transfer function
-	_CUDA(cudaMalloc((void **)&cmll_device_data,buffer_size));
-#endif
-
-	if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"The current buffer size is %d.\n\n", buffer_size);
-
-	_CUDA(cudaEventCreate(&cmll_start));
-	_CUDA(cudaEventCreate(&cmll_stop));
-	_CUDA(cudaEventRecord(cmll_start,0));
-
-}
 //
 // CBC parallel decrypt
 //

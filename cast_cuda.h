@@ -32,11 +32,8 @@
 #include <cuda_runtime_api.h>
 
 void CAST_cuda_transfer_key_schedule(const CAST_KEY *key);
-void CAST_cuda_crypt(const unsigned char *in, unsigned char *out,size_t nbytes, int);
+void CAST_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, uint8_t **host_data, uint64_t **device_data);
 
 void CAST_cuda_transfer_iv(const unsigned char *iv);
 void CAST_cuda_decrypt_cbc(const unsigned char *in, unsigned char *out,size_t nbytes);
 void CAST_cuda_encrypt_cbc(const unsigned char *in, unsigned char *out,size_t nbytes);
-
-void CAST_cuda_init(int* nm,int buffer_size_engine,int verbosity);
-void CAST_cuda_finish();

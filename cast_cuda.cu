@@ -8,16 +8,11 @@
 #include <cuda_runtime_api.h>
 #include "cuda_common.h"
 #include "common.h"
-//#include "lib/cuPrintf.cu"
 
 __device__ __constant__ uint32_t cast_constant_schedule[33];
-//__shared__ CAST_KEY cast_schedule;
 
-__device__ uint64_t *cast_device_data;
-uint8_t  *cast_host_data;
-
-float cast_elapsed;
-cudaEvent_t cast_start,cast_stop;
+__device__ uint64_t *device_data;
+uint8_t  *host_data;
 
 __shared__ CAST_LONG CAST_S_table0[256];
 __shared__ CAST_LONG CAST_S_table1[256];
@@ -227,37 +222,32 @@ __global__ void CASTdecKernel(uint64_t *data) {
 	
 }
 
-extern "C" void CAST_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc) {
+extern "C" void CAST_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, uint8_t **host_data, uint64_t **device_data) {
 	assert(in && out && nbytes);
 	cudaError_t cudaerrno;
 	int gridSize;
 	dim3 dimBlock(MAX_THREAD, 1, 1);
 
-	transferHostToDevice(&in, (uint32_t **)&cast_device_data, &cast_host_data, &nbytes);
+	transferHostToDevice(&in, (uint32_t **)device_data, host_data, &nbytes);
 
 	if ((nbytes%(MAX_THREAD*CAST_BLOCK_SIZE))==0) {
 		gridSize = nbytes/(MAX_THREAD*CAST_BLOCK_SIZE);
 	} else {
-		//if (nbytes < MAX_THREAD*CAST_BLOCK_SIZE)
-		//	dimBlock.x = nbytes / CAST_BLOCK_SIZE;
 		gridSize = nbytes/(MAX_THREAD*CAST_BLOCK_SIZE)+1;
 	}
 
 	if (output_verbosity==OUTPUT_VERBOSE)
 		fprintf(stdout,"Starting CAST kernel for %zu bytes with (%d, (%d, %d))...\n", nbytes, gridSize, dimBlock.x, dimBlock.y);
 
-	//cudaPrintfInit();
 	if(enc == CAST_ENCRYPT) {
-		CASTencKernel<<<gridSize,dimBlock>>>(cast_device_data);
+		CASTencKernel<<<gridSize,dimBlock>>>(*device_data);
 		_CUDA_N("CAST encryption kernel could not be launched!");
 	} else {
-		CASTdecKernel<<<gridSize,dimBlock>>>(cast_device_data);
+		CASTdecKernel<<<gridSize,dimBlock>>>(*device_data);
 		_CUDA_N("CAST decryption kernel could not be launched!");
 	}
-	//cudaPrintfDisplay(stdout, true);
-	//cudaPrintfEnd();
 
-	transferDeviceToHost(&out, (uint32_t **)&cast_device_data, &cast_host_data, &cast_host_data, &nbytes);
+	transferDeviceToHost(&out, (uint32_t **)device_data, host_data, host_data, &nbytes);
 }
 
 extern "C" void CAST_cuda_transfer_key_schedule(CAST_KEY *ks) {
@@ -267,96 +257,6 @@ extern "C" void CAST_cuda_transfer_key_schedule(CAST_KEY *ks) {
 	_CUDA(cudaMemcpyToSymbolAsync(cast_constant_schedule,ks,ks_size,0,cudaMemcpyHostToDevice));
 }
 
-extern "C" void CAST_cuda_finish() {
-	cudaError_t cudaerrno;
-
-	if (output_verbosity>=OUTPUT_NORMAL) fprintf(stdout, "\nDone. Finishing up CAST\n");
-
-#ifndef PAGEABLE 
-#if CUDART_VERSION >= 2020
-	if(isIntegrated) {
-		_CUDA(cudaFreeHost(cast_host_data));
-		//_CUDA(cudaFreeHost(cast_h_iv));
-	} else {
-		_CUDA(cudaFree(cast_device_data));
-		//_CUDA(cudaFree(cast_d_iv));
-	}
-#else	
-	_CUDA(cudaFree(cast_device_data));
-	//_CUDA(cudaFree(cast_d_iv));
-#endif
-#else
-	_CUDA(cudaFree(cast_device_data));
-	//_CUDA(cudaFree(cast_d_iv));
-#endif	
-
-	_CUDA(cudaEventRecord(cast_stop,0));
-	_CUDA(cudaEventSynchronize(cast_stop));
-	_CUDA(cudaEventElapsedTime(&cast_elapsed,cast_start,cast_stop));
-
-	if (output_verbosity>=OUTPUT_NORMAL) fprintf(stdout,"\nTotal time: %f milliseconds\n",cast_elapsed);	
-}
-
-extern "C" void CAST_cuda_init(int *nm, int buffer_size_engine, int output_kind) {
-	assert(nm);
-	cudaError_t cudaerrno;
-   	int buffer_size;
-	cudaDeviceProp deviceProp;
-    	
-	output_verbosity=output_kind;
-
-	checkCUDADevice(&deviceProp, output_verbosity);
-	
-	if(buffer_size_engine==0)
-		buffer_size=MAX_CHUNK_SIZE;
-	else 
-		buffer_size=buffer_size_engine;
-	
-#if CUDART_VERSION >= 2000
-	*nm=deviceProp.multiProcessorCount;
-#endif
-
-#ifndef PAGEABLE 
-#if CUDART_VERSION >= 2020
-	isIntegrated=deviceProp.integrated;
-	if(isIntegrated) {
-        	//zero-copy memory mode - use special function to get OS-pinned memory
-		_CUDA(cudaSetDeviceFlags(cudaDeviceMapHost));
-        	if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"Using zero-copy memory.\n");
-        	_CUDA(cudaHostAlloc((void**)&cast_host_data,buffer_size,cudaHostAllocMapped));
-		transferHostToDevice = transferHostToDevice_ZEROCOPY;		// set memory transfer function
-		transferDeviceToHost = transferDeviceToHost_ZEROCOPY;		// set memory transfer function
-		_CUDA(cudaHostGetDevicePointer(&cast_device_data,cast_host_data, 0));
-	} else {
-		//pinned memory mode - use special function to get OS-pinned memory
-		_CUDA(cudaHostAlloc( (void**)&cast_host_data, buffer_size, cudaHostAllocDefault));
-		if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"Using pinned memory: cudaHostAllocDefault.\n");
-		transferHostToDevice = transferHostToDevice_PINNED;	// set memory transfer function
-		transferDeviceToHost = transferDeviceToHost_PINNED;	// set memory transfer function
-		_CUDA(cudaMalloc((void **)&cast_device_data,buffer_size));
-	}
-#else
-        //pinned memory mode - use special function to get OS-pinned memory
-        _CUDA(cudaMallocHost((void**)&h_s, buffer_size));
-        if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"Using pinned memory: cudaHostAllocDefault.\n");
-	transferHostToDevice = transferHostToDevice_PINNED;			// set memory transfer function
-	transferDeviceToHost = transferDeviceToHost_PINNED;			// set memory transfer function
-	_CUDA(cudaMalloc((void **)&cast_device_data,buffer_size));
-#endif
-#else
-        if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"Using pageable memory.\n");
-	transferHostToDevice = transferHostToDevice_PAGEABLE;			// set memory transfer function
-	transferDeviceToHost = transferDeviceToHost_PAGEABLE;			// set memory transfer function
-	_CUDA(cudaMalloc((void **)&cast_device_data,buffer_size));
-#endif
-
-	if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"The current buffer size is %d.\n\n", buffer_size);
-
-	_CUDA(cudaEventCreate(&cast_start));
-	_CUDA(cudaEventCreate(&cast_stop));
-	_CUDA(cudaEventRecord(cast_start,0));
-
-}
 //
 // CBC parallel decrypt
 //

@@ -5,11 +5,11 @@ SIZE=100
 
 if [[ $ARGC -le 1 ]]; then
 	echo "> Usage: ./test.sh <algo> <file> <key>"
-	echo "> algo in {des-ecb,idea-ecb,aes-ecb}"
+	echo "> algo in {bf-ecb,camellia-128-ecb,cast-ecb,des-ecb,idea-ecb,aes-ecb}"
 	exit 0
 fi
 
-KEY="010101F10101F1F1"
+KEY="A10101F10101F1F1"
 if [[ -n $3 ]]; then
 	KEY=$3;
 fi

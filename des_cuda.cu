@@ -162,8 +162,6 @@ __shared__ uint32_t des_d_sp[8][64];
 __constant__ uint64_t cs[16];
 __shared__ uint64_t s[16];
 
-__device__ __constant__ uint64_t *des_d_s;
-uint8_t  *des_h_s;
 //__device__ uint32_t *des_d_iv;
 
 float des_elapsed;
@@ -306,13 +304,13 @@ __global__ void DESdecKernel(uint64_t *data) {
 	data[TX]=left|((uint64_t)right)<<32;
 }
 
-extern "C" void DES_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc) {
+extern "C" void DES_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, uint8_t **host_data, uint64_t **device_data) {
 	assert(in && out && nbytes);
 	cudaError_t cudaerrno;
 	int gridSize;
 	dim3 dimBlock(MAX_THREAD, 1, 1);
 
-	transferHostToDevice(&in, (uint32_t **)&des_d_s, &des_h_s, &nbytes);
+	transferHostToDevice(&in, (uint32_t **)device_data, host_data, &nbytes);
 	
 	// TODO: MAX_THREAD*4 because DES encrypts 4 bytes at once!
 	if ((nbytes%(MAX_THREAD*DES_BLOCK_SIZE))==0) {
@@ -327,14 +325,14 @@ extern "C" void DES_cuda_crypt(const unsigned char *in, unsigned char *out, size
 		fprintf(stdout,"Starting DES kernel for %zu bytes with (%d, (%d, %d))...\n", nbytes, gridSize, dimBlock.x, dimBlock.y);
 
 	if(enc == DES_ENCRYPT) {
-		DESencKernel<<<gridSize,dimBlock>>>(des_d_s);
+		DESencKernel<<<gridSize,dimBlock>>>(*device_data);
 		_CUDA_N("DES encryption kernel could not be launched!");
 	} else {
-		DESdecKernel<<<gridSize,dimBlock>>>(des_d_s);
+		DESdecKernel<<<gridSize,dimBlock>>>(*device_data);
 		_CUDA_N("DES decryption kernel could not be launched!");
 	}
 
-	transferDeviceToHost(&out, (uint32_t **)&des_d_s, &des_h_s, &des_h_s, &nbytes);
+	transferDeviceToHost(&out, (uint32_t **)device_data, host_data, host_data, &nbytes);
 }
 
 extern "C" void DES_cuda_transfer_key_schedule(DES_key_schedule *ks) {
@@ -344,96 +342,6 @@ extern "C" void DES_cuda_transfer_key_schedule(DES_key_schedule *ks) {
 	_CUDA(cudaMemcpyToSymbolAsync(cs,ks,ks_size,0,cudaMemcpyHostToDevice));
 }
 
-extern "C" void DES_cuda_finish() {
-	cudaError_t cudaerrno;
-
-	if (output_verbosity>=OUTPUT_NORMAL) fprintf(stdout, "\nDone. Finishing up DES\n");
-
-#ifndef PAGEABLE 
-#if CUDART_VERSION >= 2020
-	if(isIntegrated) {
-		_CUDA(cudaFreeHost(des_h_s));
-		//_CUDA(cudaFreeHost(des_h_iv));
-	} else {
-		_CUDA(cudaFree(des_d_s));
-		//_CUDA(cudaFree(des_d_iv));
-	}
-#else	
-	_CUDA(cudaFree(des_d_s));
-	//_CUDA(cudaFree(des_d_iv));
-#endif
-#else
-	_CUDA(cudaFree(des_d_s));
-	//_CUDA(cudaFree(des_d_iv));
-#endif	
-
-	_CUDA(cudaEventRecord(des_stop,0));
-	_CUDA(cudaEventSynchronize(des_stop));
-	_CUDA(cudaEventElapsedTime(&des_elapsed,des_start,des_stop));
-
-	if (output_verbosity>=OUTPUT_NORMAL) fprintf(stdout,"\nTotal time: %f milliseconds\n",des_elapsed);	
-}
-
-extern "C" void DES_cuda_init(int *nm, int buffer_size_engine, int output_kind) {
-	assert(nm);
-	cudaError_t cudaerrno;
-   	int buffer_size;
-	cudaDeviceProp deviceProp;
-    	
-	output_verbosity=output_kind;
-
-	checkCUDADevice(&deviceProp, output_verbosity);
-	
-	if(buffer_size_engine==0)
-		buffer_size=MAX_CHUNK_SIZE;
-	else 
-		buffer_size=buffer_size_engine;
-	
-#if CUDART_VERSION >= 2000
-	*nm=deviceProp.multiProcessorCount;
-#endif
-
-#ifndef PAGEABLE 
-#if CUDART_VERSION >= 2020
-	isIntegrated=deviceProp.integrated;
-	if(isIntegrated) {
-        	//zero-copy memory mode - use special function to get OS-pinned memory
-		_CUDA(cudaSetDeviceFlags(cudaDeviceMapHost));
-        	if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"Using zero-copy memory.\n");
-        	_CUDA(cudaHostAlloc((void**)&des_h_s,buffer_size,cudaHostAllocMapped));
-		transferHostToDevice = transferHostToDevice_ZEROCOPY;		// set memory transfer function
-		transferDeviceToHost = transferDeviceToHost_ZEROCOPY;		// set memory transfer function
-		_CUDA(cudaHostGetDevicePointer(&des_d_s,des_h_s, 0));
-	} else {
-		//pinned memory mode - use special function to get OS-pinned memory
-		_CUDA(cudaHostAlloc( (void**)&des_h_s, buffer_size, cudaHostAllocDefault));
-		if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"Using pinned memory: cudaHostAllocDefault.\n");
-		transferHostToDevice = transferHostToDevice_PINNED;	// set memory transfer function
-		transferDeviceToHost = transferDeviceToHost_PINNED;	// set memory transfer function
-		_CUDA(cudaMalloc((void **)&des_d_s,buffer_size));
-	}
-#else
-        //pinned memory mode - use special function to get OS-pinned memory
-        _CUDA(cudaMallocHost((void**)&h_s, buffer_size));
-        if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"Using pinned memory: cudaHostAllocDefault.\n");
-	transferHostToDevice = transferHostToDevice_PINNED;			// set memory transfer function
-	transferDeviceToHost = transferDeviceToHost_PINNED;			// set memory transfer function
-	_CUDA(cudaMalloc((void **)&des_d_s,buffer_size));
-#endif
-#else
-        if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"Using pageable memory.\n");
-	transferHostToDevice = transferHostToDevice_PAGEABLE;			// set memory transfer function
-	transferDeviceToHost = transferDeviceToHost_PAGEABLE;			// set memory transfer function
-	_CUDA(cudaMalloc((void **)&des_d_s,buffer_size));
-#endif
-
-	if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"The current buffer size is %d.\n\n", buffer_size);
-
-	_CUDA(cudaEventCreate(&des_start));
-	_CUDA(cudaEventCreate(&des_stop));
-	_CUDA(cudaEventRecord(des_start,0));
-
-}
 //
 // CBC parallel decrypt
 //

@@ -1,10 +1,8 @@
 == General ==
 - Non-blocking kernel calls?
 - Many calls to CudaMemcpy, where from?
-- Single Init / Finish for CUDA (Only block-size needed)
 - Adjust buffersize to device memory
 - cuPrintf inclusion OK?
-- get rid of CPU_ONLY stuff
 - Timing only for certain preprocessor definition
 - Streams
 - Rambo is capped at 800MB/s, why?

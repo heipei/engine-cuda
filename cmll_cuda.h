@@ -32,11 +32,8 @@
 #include <cuda_runtime_api.h>
 
 void CMLL_cuda_transfer_key_schedule(const CAMELLIA_KEY *key);
-void CMLL_cuda_crypt(const unsigned char *in, unsigned char *out,size_t nbytes, int);
+void CMLL_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, uint8_t **host_data, uint64_t **device_data);
 
 void CMLL_cuda_transfer_iv(const unsigned char *iv);
 void CMLL_cuda_decrypt_cbc(const unsigned char *in, unsigned char *out,size_t nbytes);
 void CMLL_cuda_encrypt_cbc(const unsigned char *in, unsigned char *out,size_t nbytes);
-
-void CMLL_cuda_init(int* nm,int buffer_size_engine,int verbosity);
-void CMLL_cuda_finish();
