@@ -1,0 +1,28 @@
+Doing des-ecb for 3s on 16 size blocks: 73053 des-ecb's in 2.99s
+Doing des-ecb for 3s on 64 size blocks: 69538 des-ecb's in 2.99s
+Doing des-ecb for 3s on 256 size blocks: 66098 des-ecb's in 2.99s
+Doing des-ecb for 3s on 1024 size blocks: 65346 des-ecb's in 2.99s
+Doing des-ecb for 3s on 2048 size blocks: 64591 des-ecb's in 2.99s
+Doing des-ecb for 3s on 4096 size blocks: 62275 des-ecb's in 2.99s
+Doing des-ecb for 3s on 8192 size blocks: 58914 des-ecb's in 2.99s
+Doing des-ecb for 3s on 16384 size blocks: 52185 des-ecb's in 2.99s
+Doing des-ecb for 3s on 32768 size blocks: 39551 des-ecb's in 2.99s
+Doing des-ecb for 3s on 65536 size blocks: 26980 des-ecb's in 2.99s
+Doing des-ecb for 3s on 131072 size blocks: 16201 des-ecb's in 2.99s
+Doing des-ecb for 3s on 262144 size blocks: 8792 des-ecb's in 2.98s
+Doing des-ecb for 3s on 524288 size blocks: 4581 des-ecb's in 2.99s
+Doing des-ecb for 3s on 1048576 size blocks: 2177 des-ecb's in 2.99s
+Doing des-ecb for 3s on 2097152 size blocks: 1060 des-ecb's in 2.99s
+Doing des-ecb for 3s on 4194304 size blocks: 525 des-ecb's in 3.00s
+Doing des-ecb for 3s on 8388608 size blocks: 268 des-ecb's in 2.97s
+Successfully found 8 CUDA devices (CUDART_VERSION 3020).
+Using pinned memory: cudaHostAllocDefault.
+The current buffer size is 8388608.
+
+OpenSSL 1.0.0b 16 Nov 2010
+built on: Tue Dec 14 19:45:32 CET 2010
+options:bn(64,64) rc4(1x,char) des(idx,cisc,16,int) aes(partial) idea(int) blowfish(idx) 
+compiler: gcc -DOPENSSL_THREADS -D_REENTRANT -DDSO_DLFCN -DHAVE_DLFCN_H -fPIC -m64 -DL_ENDIAN -DTERMIO -O3 -Wall -DMD32_REG_T=int -DOPENSSL_IA32_SSE2 -DOPENSSL_BN_ASM_MONT -DSHA1_ASM -DSHA256_ASM -DSHA512_ASM -DMD5_ASM -DAES_ASM -DWHIRLPOOL_ASM
+The 'numbers' are in 1000s of bytes per second processed.
+type             16 bytes     64 bytes    256 bytes   1024 bytes   2048 bytes   4096 bytes   8192 bytes  16384 bytes  32768 bytes  65536 bytes 131072 bytes 262144 bytes 524288 bytes1048576 bytes2097152 bytes4194304 bytes8388608 bytes
+des-ecb            390.92k     1488.44k     5659.23k    22379.37k    44241.59k    85310.50k   161412.54k   285952.86k   433447.21k   591358.29k   710199.82k   773412.77k   803265.33k   763461.52k   743471.95k   734003.20k   756951.83k

@@ -1,0 +1,28 @@
+Doing cast5-ecb for 3s on 16 size blocks: 81843 cast5-ecb's in 2.99s
+Doing cast5-ecb for 3s on 64 size blocks: 81838 cast5-ecb's in 2.99s
+Doing cast5-ecb for 3s on 256 size blocks: 81293 cast5-ecb's in 2.99s
+Doing cast5-ecb for 3s on 1024 size blocks: 82011 cast5-ecb's in 2.99s
+Doing cast5-ecb for 3s on 2048 size blocks: 80320 cast5-ecb's in 2.96s
+Doing cast5-ecb for 3s on 4096 size blocks: 76793 cast5-ecb's in 2.98s
+Doing cast5-ecb for 3s on 8192 size blocks: 71538 cast5-ecb's in 2.98s
+Doing cast5-ecb for 3s on 16384 size blocks: 61534 cast5-ecb's in 2.99s
+Doing cast5-ecb for 3s on 32768 size blocks: 46051 cast5-ecb's in 2.99s
+Doing cast5-ecb for 3s on 65536 size blocks: 30755 cast5-ecb's in 2.98s
+Doing cast5-ecb for 3s on 131072 size blocks: 18166 cast5-ecb's in 2.99s
+Doing cast5-ecb for 3s on 262144 size blocks: 9869 cast5-ecb's in 2.99s
+Doing cast5-ecb for 3s on 524288 size blocks: 5249 cast5-ecb's in 2.99s
+Doing cast5-ecb for 3s on 1048576 size blocks: 2485 cast5-ecb's in 2.99s
+Doing cast5-ecb for 3s on 2097152 size blocks: 1208 cast5-ecb's in 2.99s
+Doing cast5-ecb for 3s on 4194304 size blocks: 600 cast5-ecb's in 3.00s
+Doing cast5-ecb for 3s on 8388608 size blocks: 307 cast5-ecb's in 2.98s
+Successfully found 8 CUDA devices (CUDART_VERSION 3020).
+Using pinned memory: cudaHostAllocDefault.
+The current buffer size is 8388608.
+
+OpenSSL 1.0.0b 16 Nov 2010
+built on: Tue Dec 14 19:45:32 CET 2010
+options:bn(64,64) rc4(1x,char) des(idx,cisc,16,int) aes(partial) idea(int) blowfish(idx) 
+compiler: gcc -DOPENSSL_THREADS -D_REENTRANT -DDSO_DLFCN -DHAVE_DLFCN_H -fPIC -m64 -DL_ENDIAN -DTERMIO -O3 -Wall -DMD32_REG_T=int -DOPENSSL_IA32_SSE2 -DOPENSSL_BN_ASM_MONT -DSHA1_ASM -DSHA256_ASM -DSHA512_ASM -DMD5_ASM -DAES_ASM -DWHIRLPOOL_ASM
+The 'numbers' are in 1000s of bytes per second processed.
+type             16 bytes     64 bytes    256 bytes   1024 bytes   2048 bytes   4096 bytes   8192 bytes  16384 bytes  32768 bytes  65536 bytes 131072 bytes 262144 bytes 524288 bytes1048576 bytes2097152 bytes4194304 bytes8388608 bytes
+cast5-ecb          437.96k     1751.72k     6960.20k    28086.71k    55572.76k   105551.72k   196657.48k   337181.62k   504682.00k   676362.31k   796339.11k   865250.55k   920397.23k   871475.37k   847277.46k   838860.80k   864195.52k

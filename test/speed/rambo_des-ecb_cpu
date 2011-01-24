@@ -1,0 +1,24 @@
+Doing des-ecb for 3s on 16 size blocks: 12194233 des-ecb's in 2.99s
+Doing des-ecb for 3s on 64 size blocks: 3073618 des-ecb's in 2.99s
+Doing des-ecb for 3s on 256 size blocks: 781505 des-ecb's in 2.99s
+Doing des-ecb for 3s on 1024 size blocks: 197033 des-ecb's in 2.99s
+Doing des-ecb for 3s on 2048 size blocks: 98569 des-ecb's in 2.99s
+Doing des-ecb for 3s on 4096 size blocks: 49204 des-ecb's in 2.99s
+Doing des-ecb for 3s on 8192 size blocks: 24271 des-ecb's in 2.99s
+Doing des-ecb for 3s on 16384 size blocks: 12057 des-ecb's in 3.00s
+Doing des-ecb for 3s on 32768 size blocks: 5992 des-ecb's in 2.99s
+Doing des-ecb for 3s on 65536 size blocks: 2997 des-ecb's in 2.98s
+Doing des-ecb for 3s on 131072 size blocks: 1502 des-ecb's in 2.98s
+Doing des-ecb for 3s on 262144 size blocks: 765 des-ecb's in 2.99s
+Doing des-ecb for 3s on 524288 size blocks: 384 des-ecb's in 2.99s
+Doing des-ecb for 3s on 1048576 size blocks: 192 des-ecb's in 3.00s
+Doing des-ecb for 3s on 2097152 size blocks: 96 des-ecb's in 2.99s
+Doing des-ecb for 3s on 4194304 size blocks: 48 des-ecb's in 2.99s
+Doing des-ecb for 3s on 8388608 size blocks: 24 des-ecb's in 3.00s
+OpenSSL 1.0.0b 16 Nov 2010
+built on: Tue Dec 14 19:45:32 CET 2010
+options:bn(64,64) rc4(1x,char) des(idx,cisc,16,int) aes(partial) idea(int) blowfish(idx) 
+compiler: gcc -DOPENSSL_THREADS -D_REENTRANT -DDSO_DLFCN -DHAVE_DLFCN_H -fPIC -m64 -DL_ENDIAN -DTERMIO -O3 -Wall -DMD32_REG_T=int -DOPENSSL_IA32_SSE2 -DOPENSSL_BN_ASM_MONT -DSHA1_ASM -DSHA256_ASM -DSHA512_ASM -DMD5_ASM -DAES_ASM -DWHIRLPOOL_ASM
+The 'numbers' are in 1000s of bytes per second processed.
+type             16 bytes     64 bytes    256 bytes   1024 bytes   2048 bytes   4096 bytes   8192 bytes  16384 bytes  32768 bytes  65536 bytes 131072 bytes 262144 bytes 524288 bytes1048576 bytes2097152 bytes4194304 bytes8388608 bytes
+des-ecb          65253.42k    65789.82k    66911.46k    67478.86k    67514.82k    67404.54k    66497.67k    65847.30k    65667.51k    65909.86k    66063.81k    67070.29k    67333.31k    67108.86k    67333.31k    67333.31k    67108.86k

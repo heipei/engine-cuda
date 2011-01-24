@@ -1,0 +1,28 @@
+Doing camellia-128-ecb for 3s on 16 size blocks: 64801 camellia-128-ecb's in 3.00s
+Doing camellia-128-ecb for 3s on 64 size blocks: 64705 camellia-128-ecb's in 2.99s
+Doing camellia-128-ecb for 3s on 256 size blocks: 64380 camellia-128-ecb's in 2.99s
+Doing camellia-128-ecb for 3s on 1024 size blocks: 63813 camellia-128-ecb's in 2.99s
+Doing camellia-128-ecb for 3s on 2048 size blocks: 62567 camellia-128-ecb's in 2.98s
+Doing camellia-128-ecb for 3s on 4096 size blocks: 60656 camellia-128-ecb's in 2.99s
+Doing camellia-128-ecb for 3s on 8192 size blocks: 57367 camellia-128-ecb's in 2.99s
+Doing camellia-128-ecb for 3s on 16384 size blocks: 51085 camellia-128-ecb's in 2.99s
+Doing camellia-128-ecb for 3s on 32768 size blocks: 41548 camellia-128-ecb's in 3.00s
+Doing camellia-128-ecb for 3s on 65536 size blocks: 28434 camellia-128-ecb's in 2.97s
+Doing camellia-128-ecb for 3s on 131072 size blocks: 17551 camellia-128-ecb's in 2.99s
+Doing camellia-128-ecb for 3s on 262144 size blocks: 9670 camellia-128-ecb's in 2.99s
+Doing camellia-128-ecb for 3s on 524288 size blocks: 5213 camellia-128-ecb's in 2.99s
+Doing camellia-128-ecb for 3s on 1048576 size blocks: 2478 camellia-128-ecb's in 2.99s
+Doing camellia-128-ecb for 3s on 2097152 size blocks: 1208 camellia-128-ecb's in 2.98s
+Doing camellia-128-ecb for 3s on 4194304 size blocks: 600 camellia-128-ecb's in 2.99s
+Doing camellia-128-ecb for 3s on 8388608 size blocks: 308 camellia-128-ecb's in 3.00s
+Successfully found 8 CUDA devices (CUDART_VERSION 3020).
+Using pinned memory: cudaHostAllocDefault.
+The current buffer size is 8388608.
+
+OpenSSL 1.0.0b 16 Nov 2010
+built on: Tue Dec 14 19:45:32 CET 2010
+options:bn(64,64) rc4(1x,char) des(idx,cisc,16,int) aes(partial) idea(int) blowfish(idx) 
+compiler: gcc -DOPENSSL_THREADS -D_REENTRANT -DDSO_DLFCN -DHAVE_DLFCN_H -fPIC -m64 -DL_ENDIAN -DTERMIO -O3 -Wall -DMD32_REG_T=int -DOPENSSL_IA32_SSE2 -DOPENSSL_BN_ASM_MONT -DSHA1_ASM -DSHA256_ASM -DSHA512_ASM -DMD5_ASM -DAES_ASM -DWHIRLPOOL_ASM
+The 'numbers' are in 1000s of bytes per second processed.
+type             16 bytes     64 bytes    256 bytes   1024 bytes   2048 bytes   4096 bytes   8192 bytes  16384 bytes  32768 bytes  65536 bytes 131072 bytes 262144 bytes 524288 bytes1048576 bytes2097152 bytes4194304 bytes8388608 bytes
+camellia-128-ecb      345.61k     1384.99k     5512.13k    21854.35k    42999.07k    83092.63k   157174.07k   279925.30k   453814.95k   627424.45k   769379.49k   847803.51k   914084.73k   869020.51k   850120.68k   841666.35k   861230.42k

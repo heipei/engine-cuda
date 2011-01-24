@@ -1,5 +1,10 @@
 == General ==
 - PTX inline?
+- Test-Framework for openssl speed and all algos
+ - With averaging
+ - With Gnuplot
+- Test-Framework for single-file encryption with averaging
+ 
 - Non-blocking kernel calls?
 - Many calls to CudaMemcpy, where from?
 - Adjust buffersize to device memory

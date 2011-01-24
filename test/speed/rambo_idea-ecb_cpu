@@ -1,0 +1,24 @@
+Doing idea-ecb for 3s on 16 size blocks: 14212904 idea-ecb's in 2.98s
+Doing idea-ecb for 3s on 64 size blocks: 3776712 idea-ecb's in 2.99s
+Doing idea-ecb for 3s on 256 size blocks: 942160 idea-ecb's in 2.99s
+Doing idea-ecb for 3s on 1024 size blocks: 236443 idea-ecb's in 3.00s
+Doing idea-ecb for 3s on 2048 size blocks: 116867 idea-ecb's in 2.99s
+Doing idea-ecb for 3s on 4096 size blocks: 58961 idea-ecb's in 2.99s
+Doing idea-ecb for 3s on 8192 size blocks: 29564 idea-ecb's in 2.99s
+Doing idea-ecb for 3s on 16384 size blocks: 14794 idea-ecb's in 2.99s
+Doing idea-ecb for 3s on 32768 size blocks: 7380 idea-ecb's in 2.99s
+Doing idea-ecb for 3s on 65536 size blocks: 3691 idea-ecb's in 2.99s
+Doing idea-ecb for 3s on 131072 size blocks: 1846 idea-ecb's in 2.99s
+Doing idea-ecb for 3s on 262144 size blocks: 923 idea-ecb's in 2.99s
+Doing idea-ecb for 3s on 524288 size blocks: 463 idea-ecb's in 2.99s
+Doing idea-ecb for 3s on 1048576 size blocks: 232 idea-ecb's in 3.00s
+Doing idea-ecb for 3s on 2097152 size blocks: 116 idea-ecb's in 3.00s
+Doing idea-ecb for 3s on 4194304 size blocks: 58 idea-ecb's in 3.00s
+Doing idea-ecb for 3s on 8388608 size blocks: 29 idea-ecb's in 3.01s
+OpenSSL 1.0.0b 16 Nov 2010
+built on: Tue Dec 14 19:45:32 CET 2010
+options:bn(64,64) rc4(1x,char) des(idx,cisc,16,int) aes(partial) idea(int) blowfish(idx) 
+compiler: gcc -DOPENSSL_THREADS -D_REENTRANT -DDSO_DLFCN -DHAVE_DLFCN_H -fPIC -m64 -DL_ENDIAN -DTERMIO -O3 -Wall -DMD32_REG_T=int -DOPENSSL_IA32_SSE2 -DOPENSSL_BN_ASM_MONT -DSHA1_ASM -DSHA256_ASM -DSHA512_ASM -DMD5_ASM -DAES_ASM -DWHIRLPOOL_ASM
+The 'numbers' are in 1000s of bytes per second processed.
+type             16 bytes     64 bytes    256 bytes   1024 bytes   2048 bytes   4096 bytes   8192 bytes  16384 bytes  32768 bytes  65536 bytes 131072 bytes 262144 bytes 524288 bytes1048576 bytes2097152 bytes4194304 bytes8388608 bytes
+idea-ecb         76310.89k    80839.32k    80666.54k    80705.88k    80048.03k    80770.65k    80999.43k    81065.18k    80878.88k    80900.79k    80922.71k    80922.71k    81185.73k    81089.88k    81089.88k    81089.88k    80820.48k
