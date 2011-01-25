@@ -61,10 +61,11 @@ void checkCUDADevice(struct cudaDeviceProp *deviceProp, int output_verbosity) {
 		if (output_verbosity!=OUTPUT_QUIET) 
 			fprintf(stderr,"There is no device supporting CUDA.\n");
 		exit(EXIT_FAILURE);
-	} else {
-		if (output_verbosity>=OUTPUT_NORMAL) 
-			fprintf(stdout,"Successfully found %d CUDA devices (CUDART_VERSION %d).\n",deviceCount, CUDART_VERSION);
 	}
+
+	if (output_verbosity>=OUTPUT_NORMAL) 
+		fprintf(stdout,"Successfully found %d CUDA devices (CUDART_VERSION %d).\n",deviceCount, CUDART_VERSION);
+
 	_CUDA(cudaSetDevice(0));
 	_CUDA(cudaGetDeviceProperties(deviceProp, 0));
 	
@@ -79,7 +80,7 @@ void checkCUDADevice(struct cudaDeviceProp *deviceProp, int output_verbosity) {
         	fprintf(stdout,"  Support host page-locked memory mapping:       %s\n", deviceProp->canMapHostMemory ? "Yes" : "No");
 #endif
 		fprintf(stdout,"\n");
-		}
+	}
 }
 
 extern "C" void cuda_device_init(int *nm, int buffer_size, int output_verbosity, uint8_t **host_data, uint64_t **device_data) {
@@ -132,9 +133,11 @@ extern "C" void cuda_device_init(int *nm, int buffer_size, int output_verbosity,
 
 	if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"The current buffer size is %d.\n\n", buffer_size);
 
-	_CUDA(cudaEventCreate(&time_start));
-	_CUDA(cudaEventCreate(&time_stop));
-	_CUDA(cudaEventRecord(time_start,0));
+	if(output_verbosity>=OUTPUT_NORMAL) {
+		_CUDA(cudaEventCreate(&time_start));
+		_CUDA(cudaEventCreate(&time_stop));
+		_CUDA(cudaEventRecord(time_start,0));
+	}
 
 }
 
@@ -161,9 +164,10 @@ extern "C" void cuda_device_finish(uint8_t *host_data, uint64_t *device_data) {
 	//_CUDA(cudaFree(d_iv));
 #endif	
 
-	_CUDA(cudaEventRecord(time_stop,0));
-	_CUDA(cudaEventSynchronize(time_stop));
-	_CUDA(cudaEventElapsedTime(&time_elapsed,time_start,time_stop));
-
-	if (output_verbosity>=OUTPUT_NORMAL) fprintf(stdout,"\nTotal time: %f milliseconds\n",time_elapsed);	
+	if(output_verbosity>=OUTPUT_NORMAL) {
+		_CUDA(cudaEventRecord(time_stop,0));
+		_CUDA(cudaEventSynchronize(time_stop));
+		_CUDA(cudaEventElapsedTime(&time_elapsed,time_start,time_stop));
+		fprintf(stdout,"\nTotal time: %f milliseconds\n",time_elapsed);	
+	}
 }

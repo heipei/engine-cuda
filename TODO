@@ -1,11 +1,12 @@
 == General ==
+- PTX inline?
 - Non-blocking kernel calls?
 - Many calls to CudaMemcpy, where from?
 - Adjust buffersize to device memory
 - cuPrintf inclusion OK?
-- Timing only for certain preprocessor definition
 - Streams
 - Rambo is capped at 800MB/s, why?
+
 
 == DES ==
 - CBC

@@ -8,7 +8,6 @@
 #include <openssl/des.h>
 #include "cuda_common.h"
 #include "common.h"
-//#include "lib/cuPrintf.cu"
 
 __constant__ uint32_t des_d_sp_c[8][64]={
 {
@@ -312,7 +311,6 @@ extern "C" void DES_cuda_crypt(const unsigned char *in, unsigned char *out, size
 
 	transferHostToDevice(&in, (uint32_t **)device_data, host_data, &nbytes);
 	
-	// TODO: MAX_THREAD*4 because DES encrypts 4 bytes at once!
 	if ((nbytes%(MAX_THREAD*DES_BLOCK_SIZE))==0) {
 		gridSize = nbytes/(MAX_THREAD*DES_BLOCK_SIZE);
 	} else {
