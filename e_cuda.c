@@ -22,11 +22,11 @@
  */
 
 #include "aes_cuda.h"
+#include "bf_cuda.h"
+#include "cast_cuda.h"
+#include "cmll_cuda.h"
 #include "des_cuda.h"
 #include "idea_cuda.h"
-#include "bf_cuda.h"
-#include "cmll_cuda.h"
-#include "cast_cuda.h"
 #include "common.h"
 
 #define DYNAMIC_ENGINE
@@ -40,6 +40,7 @@
 static int cuda_ciphers (ENGINE *e, const EVP_CIPHER **cipher, const int **nids, int nid);
 static int cuda_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigned char *in_arg, size_t nbytes);
 static int cuda_aes_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigned char *in_arg, size_t nbytes);
+void (*cuda_device_crypt) (const unsigned char *in_arg, unsigned char *out_arg, size_t nbytes, int enc, uint8_t **host_data, uint64_t **device_data);
 
 static int num_multiprocessors = 0;
 static int buffer_size = 0;
@@ -83,15 +84,11 @@ int cuda_finish(ENGINE * engine) {
 
 int cuda_init(ENGINE * engine) {
 	if (!quiet && verbose) fprintf(stdout, "initializing engine\n");
-	int verbosity;
-	if(verbose) {
-		verbosity=OUTPUT_VERBOSE;
-	} else { 
+	int verbosity=OUTPUT_NORMAL;
 	if (quiet==1)
 		verbosity=OUTPUT_QUIET;
-	else 
-		verbosity=OUTPUT_NORMAL;
-	}
+	if(verbose) 
+		verbosity=OUTPUT_VERBOSE;
 
 	cuda_device_init(&num_multiprocessors,buffer_size,verbosity,&host_data,&device_data);
 
@@ -466,76 +463,25 @@ static int cuda_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigne
 	size_t current=0;
 	int chunk;
 
-	// TODO: Function pointer to encryption function, while clause below, with streams
 	switch(EVP_CIPHER_CTX_nid(ctx)) {
 	  case NID_des_ecb:
-	    while (nbytes!=current) {
-	      chunk=(nbytes-current)/maxbytes;
-	      if(chunk>=1) {
-	        DES_cuda_crypt((in_arg+current),(out_arg+current),maxbytes,ctx->encrypt,&host_data,&device_data);
-	        current+=maxbytes;  
-	      } else {
-	        DES_cuda_crypt((in_arg+current),(out_arg+current),(nbytes-current),ctx->encrypt,&host_data,&device_data);
-	        current+=(nbytes-current);
-	      }
-	    }
+	    cuda_device_crypt = DES_cuda_crypt;
 	    break;
-
 	  //case NID_bf_cbc:
 	  case NID_bf_ecb:
-	    while (nbytes!=current) {
-	      chunk=(nbytes-current)/maxbytes;
-	      if(chunk>=1) {
-	        BF_cuda_crypt((in_arg+current),(out_arg+current),maxbytes,ctx->encrypt,&host_data,&device_data);
-	        current+=maxbytes;  
-	      } else {
-	        BF_cuda_crypt((in_arg+current),(out_arg+current),(nbytes-current),ctx->encrypt,&host_data,&device_data);
-	        current+=(nbytes-current);
-	      }
-	    }
+	    cuda_device_crypt = BF_cuda_crypt;
 	    break;
-	  
 	  case NID_cast5_ecb:
-	    while (nbytes!=current) {
-	      chunk=(nbytes-current)/maxbytes;
-	      if(chunk>=1) {
-	        CAST_cuda_crypt((in_arg+current),(out_arg+current),maxbytes,ctx->encrypt,&host_data,&device_data);
-	        current+=maxbytes;  
-	      } else {
-	        CAST_cuda_crypt((in_arg+current),(out_arg+current),(nbytes-current),ctx->encrypt,&host_data,&device_data);
-	        current+=(nbytes-current);
-	      }
-	    }
+	    cuda_device_crypt = CAST_cuda_crypt;
 	    break;
-	  
 	  //case NID_camellia_128_cbc:
 	  case NID_camellia_128_ecb:
-	    while (nbytes!=current) {
-	      chunk=(nbytes-current)/maxbytes;
-	      if(chunk>=1) {
-	        CMLL_cuda_crypt((in_arg+current),(out_arg+current),maxbytes,ctx->encrypt,&host_data,&device_data);
-	        current+=maxbytes;  
-	      } else {
-	        CMLL_cuda_crypt((in_arg+current),(out_arg+current),(nbytes-current),ctx->encrypt,&host_data,&device_data);
-	        current+=(nbytes-current);
-	      }
-	    }
+	    cuda_device_crypt = CMLL_cuda_crypt;
 	    break;
-	  
 	  //case NID_idea_cbc:
 	  case NID_idea_ecb:
-	    while (nbytes!=current) {
-	      chunk=(nbytes-current)/maxbytes;
-	      if(chunk>=1) {
-	        IDEA_cuda_crypt((in_arg+current),(out_arg+current),maxbytes,ctx->encrypt,&host_data,&device_data);
-	        current+=maxbytes;  
-	      } else {
-	        IDEA_cuda_crypt((in_arg+current),(out_arg+current),(nbytes-current),ctx->encrypt,&host_data,&device_data);
-	        current+=(nbytes-current);
-	      }
-	    }
+	    cuda_device_crypt = IDEA_cuda_crypt;
 	    break;
-	  
 	  case NID_aes_128_ecb:
 	  case NID_aes_128_cbc:
 	  case NID_aes_192_ecb:
@@ -546,6 +492,17 @@ static int cuda_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigne
 	    break;
 	  default:
 	    return 0;
+	}
+
+	while (nbytes!=current) {
+		chunk=(nbytes-current)/maxbytes;
+		if(chunk>=1) {
+			cuda_device_crypt((in_arg+current),(out_arg+current),maxbytes,ctx->encrypt,&host_data,&device_data);
+			current+=maxbytes;  
+		} else {
+			cuda_device_crypt((in_arg+current),(out_arg+current),(nbytes-current),ctx->encrypt,&host_data,&device_data);
+			current+=(nbytes-current);
+		}
 	}
 
 	return 1;

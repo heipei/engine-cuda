@@ -42,10 +42,10 @@ LIBS_LIBS = @LIBS@
 LIBNAME = libcudamrg.so
 TESTNAME= teststate
 
-COMMONSRC = common.h common.c cuda_common.h cuda_common.cu Makefile
+COMMONSRC = common.h cuda_common.h cuda_common.cu Makefile
 TESTSRC= teststate.c aes_cuda.cu
 
-LIBOBJ = e_cuda.o common.o
+LIBOBJ = e_cuda.o 
 LIBOBJ_CUDA = aes_cuda.o des_cuda.o idea_cuda.o bf_cuda.o cast_cuda.o cmll_cuda.o cuda_common.o 
 TESTOBJ= aes_cuda.o teststate.o
 

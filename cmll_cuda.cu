@@ -8,10 +8,8 @@
 #include <cuda_runtime_api.h>
 #include "cuda_common.h"
 #include "common.h"
-//#include "lib/cuPrintf.cu"
 
 __constant__ CAMELLIA_KEY cmll_constant_schedule;
-//__shared__ CMLL_KEY cmll_schedule;
 
 typedef uint32_t u32;
 typedef unsigned char u8;
@@ -250,19 +248,6 @@ __global__ void CMLLencKernel(uint64_t *data) {
 	s3 = GETU32(((unsigned char *)&block2)+4) ^ k[2];
 	k += 4;
 
-	/*
-	if(TX == 0) {
-		int i=0;
-		for(i=0; i<48; i++) {
-			cuPrintf("k[%d]: %x\n", i, k[i]);
-		}
-		cuPrintf("block: %x, block2: %x\n", block, block2);
-		//cuPrintf("k[0]: %x, k[1]: %x, k[2]: %x, k[3]: %x\n", k[0], k[1], k[2], k[3]);
-		cuPrintf("s0: %x, s1: %x, s2: %x, s3: %x\n\n", s0, s1, s2, s3);
-	}
-	*/
-
-	// TODO: Get rid of k+=x
 	Camellia_Feistel(s0,s1,s2,s3,k+0);
 	Camellia_Feistel(s2,s3,s0,s1,k+2);
 	Camellia_Feistel(s0,s1,s2,s3,k+4);
@@ -325,15 +310,12 @@ extern "C" void CMLL_cuda_crypt(const unsigned char *in, unsigned char *out, siz
 	if ((nbytes%(MAX_THREAD*CMLL_BLOCK_SIZE))==0) {
 		gridSize = nbytes/(MAX_THREAD*CMLL_BLOCK_SIZE);
 	} else {
-		//if (nbytes < MAX_THREAD*CMLL_BLOCK_SIZE)
-		//	dimBlock.x = nbytes / CMLL_BLOCK_SIZE;
 		gridSize = nbytes/(MAX_THREAD*CMLL_BLOCK_SIZE)+1;
 	}
 
 	if (output_verbosity==OUTPUT_VERBOSE)
 		fprintf(stdout,"Starting CMLL kernel for %zu bytes with (%d, (%d, %d))...\n", nbytes, gridSize, dimBlock.x, dimBlock.y);
 
-	//cudaPrintfInit();
 	if(enc == CAMELLIA_ENCRYPT) {
 		CMLLencKernel<<<gridSize,dimBlock>>>(*device_data);
 		_CUDA_N("CMLL encryption kernel could not be launched!");
@@ -341,8 +323,6 @@ extern "C" void CMLL_cuda_crypt(const unsigned char *in, unsigned char *out, siz
 		CMLLdecKernel<<<gridSize,dimBlock>>>(*device_data);
 		_CUDA_N("CMLL decryption kernel could not be launched!");
 	}
-	//cudaPrintfDisplay(stdout, true);
-	//cudaPrintfEnd();
 
 	transferDeviceToHost(&out, (uint32_t **)device_data, host_data, host_data, &nbytes);
 }
