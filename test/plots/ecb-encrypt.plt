@@ -26,18 +26,12 @@ set ydata
 set zdata
 set x2data
 set y2data
-set timefmt x "%d/%m/%y,%H:%M"
-set timefmt y "%d/%m/%y,%H:%M"
-set timefmt z "%d/%m/%y,%H:%M"
-set timefmt x2 "%d/%m/%y,%H:%M"
-set timefmt y2 "%d/%m/%y,%H:%M"
-set timefmt cb "%d/%m/%y,%H:%M"
 set boxwidth
 set style fill  empty border
 set style rectangle back fc lt -3 fillstyle  solid 1.00 border -1
 set dummy x,y
 set format x "% g"
-set format y "% g"
+set format y "%4.0f"
 set format x2 "% g"
 set format y2 "% g"
 set format z "% g"
@@ -112,13 +106,13 @@ set rrange [ * : * ] noreverse nowriteback  # (currently [0.00000:10.0000] )
 set trange [ * : * ] noreverse nowriteback  # (currently [-5.00000:5.00000] )
 set urange [ * : * ] noreverse nowriteback  # (currently [-5.00000:5.00000] )
 set vrange [ * : * ] noreverse nowriteback  # (currently [-5.00000:5.00000] )
-set xlabel "Encryption block size [bytes]" 
+set xlabel "Encryption batch block size [bytes]" 
 set xlabel  offset character 0, 0, 0 font "" textcolor lt -1 norotate
 set x2label "" 
 set x2label  offset character 0, 0, 0 font "" textcolor lt -1 norotate
 set xrange [ * : * ] noreverse nowriteback  # (currently [-10.0000:10.0000] )
 set x2range [ * : * ] noreverse nowriteback  # (currently [-10.0000:10.0000] )
-set ylabel "Encryption speed [bytes/seconds]" 
+set ylabel "Encryption speed [megabytes/seconds]" 
 set ylabel  offset character 0, 0, 0 font "" textcolor lt -1 rotate by 90
 set y2label "" 
 set y2label  offset character 0, 0, 0 font "" textcolor lt -1 rotate by 90
@@ -148,14 +142,14 @@ set fontpath
 set fit noerrorvariables
 set terminal png size 1000,500
 GNUTERM = "wxt"
-plot 'bf-ecb_gpu.dat' using 2 title 'Blowfish ECB GPU' with linespoints, \
-     'bf-ecb_cpu.dat' using 2 title 'Blowfish ECB CPU' with linespoints, \
-     'idea-ecb_gpu.dat' using 2 title 'IDEA ECB GPU' with linespoints, \
-     'idea-ecb_cpu.dat' using 2 title 'IDEA ECB CPU' with linespoints, \
-     'des-ecb_gpu.dat' using 2 title 'DES ECB GPU' with linespoints, \
-     'des-ecb_cpu.dat' using 2 title 'DES ECB CPU' with linespoints, \
-     'cast5-ecb_gpu.dat' using 2 title 'CAST5 ECB GPU' with linespoints, \
-     'cast5-ecb_cpu.dat' using 2 title 'CAST5 ECB CPU' with linespoints, \
-     'camellia-128-ecb_gpu.dat' using 2 title 'Camellia 128 ECB GPU' with linespoints, \
-     'camellia-128-ecb_cpu.dat' using 2 title 'Camellia 128 ECB CPU' with linespoints
+plot 'bf-ecb_gpu.dat' using ($2/1048576) title 'Blowfish ECB GPU' with linespoints, \
+     'bf-ecb_cpu.dat' using ($2/1048576) title 'Blowfish ECB CPU' with linespoints, \
+     'idea-ecb_gpu.dat' using ($2/1048576) title 'IDEA ECB GPU' with linespoints, \
+     'idea-ecb_cpu.dat' using ($2/1048576) title 'IDEA ECB CPU' with linespoints, \
+     'des-ecb_gpu.dat' using ($2/1048576) title 'DES ECB GPU' with linespoints, \
+     'des-ecb_cpu.dat' using ($2/1048576) title 'DES ECB CPU' with linespoints, \
+     'cast5-ecb_gpu.dat' using ($2/1048576) title 'CAST5 ECB GPU' with linespoints, \
+     'cast5-ecb_cpu.dat' using ($2/1048576) title 'CAST5 ECB CPU' with linespoints, \
+     'camellia-128-ecb_gpu.dat' using ($2/1048576) title 'Camellia 128 ECB GPU' with linespoints, \
+     'camellia-128-ecb_cpu.dat' using ($2/1048576) title 'Camellia 128 ECB CPU' with linespoints
 #    EOF

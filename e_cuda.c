@@ -466,6 +466,7 @@ static int cuda_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigne
 	size_t current=0;
 	int chunk;
 
+	// TODO: Function pointer to encryption function, while clause below, with streams
 	switch(EVP_CIPHER_CTX_nid(ctx)) {
 	  case NID_des_ecb:
 	    while (nbytes!=current) {

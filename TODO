@@ -5,6 +5,7 @@
  - With Gnuplot
 - Test-Framework for single-file encryption with averaging
  
+- Why does speed decrease after 1MB / 256KB
 - Non-blocking kernel calls?
 - Many calls to CudaMemcpy, where from?
 - Adjust buffersize to device memory
