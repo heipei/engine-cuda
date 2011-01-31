@@ -8,7 +8,6 @@
 #include <cuda_runtime_api.h>
 #include "cuda_common.h"
 #include "common.h"
-//#include "lib/cuPrintf.cu"
 
 __constant__ BF_KEY bf_constant_schedule;
 //__shared__ BF_KEY bf_schedule;
@@ -90,13 +89,13 @@ __global__ void BFdecKernel(uint64_t *data) {
 	
 }
 
-extern "C" void BF_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, uint8_t **host_data, uint64_t **device_data) {
+extern "C" void BF_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, uint8_t **host_data, uint64_t **device_data, cudaStream_t stream) {
 	assert(in && out && nbytes);
 	cudaError_t cudaerrno;
 	int gridSize;
 	dim3 dimBlock(MAX_THREAD, 1, 1);
 
-	transferHostToDevice(&in, (uint32_t **)device_data, host_data, &nbytes);
+	transferHostToDevice(&in, (uint32_t **)device_data, host_data, &nbytes, stream);
 
 	if ((nbytes%(MAX_THREAD*BF_BLOCK_SIZE))==0) {
 		gridSize = nbytes/(MAX_THREAD*BF_BLOCK_SIZE);
@@ -110,14 +109,14 @@ extern "C" void BF_cuda_crypt(const unsigned char *in, unsigned char *out, size_
 		fprintf(stdout,"Starting BF kernel for %zu bytes with (%d, (%d, %d))...\n", nbytes, gridSize, dimBlock.x, dimBlock.y);
 
 	if(enc == BF_ENCRYPT) {
-		BFencKernel<<<gridSize,dimBlock>>>(*device_data);
+		BFencKernel<<<gridSize,dimBlock,0,stream>>>(*device_data);
 		_CUDA_N("BF encryption kernel could not be launched!");
 	} else {
-		BFdecKernel<<<gridSize,dimBlock>>>(*device_data);
+		BFdecKernel<<<gridSize,dimBlock,0,stream>>>(*device_data);
 		_CUDA_N("BF decryption kernel could not be launched!");
 	}
 
-	transferDeviceToHost(&out, (uint32_t **)device_data, host_data, host_data, &nbytes);
+	transferDeviceToHost(&out, (uint32_t **)device_data, host_data, host_data, &nbytes, stream);
 }
 
 extern "C" void BF_cuda_transfer_key_schedule(BF_KEY *ks) {

@@ -45,6 +45,16 @@
 
 #define TX (blockIdx.x * (blockDim.x * blockDim.y) + (blockDim.y * threadIdx.x) + threadIdx.y)
 
-void cuda_device_init(int *nm, int buffer_size, int output_verbosity, uint8_t **host_data, uint64_t **device_data);
-void cuda_device_finish(uint8_t *host_data, uint64_t *device_data);
+#ifndef _cuda_common_h_
+typedef struct {
+	uint8_t *host_data;
+	uint64_t *device_data;
+	cudaStream_t stream;
+} cuda_streams_st;
+#endif
+
+
+void cuda_device_init(int *num_streams, cuda_streams_st *streams, int *nm, int buffer_size, int output_verbosity);
+void cuda_device_finish(int num_streams, cuda_streams_st *streams);
+
 #endif

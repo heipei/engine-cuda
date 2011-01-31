@@ -7,41 +7,41 @@
 #include <assert.h>
 
 #ifndef PAGEABLE
-extern "C" void transferHostToDevice_PINNED   (const unsigned char **input, uint32_t **deviceMem, uint8_t **hostMem, size_t *size) {
+extern "C" void transferHostToDevice_PINNED   (const unsigned char **input, uint32_t **deviceMem, uint8_t **hostMem, size_t *size, cudaStream_t stream) {
 	cudaError_t cudaerrno;
-	memcpy(*hostMem,*input,*size);
-        _CUDA(cudaMemcpyAsync(*deviceMem, *hostMem, *size, cudaMemcpyHostToDevice, 0));
+	//memcpy(*hostMem,*input,*size);
+        cudaMemcpyAsync(*deviceMem, *hostMem, *size, cudaMemcpyHostToDevice, stream);
 }
 #if CUDART_VERSION >= 2020
-extern "C" void transferHostToDevice_ZEROCOPY (const unsigned char **input, uint32_t **deviceMem, uint8_t **hostMem, size_t *size) {
+extern "C" void transferHostToDevice_ZEROCOPY (const unsigned char **input, uint32_t **deviceMem, uint8_t **hostMem, size_t *size, cudaStream_t stream) {
 	//cudaError_t cudaerrno;
 	memcpy(*hostMem,*input,*size);
 	//_CUDA(cudaHostGetDevicePointer(&d_s,h_s, 0));
 }
 #endif
 #else
-extern "C" void transferHostToDevice_PAGEABLE (const unsigned char **input, uint32_t **deviceMem, uint8_t **hostMem, size_t *size) {
+extern "C" void transferHostToDevice_PAGEABLE (const unsigned char **input, uint32_t **deviceMem, uint8_t **hostMem, size_t *size, cudaStream_t stream) {
 	cudaError_t cudaerrno;
 	_CUDA(cudaMemcpy(*deviceMem, *input, *size, cudaMemcpyHostToDevice));
 }
 #endif
 
 #ifndef PAGEABLE
-extern "C" void transferDeviceToHost_PINNED   (unsigned char **output, uint32_t **deviceMem, uint8_t **hostMemS, uint8_t **hostMemOUT, size_t *size) {
+extern "C" void transferDeviceToHost_PINNED   (unsigned char **output, uint32_t **deviceMem, uint8_t **hostMemS, uint8_t **hostMemOUT, size_t *size, cudaStream_t stream) {
 	cudaError_t cudaerrno;
-        _CUDA(cudaMemcpyAsync(*hostMemS, *deviceMem, *size, cudaMemcpyDeviceToHost, 0));
-	_CUDA(cudaThreadSynchronize());
-	memcpy(*output,*hostMemS,*size);
+        cudaMemcpyAsync(*hostMemS, *deviceMem, *size, cudaMemcpyDeviceToHost, stream);
+	//_CUDA(cudaThreadSynchronize());
+	//memcpy(*output,*hostMemS,*size);
 }
 #if CUDART_VERSION >= 2020
-extern "C" void transferDeviceToHost_ZEROCOPY (unsigned char **output, uint32_t **deviceMem, uint8_t **hostMemS, uint8_t **hostMemOUT, size_t *size) {
+extern "C" void transferDeviceToHost_ZEROCOPY (unsigned char **output, uint32_t **deviceMem, uint8_t **hostMemS, uint8_t **hostMemOUT, size_t *size, cudaStream_t stream) {
 	cudaError_t cudaerrno;
 	_CUDA(cudaThreadSynchronize());
 	memcpy(*output,*hostMemOUT,*size);
 }
 #endif
 #else
-extern "C" void transferDeviceToHost_PAGEABLE (unsigned char **output, uint32_t **deviceMem, uint8_t **hostMemS, uint8_t **hostMemOUT, size_t *size) {
+extern "C" void transferDeviceToHost_PAGEABLE (unsigned char **output, uint32_t **deviceMem, uint8_t **hostMemS, uint8_t **hostMemOUT, size_t *size, cudaStream_t stream) {
 	cudaError_t cudaerrno;
 	_CUDA(cudaMemcpy(*output,*deviceMem,*size, cudaMemcpyDeviceToHost));
 }
@@ -83,10 +83,11 @@ void checkCUDADevice(struct cudaDeviceProp *deviceProp, int output_verbosity) {
 	}
 }
 
-extern "C" void cuda_device_init(int *nm, int buffer_size, int output_verbosity, uint8_t **host_data, uint64_t **device_data) {
+extern "C" void cuda_device_init(int *num_streams, cuda_streams_st *streams, int *nm, int buffer_size, int output_verbosity) {
 	assert(nm);
 	cudaError_t cudaerrno;
 	cudaDeviceProp deviceProp;
+	int i=0;
     	
 	checkCUDADevice(&deviceProp, output_verbosity);
 	
@@ -96,6 +97,15 @@ extern "C" void cuda_device_init(int *nm, int buffer_size, int output_verbosity,
 #if CUDART_VERSION >= 2000
 	*nm=deviceProp.multiProcessorCount;
 #endif
+	if(deviceProp.deviceOverlap) {
+		*num_streams = 8;
+		buffer_size=buffer_size/(*num_streams);
+	}
+
+	for(i=0; i<*num_streams; i++) {
+		cudaStreamCreate(&(streams[i].stream));
+	}
+        if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"CUDA streams enabled (%d streams)\n", *num_streams);
 
 #ifndef PAGEABLE 
 #if CUDART_VERSION >= 2020
@@ -104,31 +114,39 @@ extern "C" void cuda_device_init(int *nm, int buffer_size, int output_verbosity,
         	//zero-copy memory mode - use special function to get OS-pinned memory
 		_CUDA(cudaSetDeviceFlags(cudaDeviceMapHost));
         	if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"Using zero-copy memory.\n");
-        	_CUDA(cudaHostAlloc((void**)host_data,buffer_size,cudaHostAllocMapped));
+		for(i=0; i<*num_streams; i++) {
+			_CUDA(cudaHostAlloc((void**)&(streams[i].host_data),buffer_size,cudaHostAllocMapped));
+			_CUDA(cudaHostGetDevicePointer(&(streams[i].device_data),&(streams[i].host_data), 0));
+		}
 		transferHostToDevice = transferHostToDevice_ZEROCOPY;		// set memory transfer function
 		transferDeviceToHost = transferDeviceToHost_ZEROCOPY;		// set memory transfer function
-		_CUDA(cudaHostGetDevicePointer(device_data,host_data, 0));
 	} else {
 		//pinned memory mode - use special function to get OS-pinned memory
-		_CUDA(cudaHostAlloc( (void**)host_data, buffer_size, cudaHostAllocDefault));
+		for(i=0; i<*num_streams; i++) {
+			_CUDA(cudaHostAlloc( (void**)&(streams[i].host_data), buffer_size, cudaHostAllocDefault));
+			_CUDA(cudaMalloc((void **)&(streams[i].device_data),buffer_size));
+		}
 		if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"Using pinned memory: cudaHostAllocDefault.\n");
 		transferHostToDevice = transferHostToDevice_PINNED;	// set memory transfer function
 		transferDeviceToHost = transferDeviceToHost_PINNED;	// set memory transfer function
-		_CUDA(cudaMalloc((void **)device_data,buffer_size));
 	}
 #else
         //pinned memory mode - use special function to get OS-pinned memory
-        _CUDA(cudaMallocHost((void**)&h_s, buffer_size));
+	for(i=0; i<*num_streams; i++) {
+        	_CUDA(cudaMallocHost((void**)streams[i].host_data,buffer_size));
+		_CUDA(cudaMalloc((void **)streams[i].device_data,buffer_size));
+	}
         if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"Using pinned memory: cudaHostAllocDefault.\n");
 	transferHostToDevice = transferHostToDevice_PINNED;			// set memory transfer function
 	transferDeviceToHost = transferDeviceToHost_PINNED;			// set memory transfer function
-	_CUDA(cudaMalloc((void **)device_data,buffer_size));
 #endif
 #else
         if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"Using pageable memory.\n");
+	for(i=0; i<*num_streams; i++) {
+		_CUDA(cudaMalloc((void **)&(streams[i].device_data),buffer_size));
+	}
 	transferHostToDevice = transferHostToDevice_PAGEABLE;			// set memory transfer function
 	transferDeviceToHost = transferDeviceToHost_PAGEABLE;			// set memory transfer function
-	_CUDA(cudaMalloc((void **)device_data,buffer_size));
 #endif
 
 	if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"The current buffer size is %d.\n\n", buffer_size);
@@ -141,29 +159,35 @@ extern "C" void cuda_device_init(int *nm, int buffer_size, int output_verbosity,
 
 }
 
-extern "C" void cuda_device_finish(uint8_t *host_data, uint64_t *device_data) {
+extern "C" void cuda_device_finish(int num_streams, cuda_streams_st *streams) {
 	cudaError_t cudaerrno;
 
 	if (output_verbosity>=OUTPUT_NORMAL) fprintf(stdout, "\nDone. Finishing up...\n");
-
+	
+	int i=0;
+	for(i=0; i<num_streams; i++) {
+	
 #ifndef PAGEABLE 
 #if CUDART_VERSION >= 2020
 	if(isIntegrated) {
-		_CUDA(cudaFreeHost(host_data));
+		_CUDA(cudaFreeHost(streams[i].host_data));
 		//_CUDA(cudaFreeHost(h_iv));
 	} else {
-		_CUDA(cudaFree(device_data));
+		_CUDA(cudaFree(streams[i].device_data));
+		_CUDA(cudaFreeHost(streams[i].host_data));
 		//_CUDA(cudaFree(d_iv));
 	}
 #else	
-	_CUDA(cudaFree(device_data));
+	_CUDA(cudaFree(streams[i].device_data));
 	//_CUDA(cudaFree(d_iv));
 #endif
 #else
-	_CUDA(cudaFree(device_data));
+	_CUDA(cudaFree(streams[i].device_data));
 	//_CUDA(cudaFree(d_iv));
 #endif	
-
+	
+	_CUDA(cudaStreamDestroy(streams[i].stream));
+	}
 	if(output_verbosity>=OUTPUT_NORMAL) {
 		_CUDA(cudaEventRecord(time_stop,0));
 		_CUDA(cudaEventSynchronize(time_stop));

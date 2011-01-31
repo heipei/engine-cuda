@@ -303,13 +303,13 @@ __global__ void DESdecKernel(uint64_t *data) {
 	data[TX]=left|((uint64_t)right)<<32;
 }
 
-extern "C" void DES_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, uint8_t **host_data, uint64_t **device_data) {
+extern "C" void DES_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, uint8_t **host_data, uint64_t **device_data, cudaStream_t stream) {
 	assert(in && out && nbytes);
 	cudaError_t cudaerrno;
 	int gridSize;
 	dim3 dimBlock(MAX_THREAD, 1, 1);
 
-	transferHostToDevice(&in, (uint32_t **)device_data, host_data, &nbytes);
+	transferHostToDevice(&in, (uint32_t **)device_data, host_data, &nbytes, stream);
 	
 	if ((nbytes%(MAX_THREAD*DES_BLOCK_SIZE))==0) {
 		gridSize = nbytes/(MAX_THREAD*DES_BLOCK_SIZE);
@@ -323,14 +323,14 @@ extern "C" void DES_cuda_crypt(const unsigned char *in, unsigned char *out, size
 		fprintf(stdout,"Starting DES kernel for %zu bytes with (%d, (%d, %d))...\n", nbytes, gridSize, dimBlock.x, dimBlock.y);
 
 	if(enc == DES_ENCRYPT) {
-		DESencKernel<<<gridSize,dimBlock>>>(*device_data);
+		DESencKernel<<<gridSize,dimBlock,0,stream>>>(*device_data);
 		_CUDA_N("DES encryption kernel could not be launched!");
 	} else {
-		DESdecKernel<<<gridSize,dimBlock>>>(*device_data);
+		DESdecKernel<<<gridSize,dimBlock,0,stream>>>(*device_data);
 		_CUDA_N("DES decryption kernel could not be launched!");
 	}
 
-	transferDeviceToHost(&out, (uint32_t **)device_data, host_data, host_data, &nbytes);
+	transferDeviceToHost(&out, (uint32_t **)device_data, host_data, host_data, &nbytes, stream);
 }
 
 extern "C" void DES_cuda_transfer_key_schedule(DES_key_schedule *ks) {

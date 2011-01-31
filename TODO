@@ -1,16 +1,18 @@
 == General ==
-- PTX inline?
 - Test-Framework for openssl speed and all algos
  - With averaging
  - With Gnuplot
 - Test-Framework for single-file encryption with averaging
  
 - Why does speed decrease after 1MB / 256KB
-- Non-blocking kernel calls?
 - Many calls to CudaMemcpy, where from?
 - Adjust buffersize to device memory
 - cuPrintf inclusion OK?
 - Streams
+ - local memcpy still a bottleneck
+ - try libc mlock on pages delivered by openssl
+ - Jittery values during 'openssl speed'
+ - CUDAProf!
 - Rambo is capped at 800MB/s, why?
 
 

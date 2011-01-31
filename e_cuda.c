@@ -40,7 +40,7 @@
 static int cuda_ciphers (ENGINE *e, const EVP_CIPHER **cipher, const int **nids, int nid);
 static int cuda_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigned char *in_arg, size_t nbytes);
 static int cuda_aes_ciphers(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigned char *in_arg, size_t nbytes);
-void (*cuda_device_crypt) (const unsigned char *in_arg, unsigned char *out_arg, size_t nbytes, int enc, uint8_t **host_data, uint64_t **device_data);
+void (*cuda_device_crypt) (const unsigned char *in_arg, unsigned char *out_arg, size_t nbytes, int enc, uint8_t **host_data, uint64_t **device_data, cudaStream_t stream);
 
 static int num_multiprocessors = 0;
 static int buffer_size = 0;
@@ -48,10 +48,13 @@ static int verbose = 0;
 static int quiet = 0;
 static int initialized = 0;
 static char *library_path=NULL;
-static int maxbytes = 8388608;
+static int maxbytes = MAX_CHUNK_SIZE;
 
-static __device__ uint64_t *device_data;
-static uint8_t *host_data;
+static cuda_streams_st cuda_streams[32];
+static int num_streams = 1;
+
+//static __device__ uint64_t *device_data;
+//static uint8_t *host_data;
 
 #ifdef CPU
 static time_t startTime,endTime;
@@ -73,7 +76,7 @@ int inc_verbose(void) {
 }
 
 int cuda_finish(ENGINE * engine) {
-	cuda_device_finish(host_data,device_data);
+	cuda_device_finish(num_streams, cuda_streams);
 
 #ifdef CPU
 	endTime=time(NULL);
@@ -90,7 +93,7 @@ int cuda_init(ENGINE * engine) {
 	if(verbose) 
 		verbosity=OUTPUT_VERBOSE;
 
-	cuda_device_init(&num_multiprocessors,buffer_size,verbosity,&host_data,&device_data);
+	cuda_device_init(&num_streams,&cuda_streams[0],&num_multiprocessors,buffer_size,verbosity);
 
 #ifdef CPU
 	startTime=time(NULL);
@@ -463,6 +466,8 @@ static int cuda_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigne
 	size_t current=0;
 	int chunk;
 
+	//fprintf(stdout, "Calling cuda_crypt for a chunk of %zu bytes\n", nbytes);
+
 	switch(EVP_CIPHER_CTX_nid(ctx)) {
 	  case NID_des_ecb:
 	    cuda_device_crypt = DES_cuda_crypt;
@@ -494,15 +499,62 @@ static int cuda_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigne
 	    return 0;
 	}
 
-	while (nbytes!=current) {
-		chunk=(nbytes-current)/maxbytes;
-		if(chunk>=1) {
-			cuda_device_crypt((in_arg+current),(out_arg+current),maxbytes,ctx->encrypt,&host_data,&device_data);
-			current+=maxbytes;  
+	int stream_id = 0;
+	int stream_buffer_size = nbytes;
+	
+	if(nbytes >= maxbytes/num_streams)
+		stream_buffer_size = maxbytes / num_streams;
+	
+	/*
+	while(nbytes!=current) {
+		chunk=(nbytes-current)/stream_buffer_size;
+		if(chunk) {
+			memcpy(cuda_streams[stream_id].host_data,in_arg+stream_id*stream_buffer_size,stream_buffer_size);
+			current+=stream_buffer_size;
 		} else {
-			cuda_device_crypt((in_arg+current),(out_arg+current),(nbytes-current),ctx->encrypt,&host_data,&device_data);
+			memcpy(cuda_streams[stream_id].host_data,in_arg+stream_id*stream_buffer_size,nbytes-current);
+			current=nbytes;
+		}
+		stream_id++;
+	}
+	*/
+
+	stream_id = current = 0;
+
+	while (nbytes!=current) {
+		chunk=(nbytes-current)/stream_buffer_size;
+		if (!quiet && verbose)
+			fprintf(stdout, "Wanting to encrypt %zu nbytes (chunk %d)...\n", nbytes, chunk);
+		if(chunk>=1) {
+			if (!quiet && verbose)
+				fprintf(stdout, "Starting cuda_device_crypt for %d bytes on stream %d\n\n", stream_buffer_size, stream_id);
+			memcpy(cuda_streams[stream_id].host_data,in_arg+stream_id*stream_buffer_size,stream_buffer_size);
+			cuda_device_crypt((in_arg+current),(out_arg+current),stream_buffer_size,ctx->encrypt,&(cuda_streams[stream_id].host_data),&(cuda_streams[stream_id].device_data),cuda_streams[stream_id].stream);
+			current+=stream_buffer_size;
+			stream_id = (stream_id+1)%num_streams;
+		} else {
+			if (!quiet && verbose)
+				fprintf(stdout, "Starting cuda_device_crypt for %d bytes on stream %d\n\n", stream_buffer_size, stream_id);
+			memcpy(cuda_streams[stream_id].host_data,in_arg+stream_id*stream_buffer_size,nbytes-current);
+			cuda_device_crypt((in_arg+current),(out_arg+current),(nbytes-current),ctx->encrypt,&(cuda_streams[stream_id].host_data),&(cuda_streams[stream_id].device_data),cuda_streams[stream_id].stream);
 			current+=(nbytes-current);
 		}
+	}
+	
+	stream_id = current = 0;
+	
+	cudaThreadSynchronize();
+	while(nbytes!=current) {
+		chunk=(nbytes-current)/stream_buffer_size;
+		//cudaStreamSynchronize(cuda_streams[stream_id].stream);
+		if(chunk) {
+			memcpy(out_arg+stream_id*stream_buffer_size,cuda_streams[stream_id].host_data,stream_buffer_size);
+			current+=stream_buffer_size;
+		} else {
+			memcpy(out_arg+stream_id*stream_buffer_size,cuda_streams[stream_id].host_data,nbytes-current);
+			current=nbytes;
+		}
+		stream_id++;
 	}
 
 	return 1;

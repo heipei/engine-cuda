@@ -2917,9 +2917,9 @@ fi
 
 # Check whether --with-buffersize was given.
 if test "${with_buffersize+set}" = set; then :
-  withval=$with_buffersize; NVCPPFLAGS="$NVCPPFLAGS -DMAX_CHUNK_SIZE=$with_buffersize"
+  withval=$with_buffersize; CPPFLAGS="$CPPFLAGS -DMAX_CHUNK_SIZE=$with_buffersize";NVCPPFLAGS="$NVCPPFLAGS -DMAX_CHUNK_SIZE=$with_buffersize"
 else
-  NVCPPFLAGS="$NVCPPFLAGS -DMAX_CHUNK_SIZE=8*1024*1024"
+  CPPFLAGS="$CPPFLAGS -DMAX_CHUNK_SIZE=8*1024*1024";NVCPPFLAGS="$NVCPPFLAGS -DMAX_CHUNK_SIZE=8*1024*1024"
 fi
 
 

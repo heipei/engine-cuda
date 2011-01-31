@@ -91,13 +91,13 @@ __global__ void IDEAdecKernel(uint64_t *data) {
 	
 }
 
-extern "C" void IDEA_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, uint8_t **host_data, uint64_t **device_data) {
+extern "C" void IDEA_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, uint8_t **host_data, uint64_t **device_data, cudaStream_t stream) {
 	assert(in && out && nbytes);
 	cudaError_t cudaerrno;
 	int gridSize;
 	dim3 dimBlock(MAX_THREAD, 1, 1);
 
-	transferHostToDevice(&in, (uint32_t **)device_data, host_data, &nbytes);
+	transferHostToDevice(&in, (uint32_t **)device_data, host_data, &nbytes, stream);
 
 	if ((nbytes%(MAX_THREAD*IDEA_BLOCK_SIZE))==0) {
 		gridSize = nbytes/(MAX_THREAD*IDEA_BLOCK_SIZE);
@@ -111,14 +111,14 @@ extern "C" void IDEA_cuda_crypt(const unsigned char *in, unsigned char *out, siz
 		fprintf(stdout,"Starting IDEA kernel for %zu bytes with (%d, (%d, %d))...\n", nbytes, gridSize, dimBlock.x, dimBlock.y);
 
 	if(enc == IDEA_ENCRYPT) {
-		IDEAencKernel<<<gridSize,dimBlock>>>(*device_data);
+		IDEAencKernel<<<gridSize,dimBlock,0,stream>>>(*device_data);
 		_CUDA_N("IDEA encryption kernel could not be launched!");
 	} else {
-		IDEAdecKernel<<<gridSize,dimBlock>>>(*device_data);
+		IDEAdecKernel<<<gridSize,dimBlock,0,stream>>>(*device_data);
 		_CUDA_N("IDEA decryption kernel could not be launched!");
 	}
 
-	transferDeviceToHost(&out, (uint32_t **)device_data, host_data, host_data, &nbytes);
+	transferDeviceToHost(&out, (uint32_t **)device_data, host_data, host_data, &nbytes, stream);
 }
 
 extern "C" void IDEA_cuda_transfer_key_schedule(IDEA_KEY_SCHEDULE *ks) {

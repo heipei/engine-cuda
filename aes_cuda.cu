@@ -988,8 +988,8 @@ cudaEvent_t start,stop;
 texture <unsigned int,1,cudaReadModeElementType> texref_dk;
 texture <int,1,cudaReadModeElementType> texref_r; 
 
-void (*transferHostToDevice) (const unsigned char  **input, uint32_t **deviceMem, uint8_t **hostMem, size_t *size);
-void (*transferDeviceToHost) (      unsigned char **output, uint32_t **deviceMem, uint8_t **hostMemS, uint8_t **hostMemOUT, size_t *size);
+void (*transferHostToDevice) (const unsigned char  **input, uint32_t **deviceMem, uint8_t **hostMem, size_t *size, cudaStream_t stream);
+void (*transferDeviceToHost) (      unsigned char **output, uint32_t **deviceMem, uint8_t **hostMemS, uint8_t **hostMemOUT, size_t *size, cudaStream_t stream);
 
 #define GETU32(p) (*((uint32_t*)(p)))
 
@@ -1491,7 +1491,7 @@ extern "C" void AES_cuda_encrypt(const unsigned char *in, unsigned char *out, si
 	// valido l'input
 	assert(in && out && nbytes);
 
-	transferHostToDevice (&in, &d_s, &h_s, &nbytes);
+	transferHostToDevice (&in, &d_s, &h_s, &nbytes, 0);
 
 	if (output_verbosity==OUTPUT_VERBOSE) fprintf(stdout,"kernel execution...");
 	if ((nbytes%(MAX_THREAD*STATE_THREAD_AES))==0) {
@@ -1510,7 +1510,7 @@ extern "C" void AES_cuda_encrypt(const unsigned char *in, unsigned char *out, si
 			_CUDA_N("kernel launch failure");
 			}
 
-	transferDeviceToHost (&out, &d_s, &h_s, &h_s, &nbytes);
+	transferDeviceToHost (&out, &d_s, &h_s, &h_s, &nbytes, 0);
 	
 	if (output_verbosity==OUTPUT_VERBOSE) fprintf(stdout,"done!\n");
 }
@@ -1523,7 +1523,7 @@ extern "C" void AES_cuda_decrypt(const unsigned char *in, unsigned char *out,siz
 	if (output_verbosity==OUTPUT_VERBOSE) fprintf(stdout,"\nSize: %d\n",(int)nbytes);
 	if (output_verbosity==OUTPUT_VERBOSE) fprintf(stdout,"Starting decrypt...");
 
-	transferHostToDevice (&in, &d_s, &h_s, &nbytes);
+	transferHostToDevice (&in, &d_s, &h_s, &nbytes, 0);
 
 	if (output_verbosity==OUTPUT_VERBOSE) fprintf(stdout,"kernel execution...");
 
@@ -1543,7 +1543,7 @@ extern "C" void AES_cuda_decrypt(const unsigned char *in, unsigned char *out,siz
 			_CUDA_N("kernel launch failure");
 			}
 
-	transferDeviceToHost (&out, &d_s, &h_s, &h_s, &nbytes);
+	transferDeviceToHost (&out, &d_s, &h_s, &h_s, &nbytes, 0);
 	
 	if (output_verbosity==OUTPUT_VERBOSE) fprintf(stdout,"done!\n");
 	}
@@ -1894,7 +1894,7 @@ __global__ void AESdecKernel_cbc(uint32_t in[],uint32_t out[],uint32_t iv[]) {
 extern "C" void AES_cuda_transfer_iv(const unsigned char *iv) {
 	assert(iv);
 	size_t aes_block_size=AES_BLOCK_SIZE;
-	transferHostToDevice(&iv, &d_iv, &h_iv, &aes_block_size);
+	transferHostToDevice(&iv, &d_iv, &h_iv, &aes_block_size,0);
 	}
 
 extern "C" void AES_cuda_decrypt_cbc(const unsigned char *in, unsigned char *out, size_t nbytes) {
@@ -1904,7 +1904,7 @@ extern "C" void AES_cuda_decrypt_cbc(const unsigned char *in, unsigned char *out
 	if (output_verbosity==OUTPUT_VERBOSE) fprintf(stdout,"\nSize: %d\n",(int)nbytes);
 	if (output_verbosity==OUTPUT_VERBOSE) fprintf(stdout,"Starting decrypt...");
 
-	transferHostToDevice(&in, &d_s, &h_s, &nbytes);
+	transferHostToDevice(&in, &d_s, &h_s, &nbytes,0);
 
 	if (output_verbosity==OUTPUT_VERBOSE) fprintf(stdout,"kernel execution...");
 
@@ -1924,7 +1924,7 @@ extern "C" void AES_cuda_decrypt_cbc(const unsigned char *in, unsigned char *out
 			_CUDA_N("kernel launch failure");
 			}
 
-	transferDeviceToHost(&out, &d_out, &h_s, &h_out, &nbytes);
+	transferDeviceToHost(&out, &d_out, &h_s, &h_out, &nbytes, 0);
 
 	if (output_verbosity==OUTPUT_VERBOSE) fprintf(stdout,"done!\n");
 	}
@@ -2130,7 +2130,7 @@ extern "C" void AES_cuda_encrypt_cbc(const unsigned char *in, unsigned char *out
 	if (output_verbosity==OUTPUT_VERBOSE) fprintf(stdout,"\nSize: %d\n",(int)nbytes);
 	if (output_verbosity==OUTPUT_VERBOSE) fprintf(stdout,"Starting encrypt...");
 
-	transferHostToDevice(&in, &d_s, &h_s, &nbytes);
+	transferHostToDevice(&in, &d_s, &h_s, &nbytes, 0);
 
 	if (output_verbosity==OUTPUT_VERBOSE) fprintf(stdout,"kernel execution...");
 
@@ -2139,7 +2139,7 @@ extern "C" void AES_cuda_encrypt_cbc(const unsigned char *in, unsigned char *out
 	AESencKernel_cbc<<<dimGrid,dimBlock>>>(d_s,d_iv,nbytes);
 	_CUDA_N("kernel launch failure");
 
-	transferDeviceToHost(&out, &d_s, &h_s, &h_s, &nbytes);
+	transferDeviceToHost(&out, &d_s, &h_s, &h_s, &nbytes, 0);
 
 	if (output_verbosity==OUTPUT_VERBOSE) fprintf(stdout,"done!\n");
 	}

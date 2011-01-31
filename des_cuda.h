@@ -32,7 +32,7 @@
 #include <cuda_runtime_api.h>
 
 void DES_cuda_transfer_key_schedule(const DES_key_schedule *key);
-void DES_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, uint8_t **host_data, uint64_t **device_data);
+void DES_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, uint8_t **host_data, uint64_t **device_data, cudaStream_t stream);
 
 void DES_cuda_transfer_iv(const unsigned char *iv);
 void DES_cuda_decrypt_cbc(const unsigned char *in, unsigned char *out,size_t nbytes);

@@ -63,7 +63,7 @@ AS_HELP_STRING([--with-opensslenginedir],[specify the directory where openssl en
 [ENGINEDIR="$with_opensslenginedir"],[ENGINEDIR="lib/engines/"])
 
 AC_ARG_WITH([buffersize],AS_HELP_STRING([--with-buffersize],[specify the size of the buffer (default 8MB) ]),
-[NVCPPFLAGS="$NVCPPFLAGS -DMAX_CHUNK_SIZE=$with_buffersize"],[NVCPPFLAGS="$NVCPPFLAGS -DMAX_CHUNK_SIZE=8*1024*1024"])
+[CPPFLAGS="$CPPFLAGS -DMAX_CHUNK_SIZE=$with_buffersize";NVCPPFLAGS="$NVCPPFLAGS -DMAX_CHUNK_SIZE=$with_buffersize"],[CPPFLAGS="$CPPFLAGS -DMAX_CHUNK_SIZE=8*1024*1024";NVCPPFLAGS="$NVCPPFLAGS -DMAX_CHUNK_SIZE=8*1024*1024"])
 
 AC_ARG_WITH([maxrregcount],AS_HELP_STRING([--with-rregcount],[specify the max number of reg that a thread must use (default no restriction) ]),
 [NVCPPFLAGS="$NVCPPFLAGS -maxrregcount=$with_maxrregcount"],[NVCPPFLAGS="$NVCPPFLAGS"])
