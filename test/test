@@ -42,6 +42,6 @@ if [[ $CHKCPU != $CHKCUDA ]]; then
 	xxd $1.out.gpu|head
 else
 	echo ">> CKSUM matches"
-	rm -rf $1.out.gpu $1.out.cpu
+	#rm -rf $1.out.gpu $1.out.cpu
 fi
 

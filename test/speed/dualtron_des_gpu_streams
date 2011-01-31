@@ -1,0 +1,30 @@
+engine "cudamrg" set.
+Doing des-ecb for 3s on 16 size blocks: 31522 des-ecb's in 2.04s
+Doing des-ecb for 3s on 64 size blocks: 21196 des-ecb's in 1.07s
+Doing des-ecb for 3s on 256 size blocks: 20907 des-ecb's in 0.97s
+Doing des-ecb for 3s on 1024 size blocks: 20791 des-ecb's in 1.54s
+Doing des-ecb for 3s on 2048 size blocks: 20691 des-ecb's in 1.43s
+Doing des-ecb for 3s on 4096 size blocks: 20393 des-ecb's in 1.26s
+Doing des-ecb for 3s on 8192 size blocks: 19113 des-ecb's in 1.39s
+Doing des-ecb for 3s on 16384 size blocks: 21098 des-ecb's in 1.46s
+Doing des-ecb for 3s on 32768 size blocks: 14399 des-ecb's in 1.86s
+Doing des-ecb for 3s on 65536 size blocks: 8826 des-ecb's in 2.30s
+Doing des-ecb for 3s on 131072 size blocks: 4962 des-ecb's in 2.38s
+Doing des-ecb for 3s on 262144 size blocks: 2581 des-ecb's in 2.83s
+Doing des-ecb for 3s on 524288 size blocks: 1219 des-ecb's in 2.86s
+Doing des-ecb for 3s on 1048576 size blocks: 603 des-ecb's in 2.94s
+Doing des-ecb for 3s on 2097152 size blocks: 306 des-ecb's in 2.93s
+Doing des-ecb for 3s on 4194304 size blocks: 158 des-ecb's in 2.93s
+Doing des-ecb for 3s on 8388608 size blocks: 81 des-ecb's in 2.94s
+Successfully found 1 CUDA devices (CUDART_VERSION 3020).
+CUDA streams enabled (8 streams)
+Using pinned memory: cudaHostAllocDefault.
+The current buffer size is 1048576.
+
+OpenSSL 1.0.0b 16 Nov 2010
+built on: Wed Dec  1 21:52:12 CET 2010
+options:bn(64,64) rc4(8x,char) des(idx,cisc,16,int) aes(partial) idea(int) blowfish(idx) 
+compiler: gcc -DOPENSSL_THREADS -D_REENTRANT -DDSO_DLFCN -DHAVE_DLFCN_H -m64 -DL_ENDIAN -DTERMIO -O3 -Wall -DMD32_REG_T=int -DOPENSSL_IA32_SSE2 -DOPENSSL_BN_ASM_MONT -DSHA1_ASM -DSHA256_ASM -DSHA512_ASM -DMD5_ASM -DAES_ASM -DWHIRLPOOL_ASM
+The 'numbers' are in 1000s of bytes per second processed.
+type             16 bytes     64 bytes    256 bytes   1024 bytes   2048 bytes   4096 bytes   8192 bytes  16384 bytes  32768 bytes  65536 bytes 131072 bytes 262144 bytes 524288 bytes1048576 bytes2097152 bytes4194304 bytes8388608 bytes
+des-ecb            247.23k     1267.80k     5517.72k    13824.66k    29632.98k    66293.43k   112642.95k   236760.02k   253670.12k   251487.28k   273268.60k   239079.03k   223464.01k   215065.08k   219019.97k   226177.49k   231114.71k
