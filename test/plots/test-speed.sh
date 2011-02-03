@@ -2,9 +2,14 @@
 OPENSSL=openssl
 RUN=17
 AVG_RUNS=1
+CIPHERS=(bf-ecb camellia-128-ecb cast5-ecb des-ecb idea-ecb)
 
-for cipher in {bf-ecb,camellia-128-ecb,cast5-ecb,des-ecb,idea-ecb}; do
-#for cipher in {bf-ecb,des-ecb}; do
+if [[ -n $3 ]]; then
+	CIPHERS=$3
+fi
+echo "Ciphers: $3\n==========="
+
+for cipher in $CIPHERS; do
 	if [[ -n $2 ]]; then
 		echo "$2\n==========";
 	fi
@@ -31,7 +36,7 @@ for cipher in {bf-ecb,camellia-128-ecb,cast5-ecb,des-ecb,idea-ecb}; do
 			done
 			sort -n ${cipher}_gpu_average.dat|sed '/^$/d' > ${cipher}_gpu.dat
 		fi
-		rm out-filtered-$cipher.txt
+		rm out-filtered-$cipher.txt ${cipher}_gpu_average.dat
 	fi
 
 	
