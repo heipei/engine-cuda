@@ -1,7 +1,18 @@
 Engine_cudamrg Quickstart
 -------------------
 
+In order to generate a makefile you have to call configure first. 
 ./configure
+
+You might have to supply configure with the path to your CUDA toolkit:
+./configure --with-cudatoolkitpath=/opt/cuda
+
+If you know what NVIDIA device engine-cuda will run on, you can use the -arch
+flag to tailor nvcc-compilation:
+NVCFLAGS="-arch sm_11" ./configure
+
+After that simply do
+
 make
 make install
 
@@ -18,3 +29,8 @@ N: Paolo Margara
 E: paolo.margara@gmail.com
 W: http://www.mrgcorner.it
 D: Developer, tester and maintainer
+
+N: Johannes Gilger
+E: heipei@hackvalue.de
+W: http://www.heipei.net
+D: Contributor

@@ -70,7 +70,7 @@ install: $(LIBNAME)
 	cp $(LIBNAME) @prefix@/@ENGINEDIR@
 
 clean:
-	rm -f *.o *.obj tags core .pure *.out .nfs* *.old *.bak fluff *.linkinfo *.so *.a teststate
+	rm -f *.o *.obj tags core .pure *.out .nfs* *.old *.bak fluff *.linkinfo *.so *.a teststate config.log config.status
 	rm -f *.cpp1.ii *.cpp2.i *.cpp3.i *.cpp4.ii *.cu.cpp *.cudafe1.c *.cudafe1.cpp *.cudafe1.gpu 
 	rm -f *.cudafe1.stub.c *.cudafe2.c *.cudafe2.gpu *.cudafe2.stub.c *.fatbin.c *.hash *.ptx *.sm_*.cubin
 

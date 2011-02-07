@@ -8,7 +8,6 @@
 #include <cuda_runtime_api.h>
 #include "cuda_common.h"
 #include "common.h"
-//#include "lib/cuPrintf.cu"
 
 __constant__ uint64_t idea_constant_schedule[27];
 __shared__ IDEA_KEY_SCHEDULE idea_schedule;

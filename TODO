@@ -1,8 +1,5 @@
 == General ==
 - PTX inline?
-- Test-Framework for openssl speed and all algos
- - With averaging
- - With Gnuplot
 - Test-Framework for single-file encryption with averaging
  
 - Why does speed decrease after 1MB / 256KB
@@ -10,7 +7,6 @@
 - Many calls to CudaMemcpy, where from?
 - Adjust buffersize to device memory
 - cuPrintf inclusion OK?
-- Streams
 - Rambo is capped at 800MB/s, why?
 
 

@@ -8,10 +8,8 @@
 #include <cuda_runtime_api.h>
 #include "cuda_common.h"
 #include "common.h"
-//#include "lib/cuPrintf.cu"
 
 __constant__ BF_KEY bf_constant_schedule;
-//__shared__ BF_KEY bf_schedule;
 
 __device__ uint64_t *bf_device_data;
 uint8_t  *bf_host_data;
@@ -35,23 +33,6 @@ cudaEvent_t bf_start,bf_stop;
 __global__ void BFencKernel(uint64_t *data) {
 	register uint32_t l, r;
 	register uint64_t block = data[TX];
-
-	// TODO: Let's see if this is really faster than constant memory!
-	/*
-	if(threadIdx.x < 18)
-		bf_schedule.P[threadIdx.x] = bf_constant_schedule.P[threadIdx.x];
-
-	bf_schedule.S[threadIdx.x] = bf_constant_schedule.S[threadIdx.x];
-	bf_schedule.S[threadIdx.x+128] = bf_constant_schedule.S[threadIdx.x+128];
-	bf_schedule.S[threadIdx.x+256] = bf_constant_schedule.S[threadIdx.x+256];
-	bf_schedule.S[threadIdx.x+384] = bf_constant_schedule.S[threadIdx.x+384];
-	bf_schedule.S[threadIdx.x+512] = bf_constant_schedule.S[threadIdx.x+512];
-	bf_schedule.S[threadIdx.x+640] = bf_constant_schedule.S[threadIdx.x+640];
-	bf_schedule.S[threadIdx.x+768] = bf_constant_schedule.S[threadIdx.x+768];
-	bf_schedule.S[threadIdx.x+896] = bf_constant_schedule.S[threadIdx.x+896];
-	// TODO: Let's see if synching isn't needed
-	//__syncthreads();
-	*/
 
 	n2l((unsigned char *)&block,l);
 	n2l(((unsigned char *)&block)+4,r);
