@@ -140,7 +140,12 @@ set colorbox vertical origin screen 0.9, 0.2, 0 size screen 0.05, 0.6, 0 front b
 set loadpath 
 set fontpath 
 set fit noerrorvariables
-set terminal png size 1000,500
+
+#set terminal png size 1000,500
+
+set terminal pdf size 15cm,9cm
+set output "ecb-encrypt.pdf"
+
 GNUTERM = "wxt"
 plot 'bf-ecb_gpu.dat' using ($2/1048576) title 'Blowfish ECB GPU' with linespoints, \
      'bf-ecb_cpu.dat' using ($2/1048576) title 'Blowfish ECB CPU' with linespoints, \

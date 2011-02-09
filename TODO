@@ -1,6 +1,9 @@
 == General ==
 - PTX inline?
 - Test-Framework for single-file encryption with averaging
+
+- Try out write-combining with page locked memory and two different staging areas?
+- __threadfence_block instead of __syncthreads?
  
 - Why does speed decrease after 1MB / 256KB
 - Non-blocking kernel calls?
