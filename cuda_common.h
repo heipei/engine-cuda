@@ -1,6 +1,8 @@
 #include <stdint.h>
 #include <cuda_runtime_api.h>
 
+#define TX (blockIdx.x * (blockDim.x * blockDim.y) + (blockDim.y * threadIdx.x) + threadIdx.y)
+
 static int __attribute__((unused)) output_verbosity;
 static int __attribute__((unused)) isIntegrated;
 

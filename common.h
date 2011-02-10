@@ -1,8 +1,6 @@
 #ifndef common_h
 #define common_h
 
-#include <cuda_runtime_api.h>
-
 #define OUTPUT_QUIET		0
 #define OUTPUT_NORMAL		1
 #define OUTPUT_VERBOSE		2
@@ -43,8 +41,7 @@
 #define CAMELLIA_KEY_SIZE_192	24
 #define CAMELLIA_KEY_SIZE_256	32
 
-#define TX (blockIdx.x * (blockDim.x * blockDim.y) + (blockDim.y * threadIdx.x) + threadIdx.y)
-
 void cuda_device_init(int *nm, int buffer_size, int output_verbosity, uint8_t **host_data, uint64_t **device_data);
 void cuda_device_finish(uint8_t *host_data, uint64_t *device_data);
+
 #endif

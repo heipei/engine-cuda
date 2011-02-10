@@ -12,6 +12,8 @@
 - cuPrintf inclusion OK?
 - Rambo is capped at 800MB/s, why?
 
+== OpenCL ==
+- Init / load / compile kernels during engine-init and pass them
 
 == DES ==
 - CBC
