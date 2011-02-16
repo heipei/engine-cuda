@@ -1,4 +1,8 @@
 // vim:ft=opencl
+#include <CL/opencl.h>
+#include <sys/time.h>
+#include <string.h>
+
 #include "aes_cuda.h"
 #include "bf_cuda.h"
 #include "cast_cuda.h"
@@ -6,8 +10,6 @@
 #include "des_cuda.h"
 #include "idea_cuda.h"
 
-#include <CL/opencl.h>
-#include <sys/time.h>
 #include "bf_opencl.h"
 #include "common.h"
 #include "opencl_common.h"
@@ -42,7 +44,7 @@ static cl_kernel device_kernel;
 unsigned char *host_data = NULL;
 FILE *device_kernels = NULL;
 size_t BF_source_length;
-char *kernels_file = "/home/jojo/git/engine-cuda/bf_opencl_kernels.cl";
+char *kernels_file = "/home/jojo/git/engine-cuda/opencl_kernels.cl";
 
 int set_buffer_size(const char *buffer_size_string) {
 	buffer_size=atoi(buffer_size_string)*1024;	// The size is in kilobytes
@@ -85,28 +87,21 @@ int opencl_init(ENGINE * engine) {
 
 	// Get all OpenCL platform IDs
 	cl_platform_id cl_platform;
-	clGetPlatformIDs(1, &cl_platform, NULL);
+	CL_WRAPPER(clGetPlatformIDs(1, &cl_platform, NULL));
 
 	// Get a GPU device
-	clGetDeviceIDs(cl_platform, CL_DEVICE_TYPE_GPU, 1, &device, NULL);
+	CL_WRAPPER(clGetDeviceIDs(cl_platform, CL_DEVICE_TYPE_GPU, 1, &device, NULL));
 
 	char cBuffer[1024];
-	clGetDeviceInfo(device, CL_DEVICE_NAME, sizeof(cBuffer), &cBuffer, NULL);
+	CL_WRAPPER(clGetDeviceInfo(device, CL_DEVICE_NAME, sizeof(cBuffer), &cBuffer, NULL));
 	printf("CL_DEVICE_NAME:    %s\n", cBuffer);
-	clGetDeviceInfo(device, CL_DRIVER_VERSION, sizeof(cBuffer), &cBuffer, NULL);
+	CL_WRAPPER(clGetDeviceInfo(device, CL_DRIVER_VERSION, sizeof(cBuffer), &cBuffer, NULL));
 	printf("CL_DRIVER_VERSION: %s\n\n", cBuffer);
 
-	context = clCreateContext(NULL, 1, &device, NULL, NULL, &error);
-	check_opencl_error(error);
-
-	queue = clCreateCommandQueue(context, device, 0, &error);
-	check_opencl_error(error);
-
-	device_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE|CL_MEM_ALLOC_HOST_PTR, maxbytes, NULL, &error);
-	check_opencl_error(error);
-
-	host_data = (unsigned char *)clEnqueueMapBuffer(queue,device_buffer,CL_TRUE,CL_MAP_WRITE|CL_MAP_READ,0,maxbytes,0,NULL,NULL,&error);
-	check_opencl_error(error);
+	CL_ASSIGN(context = clCreateContext(NULL, 1, &device, NULL, NULL, &error));
+	CL_ASSIGN(queue = clCreateCommandQueue(context, device, 0, &error));
+	CL_ASSIGN(device_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE|CL_MEM_ALLOC_HOST_PTR, maxbytes, NULL, &error));
+	CL_ASSIGN(host_data = (unsigned char *)clEnqueueMapBuffer(queue,device_buffer,CL_TRUE,CL_MAP_WRITE|CL_MAP_READ,0,maxbytes,0,NULL,NULL,&error));
 
 	size_t kernels_source_length;
 	device_kernels = fopen(kernels_file, "rb");
@@ -118,24 +113,29 @@ int opencl_init(ENGINE * engine) {
 	error = fread(kernels_source, kernels_source_length, 1, device_kernels);
 	fclose(device_kernels);
 	
-	//fprintf(stdout, "Opening file %s of %zu lines length\n", kernels_file, kernels_source_length);
-	device_program = clCreateProgramWithSource(context,1,(const char **)&kernels_source,&kernels_source_length,&error);
-	check_opencl_error(error);
+	if(verbose && !quiet)
+		fprintf(stdout, "Opening file %s of %zu lines length\n", kernels_file, kernels_source_length);
+	CL_ASSIGN(device_program = clCreateProgramWithSource(context,1,(const char **)&kernels_source,&kernels_source_length,&error));
 	free(kernels_source);
 
 	gettimeofday(&starttime, NULL);
 
-	clBuildProgram(device_program, 1, &device, NULL, NULL, NULL);
-	check_opencl_error(error);
+	cl_int error;
+	error = clBuildProgram(device_program, 1, &device, "-w -cl-nv-verbose", NULL, NULL);
 
-	//char build_info[600001];
-	//error = clGetProgramBuildInfo(OpenCLProgram,device,CL_PROGRAM_BUILD_LOG,60000,build_info,NULL);
-	//fprintf(stdout, "Build log: %s\n", build_info);
-	//check_opencl_error(error);
+	if(verbose && !quiet && error) {
+		char build_info[600001];
+		CL_WRAPPER(clGetProgramBuildInfo(device_program,device,CL_PROGRAM_BUILD_LOG,60000,build_info,NULL));
+		fprintf(stdout, "Build log: %s\n", build_info);
+	}
+
+	CL_ASSIGN(device_kernel = clCreateKernel(device_program, "BFencKernel", &error));
 
 	gettimeofday(&curtime, NULL);
 	timeval_subtract(&difference,&curtime,&starttime);
-	fprintf(stdout, "opencl_init %d.%06d usecs\n", (int)difference.tv_sec, (int)difference.tv_usec);
+
+	if(verbose && !quiet)
+		fprintf(stdout, "opencl_init %d.%06d usecs\n", (int)difference.tv_sec, (int)difference.tv_usec);
 
 	initialized=1;
 	return 1;
@@ -232,7 +232,7 @@ static int opencl_init_key(EVP_CIPHER_CTX *ctx, const unsigned char *key, const 
 	    if (!quiet && verbose) fprintf(stdout,"Start calculating Blowfish key schedule...\n");
 	    BF_KEY key_schedule;
 	    BF_set_key(&key_schedule,ctx->key_len,key);
-	    device_schedule = clCreateBuffer(context, CL_MEM_READ_ONLY|CL_MEM_COPY_HOST_PTR, sizeof(BF_KEY), &key_schedule, &error);
+	    device_schedule = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(BF_KEY), &key_schedule, &error);
 	    check_opencl_error(error);
 	    BF_opencl_transfer_key_schedule(&key_schedule,&device_schedule,queue);
 	    break;
@@ -276,8 +276,7 @@ static int opencl_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsig
 	  //case NID_bf_cbc:
 	  case NID_bf_ecb:
 	    opencl_device_crypt = BF_opencl_crypt;
-	    device_kernel = clCreateKernel(device_program, "BFencKernel", &error);
-	    check_opencl_error(error);
+	    //check_opencl_error(error);
 	    break;
 	  case NID_cast5_ecb:
 	    //opencl_device_crypt = CAST_opencl_crypt;

@@ -1,6 +1,7 @@
 == General ==
 - PTX inline?
 - Test-Framework for single-file encryption with averaging
+- openssl speed has to be used with -elapsed!
 
 - Try out write-combining with page locked memory and two different staging areas?
 - __threadfence_block instead of __syncthreads?

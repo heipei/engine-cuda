@@ -27,3 +27,33 @@ void (*transferDeviceToHost) (      unsigned char **output, uint32_t **deviceMem
 
 void check_opencl_error(cl_int error);
 int timeval_subtract (struct timeval *result, struct timeval *x, struct timeval *y);
+const char *cl_error_to_str(cl_int e);
+
+#ifndef __OPENCL_HELPER_MACROS__
+#define __OPENCL_HELPER_MACROS__
+ 
+#include <stdio.h>
+#include <stdlib.h>
+#include <CL/opencl.h>
+ 
+#define CL_WRAPPER(FUNC) { \
+        cl_int error = FUNC; \
+        if (error != CL_SUCCESS) { \
+            fprintf(stderr, "Error %d executing %s on %s:%d (%s)\n", \
+                err, #FUNC, __FILE__, __LINE__, cl_error_to_str(error)); \
+            abort(); \
+        }; \
+    }
+ 
+int err; 
+#define CL_ASSIGN(ASSIGNMENT) { \
+        ASSIGNMENT; \
+        if (error != CL_SUCCESS) { \
+            fprintf(stderr, "Error %d executing %s on %s:%d (%s)\n", \
+                error, #ASSIGNMENT, __FILE__, __LINE__, cl_error_to_str(error)); \
+            abort(); \
+        }; \
+    }
+ 
+ 
+#endif

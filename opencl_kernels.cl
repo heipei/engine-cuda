@@ -1,14 +1,14 @@
 // vim:ft=opencl
+#pragma OPENCL EXTENSION cl_khr_byte_addressable_store : enable
 
-#define BF_M  (0xFF<<2)
+#include <openssl/blowfish.h>
 
-// TODO: This will issue a lot of ld.global.u8 instructions!
 #define BF_ENC(LL,R,S,P) ( \
 	LL^=P, \
-	LL^=(((*(S+   0+((R>>22)&BF_M)))<<0 | (*(S+   1+((R>>22)&BF_M)))<<8 | (*(S+   2+((R>>22)&BF_M)))<<16 | (*(S+   3+((R>>22)&BF_M)))<<24) + \
-	    ((*(S+1024+((R>>14)&BF_M)))<<0 | (*(S+1025+((R>>14)&BF_M)))<<8 | (*(S+1026+((R>>14)&BF_M)))<<16 | (*(S+1027+((R>>14)&BF_M)))<<24) ^ \
-	    ((*(S+2048+((R>>6)&BF_M)))<<0 | (*(S+2049+((R>>6)&BF_M)))<<8 | (*(S+2050+((R>>6)&BF_M)))<<16 | (*(S+2051+((R>>6)&BF_M)))<<24)) + \
-	    ((*(S+3072+((R<<2)&BF_M)))<<0 | (*(S+3073+((R<<2)&BF_M)))<<8 | (*(S+3074+((R<<2)&BF_M)))<<16 | (*(S+3075+((R<<2)&BF_M)))<<24)   \
+	LL^=(((	S[       ((uint)(R>>24)&0xff)] + \
+		S[0x0100+((uint)(R>>16)&0xff)])^ \
+		S[0x0200+((uint)(R>> 8)&0xff)])+ \
+		S[0x0300+((uint)(R    )&0xff)]) \
 	)
 
 #define n2l(c,l)        (l =((uint)(*(c)))<<24L, \
@@ -27,6 +27,9 @@
 			((a & 0xFF00000000000000) >> 56))
 
 
+// TODO: When using __constant memory for the key-schedule, each call to BF_ENC
+// increases the compilation-time by at least factor 2. Bug "filed" in NVIDIA
+// forums
 __kernel void BFencKernel(__global unsigned long *data, __global unsigned int *bf_constant_schedule) {
 	__private unsigned int l, r;
 	__private unsigned long block = data[get_global_id(0)];
@@ -34,11 +37,8 @@ __kernel void BFencKernel(__global unsigned long *data, __global unsigned int *b
 	n2l((unsigned char *)&block,l);
 	n2l(((unsigned char *)&block)+4,r);
 
-	__global unsigned int *p;
-	__global unsigned char *s;
-
-	p=bf_constant_schedule;
-	s=bf_constant_schedule+18;
+	__global unsigned int *p=bf_constant_schedule;
+	__global unsigned int *s=bf_constant_schedule+18;
 
 	l^=p[0];
 	BF_ENC(r,l,s,p[ 1]);
