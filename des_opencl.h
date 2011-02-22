@@ -27,12 +27,12 @@
 #include <stdint.h>
 #include <assert.h>
 #include <memory.h>
-#include <openssl/blowfish.h>
+#include <openssl/des.h>
 #include <openssl/engine.h>
 #include <CL/opencl.h>
 
-void BF_opencl_transfer_key_schedule(BF_KEY *ks,cl_mem *device_schedule,cl_command_queue queue);
-void BF_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, cl_mem *device_buffer, cl_mem *device_schedule, cl_command_queue queue, cl_kernel device_kernel, cl_context context);
+void DES_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, cl_mem *device_buffer, cl_mem *device_schedule, cl_command_queue queue, cl_kernel device_kernel, cl_context context);
+void DES_opencl_transfer_key_schedule(DES_key_schedule *ks, cl_mem *device_schedule,cl_command_queue queue);
 
 void BF_opencl_transfer_iv(const unsigned char *iv);
 void BF_opencl_decrypt_cbc(const unsigned char *in, unsigned char *out,size_t nbytes);

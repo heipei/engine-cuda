@@ -9,7 +9,7 @@
 #include "common.h"
 #include "opencl_common.h"
 
-void BF_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, cl_mem *device_buffer, cl_mem *device_schedule, cl_command_queue queue, cl_kernel device_kernel) {
+void BF_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, cl_mem *device_buffer, cl_mem *device_schedule, cl_command_queue queue, cl_kernel device_kernel, cl_context context) {
 	assert(in && out && nbytes);
 
 	size_t gridSize[3] = {1, 0, 0};

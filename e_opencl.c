@@ -11,6 +11,7 @@
 #include "idea_cuda.h"
 
 #include "bf_opencl.h"
+#include "des_opencl.h"
 #include "common.h"
 #include "opencl_common.h"
 
@@ -24,7 +25,7 @@
 
 static int opencl_ciphers (ENGINE *e, const EVP_CIPHER **cipher, const int **nids, int nid);
 static int opencl_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigned char *in_arg, size_t nbytes);
-void (*opencl_device_crypt) (const unsigned char *in, unsigned char *out, size_t nbytes, int enc, cl_mem *device_buffer, cl_mem *device_schedule, cl_command_queue queue, cl_kernel device_kernel);
+void (*opencl_device_crypt) (const unsigned char *in, unsigned char *out, size_t nbytes, int enc, cl_mem *device_buffer, cl_mem *device_schedule, cl_command_queue queue, cl_kernel device_kernel, cl_context context);
 
 int buffer_size = 0;
 int verbose = 0;
@@ -119,17 +120,17 @@ int opencl_init(ENGINE * engine) {
 	free(kernels_source);
 
 	gettimeofday(&starttime, NULL);
-
+	
 	cl_int error;
 	error = clBuildProgram(device_program, 1, &device, "-w -cl-nv-verbose", NULL, NULL);
 
-	if(verbose && !quiet && error) {
+	if(verbose && !quiet) {
 		char build_info[600001];
 		CL_WRAPPER(clGetProgramBuildInfo(device_program,device,CL_PROGRAM_BUILD_LOG,60000,build_info,NULL));
 		fprintf(stdout, "Build log: %s\n", build_info);
 	}
 
-	CL_ASSIGN(device_kernel = clCreateKernel(device_program, "BFencKernel", &error));
+	CL_ASSIGN(device_kernel = clCreateKernel(device_program, "DESencKernel", &error));
 
 	gettimeofday(&curtime, NULL);
 	timeval_subtract(&difference,&curtime,&starttime);
@@ -225,7 +226,8 @@ static int opencl_init_key(EVP_CIPHER_CTX *ctx, const unsigned char *key, const 
 	    if (!quiet && verbose) fprintf(stdout,"Start calculating DES key schedule...");
 	    DES_key_schedule des_key_schedule;
 	    DES_set_key((const_DES_cblock *)key,&des_key_schedule);
-	    //DES_opencl_transfer_key_schedule(&des_key_schedule);
+	    device_schedule = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(DES_key_schedule), &des_key_schedule, &error);
+	    DES_opencl_transfer_key_schedule(&des_key_schedule,&device_schedule,queue);
 	    break;
 	  case NID_bf_ecb:
 	  case NID_bf_cbc:
@@ -271,12 +273,11 @@ static int opencl_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsig
 
 	switch(EVP_CIPHER_CTX_nid(ctx)) {
 	  case NID_des_ecb:
-	    //opencl_device_crypt = DES_opencl_crypt;
+	    opencl_device_crypt = DES_opencl_crypt;
 	    break;
 	  //case NID_bf_cbc:
 	  case NID_bf_ecb:
 	    opencl_device_crypt = BF_opencl_crypt;
-	    //check_opencl_error(error);
 	    break;
 	  case NID_cast5_ecb:
 	    //opencl_device_crypt = CAST_opencl_crypt;
@@ -297,12 +298,12 @@ static int opencl_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsig
 		chunk=(nbytes-current)/maxbytes;
 		if(chunk>=1) {
 			memcpy(host_data,in_arg+current,maxbytes);
-			opencl_device_crypt(host_data,host_data,maxbytes,ctx->encrypt,&device_buffer,&device_schedule,queue,device_kernel);
+			opencl_device_crypt(host_data,host_data,maxbytes,ctx->encrypt,&device_buffer,&device_schedule,queue,device_kernel, context);
 			memcpy(out_arg+current,host_data,maxbytes);
 			current+=maxbytes;  
 		} else {
 			memcpy(host_data,in_arg+current,nbytes-current);
-			opencl_device_crypt(host_data,host_data,(nbytes-current),ctx->encrypt,&device_buffer,&device_schedule,queue,device_kernel);
+			opencl_device_crypt(host_data,host_data,(nbytes-current),ctx->encrypt,&device_buffer,&device_schedule,queue,device_kernel, context);
 			memcpy(out_arg+current,host_data,nbytes-current);
 			current+=(nbytes-current);
 		}
