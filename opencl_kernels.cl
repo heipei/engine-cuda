@@ -1,6 +1,10 @@
 // vim:ft=opencl
 #pragma OPENCL EXTENSION cl_khr_byte_addressable_store : enable
 
+// ###########
+// # BF ECB #
+// ###########
+
 #define n2l(c,l)        (l =((uint)(*(c)))<<24L, \
                          l|=((uint)(*(c+1)))<<16L, \
                          l|=((uint)(*(c+2)))<< 8L, \
@@ -64,6 +68,9 @@ __kernel void BFencKernel(__global unsigned long *data, __global unsigned int *b
 	data[get_global_id(0)] = block;
 }
 
+// ###########
+// # DES ECB #
+// ###########
 #define IP(left,right) \
 	{ \
 	register unsigned int tt; \
@@ -107,7 +114,7 @@ __kernel void BFencKernel(__global unsigned long *data, __global unsigned int *b
 
 __kernel void DESencKernel(__global unsigned long *data, __local unsigned int *des_d_sp, __local unsigned long *s, __global unsigned int *des_d_sp_c, __global unsigned long *cs) {
 	
-	//if(get_local_id(0) < 16)
+	if(get_local_id(0) < 16)
 		s[get_local_id(0)%16] = cs[get_local_id(0)%16];
 
 	// Careful: Based on the assumption of a constant 128 threads!

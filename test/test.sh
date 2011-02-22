@@ -34,24 +34,30 @@ for cipher in $CIPHERS; do
 	echo "==== $cipher tests ===="
 	echo ">> CUDA encryption"
 	echo "---------------"
-	time openssl enc -engine cudamrg -e -$cipher -nosalt -nopad -v -in $2 -out $cipher.out.gpu -bufsize 8388608 -K "$KEY"
+	time openssl enc -engine cudamrg -e -$cipher -nosalt -nopad -v -in $2 -out $cipher.out.cuda -bufsize 8388608 -K "$KEY"
+	echo ">> OpenCL encryption"
+	echo "---------------"
+	time openssl enc -engine opencl -e -$cipher -nosalt -nopad -v -in $2 -out $cipher.out.opencl -bufsize 8388608 -K "$KEY"
 	echo -e "\n>> CPU encryption"
 	echo "--------------"
 	time openssl enc -e -$cipher -nosalt -nopad -v -in $2 -out $cipher.out.cpu -K "$KEY"
 
 	CHKCPU=`cksum $cipher.out.cpu|awk {'print $1'}`
-	CHKCUDA=`cksum $cipher.out.gpu|awk {'print $1'}`
+	CHKCUDA=`cksum $cipher.out.cuda|awk {'print $1'}`
+	CHKOPENCL=`cksum $cipher.out.opencl|awk {'print $1'}`
 
 	echo ""
-	if [[ $CHKCPU != $CHKCUDA ]]; then
+	if [[ $CHKCPU != $CHKCUDA || $CHKCPU != $CHKOPENCL ]]; then
 		echo ">> CAUTION: cksum mismatch!"
-		echo ">> CPU: $CHKCPU; CUDA: $CHKCUDA"
+		echo ">> CPU: $CHKCPU; CUDA: $CHKCUDA; OpenCL: $CHKOPENCL"
 		echo ">> XXD CPU:"
 		xxd $cipher.out.cpu|head
-		echo ">> XXD GPU:"
-		xxd $cipher.out.gpu|head
+		echo ">> XXD CUDA:"
+		xxd $cipher.out.cuda|head
+		echo ">> XXD OpenCL:"
+		xxd $cipher.out.opencl|head
 	else
 		echo ">> CKSUM matches"
-		rm -rf $cipher.out.gpu $cipher.out.cpu
+		rm -rf $cipher.out.cuda $cipher.out.opencl $cipher.out.cpu
 	fi
 done

@@ -77,6 +77,10 @@ $(LIBOBJ_CUDA): %.o: %.cu $(COMMONSRC_CUDA)
 $(LIBOBJ): %.o: %.c $(COMMONSRC_CUDA)
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -c -o $@ $<
 
+ptx:
+kernels.ptx: opencl_kernels.cl
+	clcc "-cl-nv-arch sm_11" opencl_kernels.cl $@
+	
 install: $(LIBNAME)
 	mkdir -p @prefix@/@ENGINEDIR@
 	cp $(LIBNAME) @prefix@/@ENGINEDIR@

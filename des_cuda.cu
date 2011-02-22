@@ -315,7 +315,7 @@ extern "C" void DES_cuda_crypt(const unsigned char *in, unsigned char *out, size
 		gridSize = nbytes/(MAX_THREAD*DES_BLOCK_SIZE);
 	} else {
 		if (nbytes < MAX_THREAD*DES_BLOCK_SIZE)
-			dimBlock.x = nbytes / 8;
+			dimBlock.x = 128;
 		gridSize = nbytes/(MAX_THREAD*DES_BLOCK_SIZE)+1;
 	}
 

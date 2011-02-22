@@ -158,7 +158,6 @@ uint32_t des_d_sp_host[8][64]={
 static cl_mem des_sbox = NULL;
 
 void DES_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, cl_mem *device_buffer, cl_mem *device_schedule, cl_command_queue queue, cl_kernel device_kernel, cl_context context) {
-	assert(in && out && nbytes);
 
 	size_t gridSize[3] = {1, 0, 0};
 	size_t blockSize[3] = {MAX_THREAD, 0, 0};
@@ -170,14 +169,12 @@ void DES_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes
 	}
 
 	if(gridSize[0] < MAX_THREAD) {
-		blockSize[0] = gridSize[0];
+		blockSize[0] = gridSize[0] = 128;
 	}
 
-	//fprintf(stdout, "Setting kernel args for DES\n");
 	clSetKernelArg(device_kernel, 0, sizeof(cl_mem), device_buffer);
 	clSetKernelArg(device_kernel, 1, 2048, NULL);
 	clSetKernelArg(device_kernel, 2, sizeof(DES_key_schedule), NULL);
-
 
 	if(!des_sbox) {
 		cl_int error;
@@ -194,13 +191,9 @@ void DES_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes
 	#endif
 	
 
-	//cl_event event;
-	/*
-	fprintf(stdout, "Starting DES kernel with memory pointers %p (in) and %p (out) and device_buffer %p\n",in,out,device_buffer);
-	*/
-	CL_WRAPPER(clEnqueueWriteBuffer(queue,*device_buffer,CL_TRUE,0,nbytes,in,0,NULL,NULL));
-	CL_WRAPPER(clEnqueueNDRangeKernel(queue,device_kernel, 1, NULL,gridSize, blockSize, 0, NULL, NULL));
-	CL_WRAPPER(clEnqueueReadBuffer(queue,*device_buffer,CL_TRUE,0,nbytes,out,0,NULL,NULL));
+	clEnqueueWriteBuffer(queue,*device_buffer,CL_TRUE,0,nbytes,in,0,NULL,NULL);
+	clEnqueueNDRangeKernel(queue,device_kernel, 1, NULL,gridSize, blockSize, 0, NULL, NULL);
+	clEnqueueReadBuffer(queue,*device_buffer,CL_TRUE,0,nbytes,out,0,NULL,NULL);
 
 	#ifdef DEBUG
 		gettimeofday(&curtime, NULL);
@@ -210,7 +203,6 @@ void DES_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes
 }
 
 void DES_opencl_transfer_key_schedule(DES_key_schedule *ks, cl_mem *device_schedule,cl_command_queue queue) {
-	assert(ks);
 	clEnqueueWriteBuffer(queue,*device_schedule,CL_TRUE,0,sizeof(DES_key_schedule),ks,0,NULL,NULL);
 }
 

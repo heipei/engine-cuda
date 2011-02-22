@@ -12,6 +12,7 @@
 
 #include "bf_opencl.h"
 #include "des_opencl.h"
+
 #include "common.h"
 #include "opencl_common.h"
 
@@ -28,11 +29,15 @@ static int opencl_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsig
 void (*opencl_device_crypt) (const unsigned char *in, unsigned char *out, size_t nbytes, int enc, cl_mem *device_buffer, cl_mem *device_schedule, cl_command_queue queue, cl_kernel device_kernel, cl_context context);
 
 int buffer_size = 0;
-int verbose = 0;
+int verbose = 2;
 int quiet = 0;
 int initialized = 0;
 char *library_path=NULL;
 int maxbytes = 8388608;
+
+static cl_kernel des_kernel;
+static cl_kernel bf_kernel;
+static cl_kernel *device_kernel;
 
 static cl_context context;
 static cl_command_queue queue;
@@ -41,7 +46,6 @@ static cl_mem device_schedule;
 static cl_device_id device;
 static cl_int error = 0;
 static cl_program device_program;
-static cl_kernel device_kernel;
 unsigned char *host_data = NULL;
 FILE *device_kernels = NULL;
 size_t BF_source_length;
@@ -63,7 +67,7 @@ int inc_verbose(void) {
 }
 
 int opencl_finish(ENGINE * engine) {
-	clReleaseKernel(device_kernel);
+	clReleaseKernel(*device_kernel);
 	clReleaseProgram(device_program);
 	clUnloadCompiler();
 
@@ -130,7 +134,8 @@ int opencl_init(ENGINE * engine) {
 		fprintf(stdout, "Build log: %s\n", build_info);
 	}
 
-	CL_ASSIGN(device_kernel = clCreateKernel(device_program, "DESencKernel", &error));
+	CL_ASSIGN(des_kernel = clCreateKernel(device_program, "DESencKernel", &error));
+	CL_ASSIGN(bf_kernel = clCreateKernel(device_program, "BFencKernel", &error));
 
 	gettimeofday(&curtime, NULL);
 	timeval_subtract(&difference,&curtime,&starttime);
@@ -274,10 +279,12 @@ static int opencl_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsig
 	switch(EVP_CIPHER_CTX_nid(ctx)) {
 	  case NID_des_ecb:
 	    opencl_device_crypt = DES_opencl_crypt;
+	    device_kernel = &des_kernel;
 	    break;
 	  //case NID_bf_cbc:
 	  case NID_bf_ecb:
 	    opencl_device_crypt = BF_opencl_crypt;
+	    device_kernel = &bf_kernel;
 	    break;
 	  case NID_cast5_ecb:
 	    //opencl_device_crypt = CAST_opencl_crypt;
@@ -298,12 +305,12 @@ static int opencl_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsig
 		chunk=(nbytes-current)/maxbytes;
 		if(chunk>=1) {
 			memcpy(host_data,in_arg+current,maxbytes);
-			opencl_device_crypt(host_data,host_data,maxbytes,ctx->encrypt,&device_buffer,&device_schedule,queue,device_kernel, context);
+			opencl_device_crypt(host_data,host_data,maxbytes,ctx->encrypt,&device_buffer,&device_schedule,queue,*device_kernel, context);
 			memcpy(out_arg+current,host_data,maxbytes);
 			current+=maxbytes;  
 		} else {
 			memcpy(host_data,in_arg+current,nbytes-current);
-			opencl_device_crypt(host_data,host_data,(nbytes-current),ctx->encrypt,&device_buffer,&device_schedule,queue,device_kernel, context);
+			opencl_device_crypt(host_data,host_data,(nbytes-current),ctx->encrypt,&device_buffer,&device_schedule,queue,*device_kernel, context);
 			memcpy(out_arg+current,host_data,nbytes-current);
 			current+=(nbytes-current);
 		}
