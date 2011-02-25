@@ -21,12 +21,7 @@
  *
  */
 
-#include "aes_cuda.h"
-#include "bf_cuda.h"
-#include "cast_cuda.h"
-#include "cmll_cuda.h"
-#include "des_cuda.h"
-#include "idea_cuda.h"
+#include "ciphers_cuda.h"
 #include "common.h"
 
 #define DYNAMIC_ENGINE

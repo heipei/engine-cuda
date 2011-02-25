@@ -3,17 +3,9 @@
 #include <sys/time.h>
 #include <string.h>
 
-#include "aes_cuda.h"
-#include "bf_cuda.h"
-#include "cast_cuda.h"
-#include "cmll_cuda.h"
-#include "des_cuda.h"
-#include "idea_cuda.h"
+#include "ciphers_cuda.h"
 
-#include "bf_opencl.h"
-#include "des_opencl.h"
-#include "cast_opencl.h"
-
+#include "ciphers_opencl.h"
 #include "common.h"
 #include "opencl_common.h"
 
