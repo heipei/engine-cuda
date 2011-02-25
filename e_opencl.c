@@ -32,7 +32,7 @@ static cl_kernel des_kernel;
 static cl_kernel bf_kernel;
 static cl_kernel cast_kernel;
 static cl_kernel aes_kernel;
-static cl_kernel camellia_kernel;
+static cl_kernel cmll_kernel;
 static cl_kernel *device_kernel;
 
 static cl_context context;
@@ -133,6 +133,7 @@ int opencl_init(ENGINE * engine) {
 	CL_ASSIGN(des_kernel = clCreateKernel(device_program, "DESencKernel", &error));
 	CL_ASSIGN(bf_kernel = clCreateKernel(device_program, "BFencKernel", &error));
 	CL_ASSIGN(cast_kernel = clCreateKernel(device_program, "CASTencKernel", &error));
+	CL_ASSIGN(cmll_kernel = clCreateKernel(device_program, "CMLLencKernel", &error));
 
 	gettimeofday(&curtime, NULL);
 	timeval_subtract(&difference,&curtime,&starttime);
@@ -252,7 +253,8 @@ static int opencl_init_key(EVP_CIPHER_CTX *ctx, const unsigned char *key, const 
 	    if (!quiet && verbose) fprintf(stdout,"Start calculating Camellia key schedule...\n");
 	    CAMELLIA_KEY cmll_key_schedule;
 	    Camellia_set_key(key,ctx->key_len*8,&cmll_key_schedule);
-	    //CMLL_opencl_transfer_key_schedule(&cmll_key_schedule);
+	    device_schedule = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(CAMELLIA_KEY), &cmll_key_schedule, &error);
+	    CMLL_opencl_transfer_key_schedule(&cmll_key_schedule,&device_schedule,queue);
 	    break;
 	  case NID_idea_ecb:
 	  case NID_idea_cbc:
@@ -290,7 +292,8 @@ static int opencl_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsig
 	    break;
 	  //case NID_camellia_128_cbc:
 	  case NID_camellia_128_ecb:
-	    //opencl_device_crypt = CMLL_opencl_crypt;
+	    opencl_device_crypt = CMLL_opencl_crypt;
+	    device_kernel = &cmll_kernel;
 	    break;
 	  //case NID_idea_cbc:
 	  case NID_idea_ecb:

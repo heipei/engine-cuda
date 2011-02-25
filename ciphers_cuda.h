@@ -3,11 +3,11 @@
 #include <stdint.h>
 #include <assert.h>
 #include <memory.h>
-#include <openssl/aes.h>
 #include <openssl/engine.h>
 #include <cuda_runtime_api.h>
 
 
+#include <openssl/aes.h>
 int AES_cuda_set_encrypt_key(const unsigned char *userKey, int bits, AES_KEY *key);
 int AES_cuda_set_decrypt_key(const unsigned char *userKey, int bits, AES_KEY *key);
 

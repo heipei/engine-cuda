@@ -27,30 +27,25 @@
 #include <stdint.h>
 #include <assert.h>
 #include <memory.h>
-#include <openssl/blowfish.h>
 #include <openssl/engine.h>
 #include <CL/opencl.h>
 
+#include <openssl/blowfish.h>
 void BF_opencl_transfer_key_schedule(BF_KEY *ks,cl_mem *device_schedule,cl_command_queue queue);
 void BF_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, cl_mem *device_buffer, cl_mem *device_schedule, cl_command_queue queue, cl_kernel device_kernel, cl_context context);
-
-void BF_opencl_transfer_iv(const unsigned char *iv);
-void BF_opencl_decrypt_cbc(const unsigned char *in, unsigned char *out,size_t nbytes);
-void BF_opencl_encrypt_cbc(const unsigned char *in, unsigned char *out,size_t nbytes);
 
 #include <openssl/des.h>
 void DES_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, cl_mem *device_buffer, cl_mem *device_schedule, cl_command_queue queue, cl_kernel device_kernel, cl_context context);
 void DES_opencl_transfer_key_schedule(DES_key_schedule *ks, cl_mem *device_schedule,cl_command_queue queue);
 
-void BF_opencl_transfer_iv(const unsigned char *iv);
-void BF_opencl_decrypt_cbc(const unsigned char *in, unsigned char *out,size_t nbytes);
-void BF_opencl_encrypt_cbc(const unsigned char *in, unsigned char *out,size_t nbytes);
-
 #include <openssl/cast.h>
-
 void CAST_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, cl_mem *device_buffer, cl_mem *device_schedule, cl_command_queue queue, cl_kernel device_kernel, cl_context context);
 void CAST_opencl_transfer_key_schedule(CAST_KEY *ks, cl_mem *device_schedule,cl_command_queue queue);
 
-void CAST_cuda_transfer_iv(const unsigned char *iv);
-void CAST_cuda_decrypt_cbc(const unsigned char *in, unsigned char *out,size_t nbytes);
-void CAST_cuda_encrypt_cbc(const unsigned char *in, unsigned char *out,size_t nbytes);
+#include <openssl/camellia.h>
+void CMLL_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, cl_mem *device_buffer, cl_mem *device_schedule, cl_command_queue queue, cl_kernel device_kernel, cl_context context);
+void CMLL_opencl_transfer_key_schedule(CAMELLIA_KEY *ks, cl_mem *device_schedule,cl_command_queue queue);
+
+#include <openssl/idea.h>
+void IDEA_opencl_transfer_key_schedule(const IDEA_KEY_SCHEDULE *key);
+void IDEA_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, uint8_t **host_data, uint64_t **device_data);
