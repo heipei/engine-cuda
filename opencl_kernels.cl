@@ -41,8 +41,8 @@ __kernel void BFencKernel(__global unsigned long *data, __global unsigned int *b
 	n2l((unsigned char *)&block,l);
 	n2l(((unsigned char *)&block)+4,r);
 
-	__global unsigned int *p=bf_constant_schedule;
-	__global unsigned int *s=bf_constant_schedule+18;
+	__global unsigned int *p=&bf_constant_schedule[0];
+	__global unsigned int *s=p+18;
 
 	l^=p[0];
 	BF_ENC(r,l,s,p[ 1]);
@@ -115,7 +115,7 @@ __kernel void BFencKernel(__global unsigned long *data, __global unsigned int *b
 __kernel void DESencKernel(__global unsigned long *data, __local unsigned int *des_d_sp, __local unsigned long *s, __global unsigned int *des_d_sp_c, __global unsigned long *cs) {
 	
 	if(get_local_id(0) < 16)
-		s[get_local_id(0)%16] = cs[get_local_id(0)%16];
+		s[get_local_id(0)] = cs[get_local_id(0)];
 
 	// Careful: Based on the assumption of a constant 128 threads!
 	// What happens for kernel calls with less than 128 threads, like the final padding 8-byte call?
@@ -125,7 +125,6 @@ __kernel void DESencKernel(__global unsigned long *data, __local unsigned int *d
 	des_d_sp[get_local_id(0)+256] = des_d_sp_c[get_local_id(0)+256];
 	des_d_sp[get_local_id(0)+384] = des_d_sp_c[get_local_id(0)+384];
 
-	barrier(CLK_LOCAL_MEM_FENCE);
 	__private unsigned long load = data[get_global_id(0)];
 	__private unsigned int right = load;
 	__private unsigned int left = load>>32;
@@ -137,6 +136,8 @@ __kernel void DESencKernel(__global unsigned long *data, __local unsigned int *d
 
 	left=ROTATE(left,29);
 	right=ROTATE(right,29);
+
+	barrier(CLK_LOCAL_MEM_FENCE);
 
 	D_ENCRYPT(left,right, 0);
 	D_ENCRYPT(right,left, 1);
@@ -161,48 +162,69 @@ __kernel void DESencKernel(__global unsigned long *data, __local unsigned int *d
 	data[get_global_id(0)]=left|((unsigned long)right)<<32;
 }
 
-//__global void DESdecKernel(__global unsigned long *data) {
-//	
-//	if(get_local_id(0) < 16)
-//		s[get_local_id(0)] = cs[get_local_id(0)];
-//
-//	((unsigned int *)des_d_sp)[get_local_id(0)] = ((unsigned int *)des_d_sp_c)[get_local_id(0)];
-//	((unsigned int *)des_d_sp)[get_local_id(0)+128] = ((unsigned int *)des_d_sp_c)[get_local_id(0)+128];
-//	((unsigned int *)des_d_sp)[get_local_id(0)+256] = ((unsigned int *)des_d_sp_c)[get_local_id(0)+256];
-//	((unsigned int *)des_d_sp)[get_local_id(0)+384] = ((unsigned int *)des_d_sp_c)[get_local_id(0)+384];
-//
-//	unsigned long load = data[get_global_id(0)];
-//	unsigned int right = load;
-//	unsigned int left = load>>32;
-//
-//	unsigned int t,u;
-//	unsigned char *des_SP = (unsigned char *) (&des_d_sp);
-//
-//	IP(right,left);
-//
-//	left=ROTATE(left,29);
-//	right=ROTATE(right,29);
-//
-//	D_ENCRYPT(left,right,15); /*  16 */
-//	D_ENCRYPT(right,left,14); /*  15 */
-//	D_ENCRYPT(left,right,13); /*  14 */
-//	D_ENCRYPT(right,left,12); /*  13 */
-//	D_ENCRYPT(left,right,11); /*  12 */
-//	D_ENCRYPT(right,left,10); /*  11 */
-//	D_ENCRYPT(left,right, 9); /*  10 */
-//	D_ENCRYPT(right,left, 8); /*  9 */
-//	D_ENCRYPT(left,right, 7); /*  8 */
-//	D_ENCRYPT(right,left, 6); /*  7 */
-//	D_ENCRYPT(left,right, 5); /*  6 */
-//	D_ENCRYPT(right,left, 4); /*  5 */
-//	D_ENCRYPT(left,right, 3); /*  4 */
-//	D_ENCRYPT(right,left, 2); /*  3 */
-//	D_ENCRYPT(left,right, 1); /*  2 */
-//	D_ENCRYPT(right,left, 0); /*  1 */
-//
-//	left=ROTATE(left,3);
-//	right=ROTATE(right,3);
-//
-//	FP(right,left);
-//	data[get_global_id(0)]=left|((unsigned long)right)<<32;
-//}
+// #############
+// # CAST5 ECB #
+// #############
+#define ROTL(a,n)     ((((a)<<(n))&0xffffffffL)|((a)>>(32-(n))))
+
+#define C_M    0x3fc
+#define C_0    22L
+#define C_1    14L
+#define C_2     6L
+#define C_3     2L /* left shift */
+
+#define E_CAST(n,key,L,R,OP1,OP2,OP3) \
+	{ \
+	unsigned int a,b,c,d; \
+	t=(key[n*2] OP1 R)&0xffffffff; \
+	t=ROTL(t,(key[n*2+1])); \
+	a=CAST_S_table0[(t>> 8)&0xff]; \
+	b=CAST_S_table1[(t    )&0xff]; \
+	c=CAST_S_table2[(t>>24)&0xff]; \
+	d=CAST_S_table3[(t>>16)&0xff]; \
+	L^=(((((a OP2 b)&0xffffffffL) OP3 c)&0xffffffffL) OP1 d)&0xffffffffL; \
+	}
+
+__kernel void CASTencKernel(__global unsigned long *data, __constant unsigned int *cast_constant_schedule, __global unsigned int *CAST_S_table) {
+	__local unsigned int CAST_S_table0[256], CAST_S_table1[256], CAST_S_table2[256], CAST_S_table3[256];
+	__private unsigned int l,r,t;
+	__constant unsigned int *k = &cast_constant_schedule[0];
+
+	__private unsigned long block = data[get_global_id(0)];
+
+	n2l((unsigned char *)&block,l);
+	n2l(((unsigned char *)&block)+4,r);
+
+	CAST_S_table0[get_local_id(0)] = CAST_S_table[get_local_id(0)];
+	CAST_S_table0[get_local_id(0)+128] = CAST_S_table[get_local_id(0)+128];
+	CAST_S_table1[get_local_id(0)] = CAST_S_table[get_local_id(0)+256];
+	CAST_S_table1[get_local_id(0)+128] = CAST_S_table[get_local_id(0)+384];
+	CAST_S_table2[get_local_id(0)] = CAST_S_table[get_local_id(0)+512];
+	CAST_S_table2[get_local_id(0)+128] = CAST_S_table[get_local_id(0)+640];
+	CAST_S_table3[get_local_id(0)] = CAST_S_table[get_local_id(0)+768];
+	CAST_S_table3[get_local_id(0)+128] = CAST_S_table[get_local_id(0)+896];
+
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	E_CAST( 0,k,l,r,+,^,-);
+	E_CAST( 1,k,r,l,^,-,+);
+	E_CAST( 2,k,l,r,-,+,^);
+	E_CAST( 3,k,r,l,+,^,-);
+	E_CAST( 4,k,l,r,^,-,+);
+	E_CAST( 5,k,r,l,-,+,^);
+	E_CAST( 6,k,l,r,+,^,-);
+	E_CAST( 7,k,r,l,^,-,+);
+	E_CAST( 8,k,l,r,-,+,^);
+	E_CAST( 9,k,r,l,+,^,-);
+	E_CAST(10,k,l,r,^,-,+);
+	E_CAST(11,k,r,l,-,+,^);
+	E_CAST(12,k,l,r,+,^,-);
+	E_CAST(13,k,r,l,^,-,+);
+	E_CAST(14,k,l,r,-,+,^);
+	E_CAST(15,k,r,l,+,^,-);
+
+	block = ((unsigned long)r) << 32 | l;
+
+	flip64(block);
+	data[get_global_id(0)] = block;
+}

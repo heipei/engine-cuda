@@ -1,68 +1,29 @@
 engine "opencl" set.
 You have chosen to measure elapsed time instead of user CPU time.
-Doing bf-ecb for 3s on 16 size blocks: 15614 bf-ecb's in 3.00s
-Doing bf-ecb for 3s on 64 size blocks: 15616 bf-ecb's in 3.00s
-Doing bf-ecb for 3s on 256 size blocks: 19546 bf-ecb's in 3.00s
-Doing bf-ecb for 3s on 1024 size blocks: 22643 bf-ecb's in 3.00s
-Doing bf-ecb for 3s on 2048 size blocks: 19204 bf-ecb's in 3.01s
-Doing bf-ecb for 3s on 4096 size blocks: 14503 bf-ecb's in 3.00s
-Doing bf-ecb for 3s on 8192 size blocks: 10441 bf-ecb's in 3.00s
-Doing bf-ecb for 3s on 16384 size blocks: 5631 bf-ecb's in 3.00s
-Doing bf-ecb for 3s on 32768 size blocks: 3518 bf-ecb's in 3.00s
-Doing bf-ecb for 3s on 65536 size blocks: 1889 bf-ecb's in 3.00s
-Doing bf-ecb for 3s on 131072 size blocks: 960 bf-ecb's in 3.01s
-Doing bf-ecb for 3s on 262144 size blocks: 492 bf-ecb's in 3.00s
-Doing bf-ecb for 3s on 524288 size blocks: 241 bf-ecb's in 3.00s
-Doing bf-ecb for 3s on 1048576 size blocks: 123 bf-ecb's in 3.02s
-Doing bf-ecb for 3s on 2097152 size blocks: 61 bf-ecb's in 3.01s
-Doing bf-ecb for 3s on 4194304 size blocks: 32 bf-ecb's in 3.08s
-Doing bf-ecb for 3s on 8388608 size blocks: 16 bf-ecb's in 3.09s
-initializing engine
+Doing des-ecb for 3s on 16 size blocks: 26981 des-ecb's in 3.00s
+Doing des-ecb for 3s on 64 size blocks: 21505 des-ecb's in 3.00s
+Doing des-ecb for 3s on 256 size blocks: 21672 des-ecb's in 3.00s
+Doing des-ecb for 3s on 1024 size blocks: 25714 des-ecb's in 3.00s
+Doing des-ecb for 3s on 2048 size blocks: 26068 des-ecb's in 3.00s
+Doing des-ecb for 3s on 4096 size blocks: 25736 des-ecb's in 3.00s
+Doing des-ecb for 3s on 8192 size blocks: 23324 des-ecb's in 3.00s
+Doing des-ecb for 3s on 16384 size blocks: 18781 des-ecb's in 3.00s
+Doing des-ecb for 3s on 32768 size blocks: 13249 des-ecb's in 3.00s
+Doing des-ecb for 3s on 65536 size blocks: 8294 des-ecb's in 3.01s
+Doing des-ecb for 3s on 131072 size blocks: 4778 des-ecb's in 3.00s
+Doing des-ecb for 3s on 262144 size blocks: 2533 des-ecb's in 3.00s
+Doing des-ecb for 3s on 524288 size blocks: 1123 des-ecb's in 3.00s
+Doing des-ecb for 3s on 1048576 size blocks: 545 des-ecb's in 3.01s
+Doing des-ecb for 3s on 2097152 size blocks: 284 des-ecb's in 3.01s
+Doing des-ecb for 3s on 4194304 size blocks: 145 des-ecb's in 2.98s
+Doing des-ecb for 3s on 8388608 size blocks: 74 des-ecb's in 2.97s
 CL_DEVICE_NAME:    GeForce 8600 GT
 CL_DRIVER_VERSION: 270.18
 
-Opening file /home/jojo/git/engine-cuda/opencl_kernels.cl of 6458 lines length
-Build log: 
-
-opencl_init 0.000889 usecs
-Start calculating Blowfish key schedule...
-DONE!
-Start calculating Blowfish key schedule...
-DONE!
-Start calculating Blowfish key schedule...
-DONE!
-Start calculating Blowfish key schedule...
-DONE!
-Start calculating Blowfish key schedule...
-DONE!
-Start calculating Blowfish key schedule...
-DONE!
-Start calculating Blowfish key schedule...
-DONE!
-Start calculating Blowfish key schedule...
-DONE!
-Start calculating Blowfish key schedule...
-DONE!
-Start calculating Blowfish key schedule...
-DONE!
-Start calculating Blowfish key schedule...
-DONE!
-Start calculating Blowfish key schedule...
-DONE!
-Start calculating Blowfish key schedule...
-DONE!
-Start calculating Blowfish key schedule...
-DONE!
-Start calculating Blowfish key schedule...
-DONE!
-Start calculating Blowfish key schedule...
-DONE!
-Start calculating Blowfish key schedule...
-DONE!
 OpenSSL 1.0.0b 16 Nov 2010
 built on: Wed Dec  1 21:52:12 CET 2010
 options:bn(64,64) rc4(8x,char) des(idx,cisc,16,int) aes(partial) idea(int) blowfish(idx) 
 compiler: gcc -DOPENSSL_THREADS -D_REENTRANT -DDSO_DLFCN -DHAVE_DLFCN_H -m64 -DL_ENDIAN -DTERMIO -O3 -Wall -DMD32_REG_T=int -DOPENSSL_IA32_SSE2 -DOPENSSL_BN_ASM_MONT -DSHA1_ASM -DSHA256_ASM -DSHA512_ASM -DMD5_ASM -DAES_ASM -DWHIRLPOOL_ASM
 The 'numbers' are in 1000s of bytes per second processed.
 type             16 bytes     64 bytes    256 bytes   1024 bytes   2048 bytes   4096 bytes   8192 bytes  16384 bytes  32768 bytes  65536 bytes 131072 bytes 262144 bytes 524288 bytes1048576 bytes2097152 bytes4194304 bytes8388608 bytes
-bf-ecb              83.27k      333.14k     1667.93k     7728.81k    13066.38k    19801.43k    28510.89k    30752.77k    38425.94k    41265.83k    41803.69k    42991.62k    42117.80k    42706.90k    42500.42k    43577.18k    43436.16k
+des-ecb            143.90k      458.77k     1849.34k     8777.05k    17795.75k    35138.22k    63690.07k   102569.30k   144714.41k   180583.25k   208754.01k   221336.92k   196258.47k   189858.45k   197870.82k   204085.26k   209009.09k

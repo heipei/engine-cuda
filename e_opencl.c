@@ -12,6 +12,7 @@
 
 #include "bf_opencl.h"
 #include "des_opencl.h"
+#include "cast_opencl.h"
 
 #include "common.h"
 #include "opencl_common.h"
@@ -29,7 +30,7 @@ static int opencl_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsig
 void (*opencl_device_crypt) (const unsigned char *in, unsigned char *out, size_t nbytes, int enc, cl_mem *device_buffer, cl_mem *device_schedule, cl_command_queue queue, cl_kernel device_kernel, cl_context context);
 
 int buffer_size = 0;
-int verbose = 2;
+int verbose = 0;
 int quiet = 0;
 int initialized = 0;
 char *library_path=NULL;
@@ -37,6 +38,9 @@ int maxbytes = 8388608;
 
 static cl_kernel des_kernel;
 static cl_kernel bf_kernel;
+static cl_kernel cast_kernel;
+static cl_kernel aes_kernel;
+static cl_kernel camellia_kernel;
 static cl_kernel *device_kernel;
 
 static cl_context context;
@@ -136,6 +140,7 @@ int opencl_init(ENGINE * engine) {
 
 	CL_ASSIGN(des_kernel = clCreateKernel(device_program, "DESencKernel", &error));
 	CL_ASSIGN(bf_kernel = clCreateKernel(device_program, "BFencKernel", &error));
+	CL_ASSIGN(cast_kernel = clCreateKernel(device_program, "CASTencKernel", &error));
 
 	gettimeofday(&curtime, NULL);
 	timeval_subtract(&difference,&curtime,&starttime);
@@ -247,7 +252,8 @@ static int opencl_init_key(EVP_CIPHER_CTX *ctx, const unsigned char *key, const 
 	    if (!quiet && verbose) fprintf(stdout,"Start calculating CAST5 key schedule...\n");
 	    CAST_KEY cast_key_schedule;
 	    CAST_set_key(&cast_key_schedule,ctx->key_len*8,key);
-	    //CAST_opencl_transfer_key_schedule(&cast_key_schedule);
+	    device_schedule = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(CAST_KEY), &key_schedule, &error);
+	    CAST_opencl_transfer_key_schedule(&cast_key_schedule,&device_schedule,queue);
 	    break;
 	  case NID_camellia_128_ecb:
 	  case NID_camellia_128_cbc:
@@ -287,7 +293,8 @@ static int opencl_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsig
 	    device_kernel = &bf_kernel;
 	    break;
 	  case NID_cast5_ecb:
-	    //opencl_device_crypt = CAST_opencl_crypt;
+	    opencl_device_crypt = CAST_opencl_crypt;
+	    device_kernel = &cast_kernel;
 	    break;
 	  //case NID_camellia_128_cbc:
 	  case NID_camellia_128_ecb:

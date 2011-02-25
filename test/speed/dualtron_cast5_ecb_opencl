@@ -1,0 +1,29 @@
+engine "opencl" set.
+You have chosen to measure elapsed time instead of user CPU time.
+Doing cast5-ecb for 3s on 16 size blocks: 18690 cast5-ecb's in 3.00s
+Doing cast5-ecb for 3s on 64 size blocks: 27539 cast5-ecb's in 3.00s
+Doing cast5-ecb for 3s on 256 size blocks: 28500 cast5-ecb's in 3.00s
+Doing cast5-ecb for 3s on 1024 size blocks: 28140 cast5-ecb's in 3.00s
+Doing cast5-ecb for 3s on 2048 size blocks: 27810 cast5-ecb's in 3.00s
+Doing cast5-ecb for 3s on 4096 size blocks: 14561 cast5-ecb's in 3.00s
+Doing cast5-ecb for 3s on 8192 size blocks: 12311 cast5-ecb's in 3.01s
+Doing cast5-ecb for 3s on 16384 size blocks: 16701 cast5-ecb's in 3.00s
+Doing cast5-ecb for 3s on 32768 size blocks: 14751 cast5-ecb's in 3.00s
+Doing cast5-ecb for 3s on 65536 size blocks: 10222 cast5-ecb's in 3.00s
+Doing cast5-ecb for 3s on 131072 size blocks: 6049 cast5-ecb's in 3.00s
+Doing cast5-ecb for 3s on 262144 size blocks: 3399 cast5-ecb's in 3.00s
+Doing cast5-ecb for 3s on 524288 size blocks: 1367 cast5-ecb's in 3.00s
+Doing cast5-ecb for 3s on 1048576 size blocks: 685 cast5-ecb's in 3.00s
+Doing cast5-ecb for 3s on 2097152 size blocks: 369 cast5-ecb's in 3.01s
+Doing cast5-ecb for 3s on 4194304 size blocks: 191 cast5-ecb's in 2.97s
+Doing cast5-ecb for 3s on 8388608 size blocks: 97 cast5-ecb's in 2.94s
+CL_DEVICE_NAME:    GeForce 8600 GT
+CL_DRIVER_VERSION: 270.18
+
+OpenSSL 1.0.0b 16 Nov 2010
+built on: Wed Dec  1 21:52:12 CET 2010
+options:bn(64,64) rc4(8x,char) des(idx,cisc,16,int) aes(partial) idea(int) blowfish(idx) 
+compiler: gcc -DOPENSSL_THREADS -D_REENTRANT -DDSO_DLFCN -DHAVE_DLFCN_H -m64 -DL_ENDIAN -DTERMIO -O3 -Wall -DMD32_REG_T=int -DOPENSSL_IA32_SSE2 -DOPENSSL_BN_ASM_MONT -DSHA1_ASM -DSHA256_ASM -DSHA512_ASM -DMD5_ASM -DAES_ASM -DWHIRLPOOL_ASM
+The 'numbers' are in 1000s of bytes per second processed.
+type             16 bytes     64 bytes    256 bytes   1024 bytes   2048 bytes   4096 bytes   8192 bytes  16384 bytes  32768 bytes  65536 bytes 131072 bytes 262144 bytes 524288 bytes1048576 bytes2097152 bytes4194304 bytes8388608 bytes
+cast5-ecb           99.68k      587.50k     2432.00k     9605.12k    18984.96k    19880.62k    33505.55k    91209.73k   161120.26k   223303.00k   264284.84k   297009.15k   238900.57k   239424.85k   257092.72k   269734.70k   276767.00k

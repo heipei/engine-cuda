@@ -1,4 +1,5 @@
 == General ==
+- cast_*.h into one header file?
 - Test-Framework for single-file encryption with averaging
 
 - Try out write-combining with page locked memory and two different staging areas?

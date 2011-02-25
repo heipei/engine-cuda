@@ -172,17 +172,17 @@ void DES_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes
 		blockSize[0] = gridSize[0] = 128;
 	}
 
-	clSetKernelArg(device_kernel, 0, sizeof(cl_mem), device_buffer);
-	clSetKernelArg(device_kernel, 1, 2048, NULL);
-	clSetKernelArg(device_kernel, 2, sizeof(DES_key_schedule), NULL);
-
 	if(!des_sbox) {
 		cl_int error;
 		CL_ASSIGN(des_sbox = clCreateBuffer(context, CL_MEM_READ_ONLY, 2048, NULL, &error));
 		CL_WRAPPER(clEnqueueWriteBuffer(queue,des_sbox,CL_TRUE,0,2048,des_d_sp_host,0,NULL,NULL));
+
+		clSetKernelArg(device_kernel, 0, sizeof(cl_mem), device_buffer);
+		clSetKernelArg(device_kernel, 1, 2048, NULL);
+		clSetKernelArg(device_kernel, 2, sizeof(DES_key_schedule), NULL);
+		clSetKernelArg(device_kernel, 3, sizeof(cl_mem), &des_sbox);
+		clSetKernelArg(device_kernel, 4, sizeof(cl_mem), device_schedule);
 	}
-	clSetKernelArg(device_kernel, 3, sizeof(cl_mem), &des_sbox);
-	clSetKernelArg(device_kernel, 4, sizeof(cl_mem), device_schedule);
 
 	#ifdef DEBUG
 		struct timeval starttime,curtime,difference;
@@ -190,7 +190,6 @@ void DES_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes
 		fprintf(stdout, "nbytes: %zu, gridsize: %zu, blocksize: %zu\n", nbytes, gridSize[0], blockSize[0]);
 	#endif
 	
-
 	clEnqueueWriteBuffer(queue,*device_buffer,CL_TRUE,0,nbytes,in,0,NULL,NULL);
 	clEnqueueNDRangeKernel(queue,device_kernel, 1, NULL,gridSize, blockSize, 0, NULL, NULL);
 	clEnqueueReadBuffer(queue,*device_buffer,CL_TRUE,0,nbytes,out,0,NULL,NULL);
