@@ -331,3 +331,81 @@ __kernel void CMLLencKernel(__global unsigned long *data, __constant unsigned in
 	data[get_global_id(0)*2] = block;
 	data[(get_global_id(0)*2)+1] = block2;
 }
+
+#define idea_mul(r,a,b,ul) \
+	ul = mul24(a,b); \
+	if (ul != 0) { \
+		r=(ul&0xffff)-(ul>>16); \
+		r-=((r)>>16); \
+	} \
+	else \
+		r=(-(int)a-b+1); /* assuming a or b is 0 and in range */ 
+
+#define E_IDEA(num) \
+	x1&=0xffff; \
+	idea_mul(x1,x1,*p,ul); p++; \
+	x2+= *(p++); \
+	x3+= *(p++); \
+	x4&=0xffff; \
+	idea_mul(x4,x4,*p,ul); p++; \
+	t0=(x1^x3)&0xffff; \
+	idea_mul(t0,t0,*p,ul); p++; \
+	t1=(t0+(x2^x4))&0xffff; \
+	idea_mul(t1,t1,*p,ul); p++; \
+	t0+=t1; \
+	x1^=t1; \
+	x4^=t0; \
+	ul=x2^t0; /* do the swap to x3 */ \
+	x2=x3^t1; \
+	x3=ul;
+
+// ############
+// # IDEA ECB #
+// ############
+
+__kernel void IDEAencKernel(__global unsigned long *data, __constant unsigned long *idea_constant_schedule) {
+	
+	__local unsigned long idea_schedule[27];
+	if(get_local_id(0) < 27)
+		idea_schedule[get_local_id(0)] = idea_constant_schedule[get_local_id(0)];
+
+	__local unsigned int *p = (__local unsigned int *)&idea_schedule;
+
+	__private unsigned int x1,x2,x3,x4,t0,t1,ul,l0,l1;
+
+	__private unsigned long block = data[get_global_id(0)];
+
+	// TODO: One split64 op!
+	n2l((unsigned char *)&block,x2);
+	n2l(((unsigned char *)&block)+4,x4);
+
+	x1=(x2>>16);
+	x3=(x4>>16);
+
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	E_IDEA(0);
+	E_IDEA(1);
+	E_IDEA(2);
+	E_IDEA(3);
+	E_IDEA(4);
+	E_IDEA(5);
+	E_IDEA(6);
+	E_IDEA(7);
+
+	x1&=0xffff;
+	idea_mul(x1,x1,*p,ul); p++;
+
+	t0= x3+ *(p++);
+	t1= x2+ *(p++);
+
+	x4&=0xffff;
+	idea_mul(x4,x4,*p,ul);
+
+	l0=(t0&0xffff)|((x1&0xffff)<<16);
+	l1=(x4&0xffff)|((t1&0xffff)<<16);
+
+	block = ((unsigned long)l0) << 32 | l1;
+	flip64(block);
+	data[get_global_id(0)] = block;
+}

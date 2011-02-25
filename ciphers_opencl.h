@@ -47,5 +47,5 @@ void CMLL_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbyte
 void CMLL_opencl_transfer_key_schedule(CAMELLIA_KEY *ks, cl_mem *device_schedule,cl_command_queue queue);
 
 #include <openssl/idea.h>
-void IDEA_opencl_transfer_key_schedule(const IDEA_KEY_SCHEDULE *key);
-void IDEA_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, uint8_t **host_data, uint64_t **device_data);
+void IDEA_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, cl_mem *device_buffer, cl_mem *device_schedule, cl_command_queue queue, cl_kernel device_kernel, cl_context context);
+void IDEA_opencl_transfer_key_schedule(IDEA_KEY_SCHEDULE *ks, cl_mem *device_schedule,cl_command_queue queue);

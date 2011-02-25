@@ -33,6 +33,7 @@ static cl_kernel bf_kernel;
 static cl_kernel cast_kernel;
 static cl_kernel aes_kernel;
 static cl_kernel cmll_kernel;
+static cl_kernel idea_kernel;
 static cl_kernel *device_kernel;
 
 static cl_context context;
@@ -134,6 +135,7 @@ int opencl_init(ENGINE * engine) {
 	CL_ASSIGN(bf_kernel = clCreateKernel(device_program, "BFencKernel", &error));
 	CL_ASSIGN(cast_kernel = clCreateKernel(device_program, "CASTencKernel", &error));
 	CL_ASSIGN(cmll_kernel = clCreateKernel(device_program, "CMLLencKernel", &error));
+	CL_ASSIGN(idea_kernel = clCreateKernel(device_program, "IDEAencKernel", &error));
 
 	gettimeofday(&curtime, NULL);
 	timeval_subtract(&difference,&curtime,&starttime);
@@ -166,10 +168,7 @@ static int opencl_engine_ctrl(ENGINE * e, int cmd, long i, void *p, void (*f) ()
 			return 0;
 			} else return inc_quiet();
 	case CMD_VERBOSE:
-		if (initialized) {
-			if (!quiet) fprintf(stderr,"Error: you cannot set command %d when the engine is already initialized.",cmd);
-			return 0;
-			} else return inc_verbose();
+			return inc_verbose();
 	case CMD_BUFFER_SIZE:
 		if (initialized) {
 			if (!quiet) fprintf(stderr,"Error: you cannot set command %d when the engine is already initialized.",cmd);
@@ -261,7 +260,8 @@ static int opencl_init_key(EVP_CIPHER_CTX *ctx, const unsigned char *key, const 
 	    if (!quiet && verbose) fprintf(stdout,"Start calculating IDEA key schedule...\n");
 	    IDEA_KEY_SCHEDULE idea_key_schedule;
 	    idea_set_encrypt_key(key,&idea_key_schedule);
-	    //IDEA_opencl_transfer_key_schedule(&idea_key_schedule);
+	    device_schedule = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(IDEA_KEY_SCHEDULE), &idea_key_schedule, &error);
+	    IDEA_opencl_transfer_key_schedule(&idea_key_schedule,&device_schedule,queue);
 	    break;
 	  default:
 	    return 0;
@@ -297,7 +297,8 @@ static int opencl_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsig
 	    break;
 	  //case NID_idea_cbc:
 	  case NID_idea_ecb:
-	    //opencl_device_crypt = IDEA_opencl_crypt;
+	    opencl_device_crypt = IDEA_opencl_crypt;
+	    device_kernel = &idea_kernel;
 	    break;
 	  default:
 	    return 0;

@@ -1,9 +1,9 @@
 == General ==
-- cast_*.h into one header file?
 - Test-Framework for single-file encryption with averaging
 
 - Try out write-combining with page locked memory and two different staging areas?
 - __threadfence_block instead of __syncthreads?
+- Directly lock memory for crypt if nbytes < RLIMIT_MEMLOCK
  
 - Why does speed decrease after 1MB / 256KB
 - Non-blocking kernel calls?
