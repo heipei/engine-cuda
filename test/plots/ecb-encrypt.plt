@@ -144,17 +144,32 @@ set fit noerrorvariables
 #set terminal png size 1000,500
 
 set terminal pdf size 15cm,9cm
-set output "ecb-encrypt.pdf"
+set output "ecb-encrypt_cuda.pdf"
 
 GNUTERM = "wxt"
-plot 'bf-ecb_gpu.dat' using ($2/1048576) title 'Blowfish ECB GPU' with linespoints, \
+plot 'bf-ecb_gpu_cudamrg.dat' using ($2/1048576) title 'Blowfish ECB GPU' with linespoints, \
      'bf-ecb_cpu.dat' using ($2/1048576) title 'Blowfish ECB CPU' with linespoints, \
-     'idea-ecb_gpu.dat' using ($2/1048576) title 'IDEA ECB GPU' with linespoints, \
+     'idea-ecb_gpu_cudamrg.dat' using ($2/1048576) title 'IDEA ECB GPU' with linespoints, \
      'idea-ecb_cpu.dat' using ($2/1048576) title 'IDEA ECB CPU' with linespoints, \
-     'des-ecb_gpu.dat' using ($2/1048576) title 'DES ECB GPU' with linespoints, \
+     'des-ecb_gpu_cudamrg.dat' using ($2/1048576) title 'DES ECB GPU' with linespoints, \
      'des-ecb_cpu.dat' using ($2/1048576) title 'DES ECB CPU' with linespoints, \
-     'cast5-ecb_gpu.dat' using ($2/1048576) title 'CAST5 ECB GPU' with linespoints, \
+     'cast5-ecb_gpu_cudamrg.dat' using ($2/1048576) title 'CAST5 ECB GPU' with linespoints, \
      'cast5-ecb_cpu.dat' using ($2/1048576) title 'CAST5 ECB CPU' with linespoints, \
-     'camellia-128-ecb_gpu.dat' using ($2/1048576) title 'Camellia 128 ECB GPU' with linespoints, \
+     'camellia-128-ecb_gpu_cudamrg.dat' using ($2/1048576) title 'Camellia 128 ECB GPU' with linespoints, \
+     'camellia-128-ecb_cpu.dat' using ($2/1048576) title 'Camellia 128 ECB CPU' with linespoints
+#    EOF
+
+set output "ecb-encrypt_opencl.pdf"
+
+GNUTERM = "wxt"
+plot 'bf-ecb_gpu_opencl.dat' using ($2/1048576) title 'Blowfish ECB GPU' with linespoints, \
+     'bf-ecb_cpu.dat' using ($2/1048576) title 'Blowfish ECB CPU' with linespoints, \
+     'idea-ecb_gpu_opencl.dat' using ($2/1048576) title 'IDEA ECB GPU' with linespoints, \
+     'idea-ecb_cpu.dat' using ($2/1048576) title 'IDEA ECB CPU' with linespoints, \
+     'des-ecb_gpu_opencl.dat' using ($2/1048576) title 'DES ECB GPU' with linespoints, \
+     'des-ecb_cpu.dat' using ($2/1048576) title 'DES ECB CPU' with linespoints, \
+     'cast5-ecb_gpu_opencl.dat' using ($2/1048576) title 'CAST5 ECB GPU' with linespoints, \
+     'cast5-ecb_cpu.dat' using ($2/1048576) title 'CAST5 ECB CPU' with linespoints, \
+     'camellia-128-ecb_gpu_opencl.dat' using ($2/1048576) title 'Camellia 128 ECB GPU' with linespoints, \
      'camellia-128-ecb_cpu.dat' using ($2/1048576) title 'Camellia 128 ECB CPU' with linespoints
 #    EOF

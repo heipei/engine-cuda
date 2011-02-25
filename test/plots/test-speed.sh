@@ -3,9 +3,10 @@ OPENSSL=openssl
 RUN=17
 AVG_RUNS=1
 CIPHERS=(bf-ecb camellia-128-ecb cast5-ecb des-ecb idea-ecb)
+ENGINE=cudamrg
 
 if [[ -n $3 ]]; then
-	CIPHERS=$3
+	ENGINE=$3
 fi
 echo "Ciphers: $3\n==========="
 
@@ -22,21 +23,21 @@ for cipher in $CIPHERS; do
 	echo "===================="
 
 	if [[ $2 != "CPUONLY" ]]; then
-		echo -n "" > ${cipher}_gpu.dat > ${cipher}_gpu_average.dat
+		echo -n "" > ${cipher}_gpu_$ENGINE.dat > ${cipher}_gpu_${ENGINE}_average.dat
 		for avg_run in $(seq 1 $AVG_RUNS); do
-			$OPENSSL speed -engine cudamrg -evp $cipher -mr | egrep -e '+H:' -e '+F:' | sed s/+H:// | sed s/+F:22:$cipher:// > out-filtered-$cipher.txt
+			$OPENSSL speed -engine $ENGINE -evp $cipher -mr -elapsed| egrep -e '+H:' -e '+F:' | sed s/+H:// | sed s/+F:22:$cipher:// > out-filtered-$cipher.txt
 			for i in $(seq 1 $RUN); do
 				row=$(cat out-filtered-$cipher.txt |cut -f $i -d :|tr '\n' ' ')
-				echo $row >> ${cipher}_gpu.dat
+				echo $row >> ${cipher}_gpu_${ENGINE}.dat
 			done
 		done
 		if [[ $AVG_RUNS > 1 ]]; then
 			for run in $(seq 1 $RUN); do
-				sed -n "${run}~17p" ${cipher}_gpu.dat|awk '{sum+=$2} END { OFMT = "%.0f"; print $1, "\t", sum/NR}' >> ${cipher}_gpu_average.dat
+				sed -n "${run}~17p" ${cipher}_gpu_${ENGINE}.dat|awk '{sum+=$2} END { OFMT = "%.0f"; print $1, "\t", sum/NR}' >> ${cipher}_gpu_${ENGINE}_average.dat
 			done
-			sort -n ${cipher}_gpu_average.dat|sed '/^$/d' > ${cipher}_gpu.dat
+			sort -n ${cipher}_gpu_${ENGINE}_average.dat|sed '/^$/d' > ${cipher}_gpu_${ENGINE}.dat
 		fi
-		rm out-filtered-$cipher.txt ${cipher}_gpu_average.dat
+		rm out-filtered-$cipher.txt ${cipher}_gpu_${ENGINE}_average.dat
 	fi
 
 	
