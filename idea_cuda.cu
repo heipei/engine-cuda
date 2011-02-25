@@ -10,7 +10,7 @@
 #include "common.h"
 
 __constant__ uint64_t idea_constant_schedule[27];
-__shared__ IDEA_KEY_SCHEDULE idea_schedule;
+__shared__ uint64_t idea_schedule[27];
 
 float idea_elapsed;
 cudaEvent_t idea_start,idea_stop;
@@ -45,7 +45,8 @@ ul=__umul24(a,b); \
 
 __global__ void IDEAencKernel(uint64_t *data) {
 	
-	*((uint64_t *)&idea_schedule+threadIdx.x) = idea_constant_schedule[threadIdx.x];
+	if(threadIdx.x < 27)
+		idea_schedule[threadIdx.x] = idea_constant_schedule[threadIdx.x];
 
 	unsigned int *p = (unsigned int *)&idea_schedule;
 	uint32_t x1,x2,x3,x4,t0,t1,ul,l0,l1;
