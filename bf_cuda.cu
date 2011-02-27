@@ -34,8 +34,7 @@ __global__ void BFencKernel(uint64_t *data) {
 	register uint32_t l, r;
 	register uint64_t block = data[TX];
 
-	n2l((unsigned char *)&block,l);
-	n2l(((unsigned char *)&block)+4,r);
+	nl2i(block, l, r);
 
 	register const uint32_t *p,*s;
 

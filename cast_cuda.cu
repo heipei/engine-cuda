@@ -181,8 +181,7 @@ __global__ void CASTencKernel(uint64_t *data) {
 
 	register uint64_t block = data[TX];
 
-	n2l((unsigned char *)&block,l);
-	n2l(((unsigned char *)&block)+4,r);
+	nl2i(block,l,r);
 
 	CAST_S_table0[threadIdx.x] = CAST_S_table_constant0[threadIdx.x];
 	CAST_S_table0[threadIdx.x+128] = CAST_S_table_constant0[threadIdx.x+128];
@@ -226,7 +225,6 @@ extern "C" void CAST_cuda_crypt(const unsigned char *in, unsigned char *out, siz
 	assert(in && out && nbytes);
 	cudaError_t cudaerrno;
 	int gridSize;
-	dim3 dimBlock(MAX_THREAD, 1, 1);
 
 	transferHostToDevice(&in, (uint32_t **)device_data, host_data, &nbytes);
 
@@ -236,14 +234,15 @@ extern "C" void CAST_cuda_crypt(const unsigned char *in, unsigned char *out, siz
 		gridSize = nbytes/(MAX_THREAD*CAST_BLOCK_SIZE)+1;
 	}
 
-	if (output_verbosity==OUTPUT_VERBOSE)
-		fprintf(stdout,"Starting CAST kernel for %zu bytes with (%d, (%d, %d))...\n", nbytes, gridSize, dimBlock.x, dimBlock.y);
+	#ifdef DEBUG
+		fprintf(stdout,"Starting CAST kernel for %zu bytes with (%d, (%d))...\n", nbytes, gridSize, MAX_THREAD);
+	#endif
 
 	if(enc == CAST_ENCRYPT) {
-		CASTencKernel<<<gridSize,dimBlock>>>(*device_data);
+		CASTencKernel<<<gridSize,MAX_THREAD>>>(*device_data);
 		_CUDA_N("CAST encryption kernel could not be launched!");
 	} else {
-		CASTdecKernel<<<gridSize,dimBlock>>>(*device_data);
+		CASTdecKernel<<<gridSize,MAX_THREAD>>>(*device_data);
 		_CUDA_N("CAST decryption kernel could not be launched!");
 	}
 
@@ -251,10 +250,8 @@ extern "C" void CAST_cuda_crypt(const unsigned char *in, unsigned char *out, siz
 }
 
 extern "C" void CAST_cuda_transfer_key_schedule(CAST_KEY *ks) {
-	assert(ks);
 	cudaError_t cudaerrno;
-	size_t ks_size = sizeof(CAST_KEY);
-	_CUDA(cudaMemcpyToSymbolAsync(cast_constant_schedule,ks,ks_size,0,cudaMemcpyHostToDevice));
+	_CUDA(cudaMemcpyToSymbolAsync(cast_constant_schedule,ks,sizeof(CAST_KEY),0,cudaMemcpyHostToDevice));
 }
 
 //

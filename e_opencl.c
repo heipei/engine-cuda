@@ -2,6 +2,8 @@
 #include <CL/opencl.h>
 #include <sys/time.h>
 #include <string.h>
+#include <unistd.h>
+#include <libgen.h>
 
 #include "ciphers_cuda.h"
 
@@ -44,9 +46,6 @@ static cl_device_id device;
 static cl_int error = 0;
 static cl_program device_program;
 unsigned char *host_data = NULL;
-FILE *device_kernels = NULL;
-size_t BF_source_length;
-char *kernels_file = "/home/jojo/git/engine-cuda/opencl_kernels.cl";
 
 int set_buffer_size(const char *buffer_size_string) {
 	buffer_size=atoi(buffer_size_string)*1024;	// The size is in kilobytes
@@ -105,8 +104,24 @@ int opencl_init(ENGINE * engine) {
 	CL_ASSIGN(device_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE|CL_MEM_ALLOC_HOST_PTR, maxbytes, NULL, &error));
 	CL_ASSIGN(host_data = (unsigned char *)clEnqueueMapBuffer(queue,device_buffer,CL_TRUE,CL_MAP_WRITE|CL_MAP_READ,0,maxbytes,0,NULL,NULL,&error));
 
+	char szTmp[32];
+	char kernels_file[200];
+	sprintf(szTmp, "/proc/%d/exe", getpid());
+	int bytes = readlink(szTmp,kernels_file,199) < 199 ? readlink(szTmp,kernels_file,199) : 199;
+	if(bytes >= 0)
+	        kernels_file[bytes] = '\0';
+
+	if(verbose && !quiet)
+		fprintf(stdout, "OpenSSL path is %s\n", kernels_file);
+
+	strncpy(kernels_file,dirname(kernels_file),199);
+	strcat(kernels_file,"/../lib/engines/opencl_kernels.cl");
+	
+	if(verbose && !quiet)
+		fprintf(stdout, "OpenCL kernels path is %s\n", kernels_file);
+
 	size_t kernels_source_length;
-	device_kernels = fopen(kernels_file, "rb");
+	FILE *device_kernels = fopen(kernels_file, "rb");
 	fseek(device_kernels, 0, SEEK_END);
 	kernels_source_length = ftell(device_kernels);
 	fseek(device_kernels, 0, SEEK_SET);
@@ -117,6 +132,7 @@ int opencl_init(ENGINE * engine) {
 	
 	if(verbose && !quiet)
 		fprintf(stdout, "Opening file %s of %zu lines length\n", kernels_file, kernels_source_length);
+
 	CL_ASSIGN(device_program = clCreateProgramWithSource(context,1,(const char **)&kernels_source,&kernels_source_length,&error));
 	free(kernels_source);
 

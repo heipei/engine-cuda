@@ -1,15 +1,17 @@
 // vim:ft=opencl
 #pragma OPENCL EXTENSION cl_khr_byte_addressable_store : enable
 
-// ###########
-// # BF ECB #
-// ###########
+// Split uint64_t into two uint32_t and convert each from BE to LE
+#define nl2i(s,a,b)      a = ((s >> 24L) & 0x000000ff) | \
+			     ((s >> 8L ) & 0x0000ff00) | \
+			     ((s << 8L ) & 0x00ff0000) | \
+			     ((s << 24L) & 0xff000000),   \
+			 b = ((s >> 56L) & 0x000000ff) | \
+			     ((s >> 40L) & 0x0000ff00) | \
+			     ((s >> 24L) & 0x00ff0000) | \
+			     ((s >> 8L) & 0xff000000)
 
-#define n2l(c,l)        (l =((uint)(*(c)))<<24L, \
-                         l|=((uint)(*(c+1)))<<16L, \
-                         l|=((uint)(*(c+2)))<< 8L, \
-                         l|=((uint)(*(c+3))))
-
+// Convert uint64_t endianness
 #define flip64(a)	(a= \
 			((a & 0x00000000000000FF) << 56) | \
 			((a & 0x000000000000FF00) << 40) | \
@@ -19,6 +21,10 @@
 			((a & 0x0000FF0000000000) >> 24) | \
 			((a & 0x00FF000000000000) >> 40) | \
 			((a & 0xFF00000000000000) >> 56))
+
+// ###########
+// # BF ECB #
+// ###########
 
 #include <openssl/blowfish.h>
 
@@ -38,8 +44,7 @@ __kernel void BFencKernel(__global unsigned long *data, __global unsigned int *b
 	__private unsigned int l, r;
 	__private unsigned long block = data[get_global_id(0)];
 	
-	n2l((unsigned char *)&block,l);
-	n2l(((unsigned char *)&block)+4,r);
+	nl2i(block,l,r);
 
 	__global unsigned int *p=&bf_constant_schedule[0];
 	__global unsigned int *s=p+18;
@@ -192,8 +197,7 @@ __kernel void CASTencKernel(__global unsigned long *data, __constant unsigned in
 
 	__private unsigned long block = data[get_global_id(0)];
 
-	n2l((unsigned char *)&block,l);
-	n2l(((unsigned char *)&block)+4,r);
+	nl2i(block,l,r);
 
 	CAST_S_table0[get_local_id(0)] = CAST_S_table[get_local_id(0)];
 	CAST_S_table0[get_local_id(0)+128] = CAST_S_table[get_local_id(0)+128];
@@ -375,9 +379,7 @@ __kernel void IDEAencKernel(__global unsigned long *data, __constant unsigned lo
 
 	__private unsigned long block = data[get_global_id(0)];
 
-	// TODO: One split64 op!
-	n2l((unsigned char *)&block,x2);
-	n2l(((unsigned char *)&block)+4,x4);
+	nl2i(block,x2,x4);
 
 	x1=(x2>>16);
 	x3=(x4>>16);

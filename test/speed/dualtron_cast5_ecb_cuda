@@ -1,21 +1,21 @@
 engine "cudamrg" set.
-Doing cast5-ecb for 3s on 16 size blocks: 79269 cast5-ecb's in 2.98s
-Doing cast5-ecb for 3s on 64 size blocks: 79549 cast5-ecb's in 3.00s
-Doing cast5-ecb for 3s on 256 size blocks: 78900 cast5-ecb's in 2.99s
-Doing cast5-ecb for 3s on 1024 size blocks: 79747 cast5-ecb's in 3.00s
-Doing cast5-ecb for 3s on 2048 size blocks: 77392 cast5-ecb's in 3.00s
-Doing cast5-ecb for 3s on 4096 size blocks: 72220 cast5-ecb's in 3.00s
-Doing cast5-ecb for 3s on 8192 size blocks: 58816 cast5-ecb's in 2.99s
-Doing cast5-ecb for 3s on 16384 size blocks: 40397 cast5-ecb's in 3.00s
-Doing cast5-ecb for 3s on 32768 size blocks: 24857 cast5-ecb's in 3.00s
-Doing cast5-ecb for 3s on 65536 size blocks: 13869 cast5-ecb's in 2.99s
-Doing cast5-ecb for 3s on 131072 size blocks: 7294 cast5-ecb's in 3.00s
-Doing cast5-ecb for 3s on 262144 size blocks: 3570 cast5-ecb's in 3.00s
-Doing cast5-ecb for 3s on 524288 size blocks: 1708 cast5-ecb's in 3.00s
-Doing cast5-ecb for 3s on 1048576 size blocks: 838 cast5-ecb's in 3.00s
-Doing cast5-ecb for 3s on 2097152 size blocks: 422 cast5-ecb's in 3.01s
-Doing cast5-ecb for 3s on 4194304 size blocks: 211 cast5-ecb's in 3.00s
-Doing cast5-ecb for 3s on 8388608 size blocks: 106 cast5-ecb's in 2.99s
+Doing cast5-ecb for 3s on 16 size blocks: 80494 cast5-ecb's in 2.99s
+Doing cast5-ecb for 3s on 64 size blocks: 80327 cast5-ecb's in 3.01s
+Doing cast5-ecb for 3s on 256 size blocks: 79803 cast5-ecb's in 3.00s
+Doing cast5-ecb for 3s on 1024 size blocks: 78027 cast5-ecb's in 2.99s
+Doing cast5-ecb for 3s on 2048 size blocks: 76336 cast5-ecb's in 3.00s
+Doing cast5-ecb for 3s on 4096 size blocks: 72217 cast5-ecb's in 3.01s
+Doing cast5-ecb for 3s on 8192 size blocks: 60180 cast5-ecb's in 3.00s
+Doing cast5-ecb for 3s on 16384 size blocks: 41468 cast5-ecb's in 3.00s
+Doing cast5-ecb for 3s on 32768 size blocks: 25413 cast5-ecb's in 2.99s
+Doing cast5-ecb for 3s on 65536 size blocks: 14149 cast5-ecb's in 3.01s
+Doing cast5-ecb for 3s on 131072 size blocks: 7549 cast5-ecb's in 2.99s
+Doing cast5-ecb for 3s on 262144 size blocks: 3629 cast5-ecb's in 3.00s
+Doing cast5-ecb for 3s on 524288 size blocks: 1586 cast5-ecb's in 3.00s
+Doing cast5-ecb for 3s on 1048576 size blocks: 819 cast5-ecb's in 3.01s
+Doing cast5-ecb for 3s on 2097152 size blocks: 420 cast5-ecb's in 3.00s
+Doing cast5-ecb for 3s on 4194304 size blocks: 212 cast5-ecb's in 3.00s
+Doing cast5-ecb for 3s on 8388608 size blocks: 107 cast5-ecb's in 3.00s
 Successfully found 1 CUDA devices (CUDART_VERSION 3020).
 Using pinned memory: cudaHostAllocDefault.
 The current buffer size is 8388608.
@@ -26,8 +26,4 @@ options:bn(64,64) rc4(8x,char) des(idx,cisc,16,int) aes(partial) idea(int) blowf
 compiler: gcc -DOPENSSL_THREADS -D_REENTRANT -DDSO_DLFCN -DHAVE_DLFCN_H -m64 -DL_ENDIAN -DTERMIO -O3 -Wall -DMD32_REG_T=int -DOPENSSL_IA32_SSE2 -DOPENSSL_BN_ASM_MONT -DSHA1_ASM -DSHA256_ASM -DSHA512_ASM -DMD5_ASM -DAES_ASM -DWHIRLPOOL_ASM
 The 'numbers' are in 1000s of bytes per second processed.
 type             16 bytes     64 bytes    256 bytes   1024 bytes   2048 bytes   4096 bytes   8192 bytes  16384 bytes  32768 bytes  65536 bytes 131072 bytes 262144 bytes 524288 bytes1048576 bytes2097152 bytes4194304 bytes8388608 bytes
-cast5-ecb          425.61k     1697.05k     6755.32k    27220.31k    52832.94k    98604.37k   161144.04k   220621.48k   271504.73k   303986.22k   318679.72k   311951.36k   298494.63k   292902.23k   294019.32k   294999.38k   297388.78k
-
-Done. Finishing up CAST
-
-Total time: 51033.222656 milliseconds
+cast5-ecb          430.74k     1707.95k     6809.86k    26722.29k    52112.04k    98272.70k   164331.52k   226470.57k   278506.08k   308062.75k   330923.92k   317106.86k   277173.59k   285310.21k   293601.28k   296397.48k   299193.69k

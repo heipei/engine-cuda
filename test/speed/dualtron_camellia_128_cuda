@@ -1,20 +1,21 @@
-Doing camellia-128-ecb for 3s on 16 size blocks: 64534 camellia-128-ecb's in 2.93s
-Doing camellia-128-ecb for 3s on 64 size blocks: 64654 camellia-128-ecb's in 2.95s
-Doing camellia-128-ecb for 3s on 256 size blocks: 63972 camellia-128-ecb's in 2.95s
-Doing camellia-128-ecb for 3s on 1024 size blocks: 63008 camellia-128-ecb's in 2.94s
-Doing camellia-128-ecb for 3s on 2048 size blocks: 60984 camellia-128-ecb's in 2.94s
-Doing camellia-128-ecb for 3s on 4096 size blocks: 58868 camellia-128-ecb's in 3.00s
-Doing camellia-128-ecb for 3s on 8192 size blocks: 52010 camellia-128-ecb's in 3.00s
-Doing camellia-128-ecb for 3s on 16384 size blocks: 39061 camellia-128-ecb's in 3.00s
-Doing camellia-128-ecb for 3s on 32768 size blocks: 23463 camellia-128-ecb's in 3.00s
-Doing camellia-128-ecb for 3s on 65536 size blocks: 13164 camellia-128-ecb's in 3.00s
-Doing camellia-128-ecb for 3s on 131072 size blocks: 6799 camellia-128-ecb's in 3.00s
-Doing camellia-128-ecb for 3s on 262144 size blocks: 3435 camellia-128-ecb's in 3.00s
-Doing camellia-128-ecb for 3s on 524288 size blocks: 1722 camellia-128-ecb's in 2.98s
-Doing camellia-128-ecb for 3s on 1048576 size blocks: 849 camellia-128-ecb's in 3.00s
-Doing camellia-128-ecb for 3s on 2097152 size blocks: 422 camellia-128-ecb's in 3.01s
-Doing camellia-128-ecb for 3s on 4194304 size blocks: 212 camellia-128-ecb's in 3.00s
-Doing camellia-128-ecb for 3s on 8388608 size blocks: 106 camellia-128-ecb's in 3.00s
+engine "cudamrg" set.
+Doing camellia-128-ecb for 3s on 16 size blocks: 59280 camellia-128-ecb's in 3.00s
+Doing camellia-128-ecb for 3s on 64 size blocks: 59338 camellia-128-ecb's in 3.00s
+Doing camellia-128-ecb for 3s on 256 size blocks: 58994 camellia-128-ecb's in 2.99s
+Doing camellia-128-ecb for 3s on 1024 size blocks: 61517 camellia-128-ecb's in 3.00s
+Doing camellia-128-ecb for 3s on 2048 size blocks: 60642 camellia-128-ecb's in 2.99s
+Doing camellia-128-ecb for 3s on 4096 size blocks: 58307 camellia-128-ecb's in 2.99s
+Doing camellia-128-ecb for 3s on 8192 size blocks: 51716 camellia-128-ecb's in 2.98s
+Doing camellia-128-ecb for 3s on 16384 size blocks: 39478 camellia-128-ecb's in 3.00s
+Doing camellia-128-ecb for 3s on 32768 size blocks: 23746 camellia-128-ecb's in 2.99s
+Doing camellia-128-ecb for 3s on 65536 size blocks: 13347 camellia-128-ecb's in 3.00s
+Doing camellia-128-ecb for 3s on 131072 size blocks: 6994 camellia-128-ecb's in 2.99s
+Doing camellia-128-ecb for 3s on 262144 size blocks: 3550 camellia-128-ecb's in 2.99s
+Doing camellia-128-ecb for 3s on 524288 size blocks: 1680 camellia-128-ecb's in 3.00s
+Doing camellia-128-ecb for 3s on 1048576 size blocks: 835 camellia-128-ecb's in 3.00s
+Doing camellia-128-ecb for 3s on 2097152 size blocks: 418 camellia-128-ecb's in 2.98s
+Doing camellia-128-ecb for 3s on 4194304 size blocks: 210 camellia-128-ecb's in 2.99s
+Doing camellia-128-ecb for 3s on 8388608 size blocks: 106 camellia-128-ecb's in 2.98s
 Successfully found 1 CUDA devices (CUDART_VERSION 3020).
 Using pinned memory: cudaHostAllocDefault.
 The current buffer size is 8388608.
@@ -25,8 +26,4 @@ options:bn(64,64) rc4(8x,char) des(idx,cisc,16,int) aes(partial) idea(int) blowf
 compiler: gcc -DOPENSSL_THREADS -D_REENTRANT -DDSO_DLFCN -DHAVE_DLFCN_H -m64 -DL_ENDIAN -DTERMIO -O3 -Wall -DMD32_REG_T=int -DOPENSSL_IA32_SSE2 -DOPENSSL_BN_ASM_MONT -DSHA1_ASM -DSHA256_ASM -DSHA512_ASM -DMD5_ASM -DAES_ASM -DWHIRLPOOL_ASM
 The 'numbers' are in 1000s of bytes per second processed.
 type             16 bytes     64 bytes    256 bytes   1024 bytes   2048 bytes   4096 bytes   8192 bytes  16384 bytes  32768 bytes  65536 bytes 131072 bytes 262144 bytes 524288 bytes1048576 bytes2097152 bytes4194304 bytes8388608 bytes
-camellia-128-ecb      352.40k     1402.66k     5551.47k    21945.64k    42481.37k    80374.44k   142021.97k   213325.14k   256278.53k   287571.97k   297052.84k   300154.88k   302961.05k   296747.01k   294019.32k   296397.48k   296397.48k
-
-Done. Finishing up CMLL
-
-Total time: 51040.281250 milliseconds
+camellia-128-ecb      316.16k     1265.88k     5050.99k    20997.80k    41536.73k    79874.74k   142166.94k   215602.52k   260237.10k   291569.66k   306594.50k   311241.20k   293601.28k   291853.65k   294164.27k   294583.22k   298386.73k

@@ -17,9 +17,6 @@ typedef unsigned char u8;
 __device__ uint64_t *cmll_device_data;
 uint8_t  *cmll_host_data;
 
-float cmll_elapsed;
-cudaEvent_t cmll_start,cmll_stop;
-
 __device__ __shared__ u32 Camellia_SBOX[4][256];
 /* S-box data */
 #define SBOX1_1110 Camellia_SBOX[0]
@@ -303,7 +300,6 @@ extern "C" void CMLL_cuda_crypt(const unsigned char *in, unsigned char *out, siz
 	assert(in && out && nbytes);
 	cudaError_t cudaerrno;
 	int gridSize;
-	dim3 dimBlock(MAX_THREAD, 1, 1);
 
 	transferHostToDevice(&in, (uint32_t **)device_data, host_data, &nbytes);
 
@@ -313,14 +309,15 @@ extern "C" void CMLL_cuda_crypt(const unsigned char *in, unsigned char *out, siz
 		gridSize = nbytes/(MAX_THREAD*CMLL_BLOCK_SIZE)+1;
 	}
 
-	if (output_verbosity==OUTPUT_VERBOSE)
-		fprintf(stdout,"Starting CMLL kernel for %zu bytes with (%d, (%d, %d))...\n", nbytes, gridSize, dimBlock.x, dimBlock.y);
+	#ifdef DEBUG
+		fprintf(stdout,"Starting CMLL kernel for %zu bytes with (%d, (%d))...\n", nbytes, gridSize, MAX_THREAD);
+	#endif
 
 	if(enc == CAMELLIA_ENCRYPT) {
-		CMLLencKernel<<<gridSize,dimBlock>>>(*device_data);
+		CMLLencKernel<<<gridSize,MAX_THREAD>>>(*device_data);
 		_CUDA_N("CMLL encryption kernel could not be launched!");
 	} else {
-		CMLLdecKernel<<<gridSize,dimBlock>>>(*device_data);
+		CMLLdecKernel<<<gridSize,MAX_THREAD>>>(*device_data);
 		_CUDA_N("CMLL decryption kernel could not be launched!");
 	}
 
@@ -328,10 +325,8 @@ extern "C" void CMLL_cuda_crypt(const unsigned char *in, unsigned char *out, siz
 }
 
 extern "C" void CMLL_cuda_transfer_key_schedule(CAMELLIA_KEY *ks) {
-	assert(ks);
 	cudaError_t cudaerrno;
-	size_t ks_size = sizeof(CAMELLIA_KEY);
-	_CUDA(cudaMemcpyToSymbolAsync(cmll_constant_schedule,ks,ks_size,0,cudaMemcpyHostToDevice));
+	_CUDA(cudaMemcpyToSymbolAsync(cmll_constant_schedule,ks,sizeof(CAMELLIA_KEY),0,cudaMemcpyHostToDevice));
 }
 
 //

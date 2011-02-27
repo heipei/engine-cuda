@@ -44,4 +44,25 @@
 void cuda_device_init(int *nm, int buffer_size, int output_verbosity, uint8_t **host_data, uint64_t **device_data);
 void cuda_device_finish(uint8_t *host_data, uint64_t *device_data);
 
+// Split uint64_t into two uint32_t and convert each from BE to LE
+#define nl2i(s,a,b)      a = ((s >> 24L) & 0x000000ff) | \
+			     ((s >> 8L ) & 0x0000ff00) | \
+			     ((s << 8L ) & 0x00ff0000) | \
+			     ((s << 24L) & 0xff000000),   \
+			 b = ((s >> 56L) & 0x000000ff) | \
+			     ((s >> 40L) & 0x0000ff00) | \
+			     ((s >> 24L) & 0x00ff0000) | \
+			     ((s >> 8L) & 0xff000000)
+
+// Convert uint64_t endianness
+#define flip64(a)	(a= \
+			((a & 0x00000000000000FF) << 56) | \
+			((a & 0x000000000000FF00) << 40) | \
+			((a & 0x0000000000FF0000) << 24) | \
+			((a & 0x00000000FF000000) << 8)  | \
+			((a & 0x000000FF00000000) >> 8)  | \
+			((a & 0x0000FF0000000000) >> 24) | \
+			((a & 0x00FF000000000000) >> 40) | \
+			((a & 0xFF00000000000000) >> 56))
+
 #endif

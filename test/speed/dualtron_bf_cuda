@@ -1,20 +1,21 @@
-Doing bf-ecb for 3s on 16 size blocks: 74246 bf-ecb's in 2.97s
-Doing bf-ecb for 3s on 64 size blocks: 71156 bf-ecb's in 2.95s
-Doing bf-ecb for 3s on 256 size blocks: 69155 bf-ecb's in 2.96s
-Doing bf-ecb for 3s on 1024 size blocks: 70877 bf-ecb's in 2.95s
-Doing bf-ecb for 3s on 2048 size blocks: 69630 bf-ecb's in 2.96s
-Doing bf-ecb for 3s on 4096 size blocks: 63781 bf-ecb's in 2.96s
-Doing bf-ecb for 3s on 8192 size blocks: 54831 bf-ecb's in 2.94s
-Doing bf-ecb for 3s on 16384 size blocks: 41499 bf-ecb's in 2.95s
-Doing bf-ecb for 3s on 32768 size blocks: 25612 bf-ecb's in 2.96s
-Doing bf-ecb for 3s on 65536 size blocks: 14508 bf-ecb's in 2.95s
-Doing bf-ecb for 3s on 131072 size blocks: 7119 bf-ecb's in 2.92s
-Doing bf-ecb for 3s on 262144 size blocks: 3757 bf-ecb's in 2.91s
-Doing bf-ecb for 3s on 524288 size blocks: 1793 bf-ecb's in 2.91s
-Doing bf-ecb for 3s on 1048576 size blocks: 869 bf-ecb's in 2.92s
-Doing bf-ecb for 3s on 2097152 size blocks: 432 bf-ecb's in 2.91s
-Doing bf-ecb for 3s on 4194304 size blocks: 218 bf-ecb's in 2.96s
-Doing bf-ecb for 3s on 8388608 size blocks: 110 bf-ecb's in 2.94s
+engine "cudamrg" set.
+Doing bf-ecb for 3s on 16 size blocks: 73333 bf-ecb's in 2.93s
+Doing bf-ecb for 3s on 64 size blocks: 68847 bf-ecb's in 2.94s
+Doing bf-ecb for 3s on 256 size blocks: 67349 bf-ecb's in 2.94s
+Doing bf-ecb for 3s on 1024 size blocks: 69066 bf-ecb's in 2.93s
+Doing bf-ecb for 3s on 2048 size blocks: 67844 bf-ecb's in 2.93s
+Doing bf-ecb for 3s on 4096 size blocks: 64262 bf-ecb's in 2.93s
+Doing bf-ecb for 3s on 8192 size blocks: 55992 bf-ecb's in 2.94s
+Doing bf-ecb for 3s on 16384 size blocks: 42271 bf-ecb's in 2.94s
+Doing bf-ecb for 3s on 32768 size blocks: 26097 bf-ecb's in 2.93s
+Doing bf-ecb for 3s on 65536 size blocks: 14999 bf-ecb's in 2.94s
+Doing bf-ecb for 3s on 131072 size blocks: 7940 bf-ecb's in 2.93s
+Doing bf-ecb for 3s on 262144 size blocks: 3864 bf-ecb's in 2.93s
+Doing bf-ecb for 3s on 524288 size blocks: 1790 bf-ecb's in 2.92s
+Doing bf-ecb for 3s on 1048576 size blocks: 872 bf-ecb's in 2.93s
+Doing bf-ecb for 3s on 2097152 size blocks: 437 bf-ecb's in 2.92s
+Doing bf-ecb for 3s on 4194304 size blocks: 221 bf-ecb's in 2.93s
+Doing bf-ecb for 3s on 8388608 size blocks: 111 bf-ecb's in 2.94s
 Successfully found 1 CUDA devices (CUDART_VERSION 3020).
 Using pinned memory: cudaHostAllocDefault.
 The current buffer size is 8388608.
@@ -25,8 +26,4 @@ options:bn(64,64) rc4(8x,char) des(idx,cisc,16,int) aes(partial) idea(int) blowf
 compiler: gcc -DOPENSSL_THREADS -D_REENTRANT -DDSO_DLFCN -DHAVE_DLFCN_H -m64 -DL_ENDIAN -DTERMIO -O3 -Wall -DMD32_REG_T=int -DOPENSSL_IA32_SSE2 -DOPENSSL_BN_ASM_MONT -DSHA1_ASM -DSHA256_ASM -DSHA512_ASM -DMD5_ASM -DAES_ASM -DWHIRLPOOL_ASM
 The 'numbers' are in 1000s of bytes per second processed.
 type             16 bytes     64 bytes    256 bytes   1024 bytes   2048 bytes   4096 bytes   8192 bytes  16384 bytes  32768 bytes  65536 bytes 131072 bytes 262144 bytes 524288 bytes1048576 bytes2097152 bytes4194304 bytes8388608 bytes
-bf-ecb             399.98k     1543.72k     5980.97k    24602.73k    48176.43k    88259.11k   152780.80k   230481.23k   283531.76k   322303.83k   319555.33k   338445.02k   323040.68k   312059.09k   311329.78k   308904.82k   313859.48k
-
-Done. Finishing up BF
-
-Total time: 51040.789062 milliseconds
+bf-ecb             400.45k     1498.71k     5864.40k    24137.74k    47421.34k    89835.21k   156015.80k   235567.37k   291858.87k   334345.06k   355191.70k   345707.99k   321395.73k   312067.67k   313854.60k   316362.18k   316712.75k

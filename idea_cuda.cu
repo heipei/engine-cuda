@@ -12,9 +12,6 @@
 __constant__ uint64_t idea_constant_schedule[27];
 __shared__ uint64_t idea_schedule[27];
 
-float idea_elapsed;
-cudaEvent_t idea_start,idea_stop;
-
 #define idea_mul(r,a,b,ul) \
 ul=__umul24(a,b); \
 	if (ul != 0) { \
@@ -53,9 +50,7 @@ __global__ void IDEAencKernel(uint64_t *data) {
 
 	register uint64_t block = data[TX];
 
-	// TODO: One split64 op!
-	n2l((unsigned char *)&block,x2);
-	n2l(((unsigned char *)&block)+4,x4);
+	nl2i(block,x2,x4);
 
 	x1=(x2>>16);
 	x3=(x4>>16);
@@ -95,26 +90,24 @@ extern "C" void IDEA_cuda_crypt(const unsigned char *in, unsigned char *out, siz
 	assert(in && out && nbytes);
 	cudaError_t cudaerrno;
 	int gridSize;
-	dim3 dimBlock(MAX_THREAD, 1, 1);
 
 	transferHostToDevice(&in, (uint32_t **)device_data, host_data, &nbytes);
 
 	if ((nbytes%(MAX_THREAD*IDEA_BLOCK_SIZE))==0) {
 		gridSize = nbytes/(MAX_THREAD*IDEA_BLOCK_SIZE);
 	} else {
-		if (nbytes < MAX_THREAD*IDEA_BLOCK_SIZE)
-			dimBlock.x = nbytes / 8;
 		gridSize = nbytes/(MAX_THREAD*IDEA_BLOCK_SIZE)+1;
 	}
 
-	if (output_verbosity==OUTPUT_VERBOSE)
-		fprintf(stdout,"Starting IDEA kernel for %zu bytes with (%d, (%d, %d))...\n", nbytes, gridSize, dimBlock.x, dimBlock.y);
+	#ifdef DEBUG
+		fprintf(stdout,"Starting IDEA kernel for %zu bytes with (%d, (%d))...\n", nbytes, gridSize, MAX_THREAD);
+	#endif
 
 	if(enc == IDEA_ENCRYPT) {
-		IDEAencKernel<<<gridSize,dimBlock>>>(*device_data);
+		IDEAencKernel<<<gridSize,MAX_THREAD>>>(*device_data);
 		_CUDA_N("IDEA encryption kernel could not be launched!");
 	} else {
-		IDEAdecKernel<<<gridSize,dimBlock>>>(*device_data);
+		IDEAdecKernel<<<gridSize,MAX_THREAD>>>(*device_data);
 		_CUDA_N("IDEA decryption kernel could not be launched!");
 	}
 
@@ -122,10 +115,9 @@ extern "C" void IDEA_cuda_crypt(const unsigned char *in, unsigned char *out, siz
 }
 
 extern "C" void IDEA_cuda_transfer_key_schedule(IDEA_KEY_SCHEDULE *ks) {
-	assert(ks);
+	//assert(ks);
 	cudaError_t cudaerrno;
-	size_t ks_size = sizeof(IDEA_KEY_SCHEDULE);
-	_CUDA(cudaMemcpyToSymbolAsync(idea_constant_schedule,ks,ks_size,0,cudaMemcpyHostToDevice));
+	_CUDA(cudaMemcpyToSymbolAsync(idea_constant_schedule,ks,sizeof(IDEA_KEY_SCHEDULE),0,cudaMemcpyHostToDevice));
 }
 
 //

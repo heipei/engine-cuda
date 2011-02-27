@@ -97,7 +97,6 @@ set nox2tics
 set noy2tics
 set cbtics border in scale 1,0.5 mirror norotate  offset character 0, 0, 0
 set cbtics autofreq
-set title "Encryption performance with ECB" 
 set title  offset character 0, 0, 0 font "" norotate
 set timestamp bottom 
 set timestamp "" 
@@ -140,10 +139,11 @@ set colorbox vertical origin screen 0.9, 0.2, 0 size screen 0.05, 0.6, 0 front b
 set loadpath 
 set fontpath 
 set fit noerrorvariables
+set terminal pdf size 15cm,9cm
 
 #set terminal png size 1000,500
 
-set terminal pdf size 15cm,9cm
+set title "Encryption performance with ECB (CUDA)" 
 set output "ecb-encrypt_cuda.pdf"
 
 GNUTERM = "wxt"
@@ -159,6 +159,7 @@ plot 'bf-ecb_gpu_cudamrg.dat' using ($2/1048576) title 'Blowfish ECB GPU' with l
      'camellia-128-ecb_cpu.dat' using ($2/1048576) title 'Camellia 128 ECB CPU' with linespoints
 #    EOF
 
+set title "Encryption performance with ECB (OpenCL)" 
 set output "ecb-encrypt_opencl.pdf"
 
 GNUTERM = "wxt"
