@@ -117,7 +117,7 @@ __kernel void BFencKernel(__global unsigned long *data, __global unsigned int *b
 	*(__local unsigned int *)(des_SP+0x500+((t>>16L)&0xfc))^ \
 	*(__local unsigned int *)(des_SP+0x700+((t>>24L)&0xfc)); }
 
-__kernel void DESencKernel(__global unsigned long *data, __local unsigned int *des_d_sp, __local unsigned long *s, __global unsigned int *des_d_sp_c, __global unsigned long *cs) {
+__kernel void DESencKernel(__global unsigned long *data, __local unsigned char *des_SP, __local unsigned long *s, __global unsigned int *des_d_sp_c, __global unsigned long *cs) {
 	
 	if(get_local_id(0) < 16)
 		s[get_local_id(0)] = cs[get_local_id(0)];
@@ -125,17 +125,16 @@ __kernel void DESencKernel(__global unsigned long *data, __local unsigned int *d
 	// Careful: Based on the assumption of a constant 128 threads!
 	// What happens for kernel calls with less than 128 threads, like the final padding 8-byte call?
 	// It seems to work, but might be because of a strange race condition. Watch out!
-	des_d_sp[get_local_id(0)] = des_d_sp_c[get_local_id(0)];
-	des_d_sp[get_local_id(0)+128] = des_d_sp_c[get_local_id(0)+128];
-	des_d_sp[get_local_id(0)+256] = des_d_sp_c[get_local_id(0)+256];
-	des_d_sp[get_local_id(0)+384] = des_d_sp_c[get_local_id(0)+384];
+	((__local unsigned int *)des_SP)[get_local_id(0)] = des_d_sp_c[get_local_id(0)];
+	((__local unsigned int *)des_SP)[get_local_id(0)+128] = des_d_sp_c[get_local_id(0)+128];
+	((__local unsigned int *)des_SP)[get_local_id(0)+256] = des_d_sp_c[get_local_id(0)+256];
+	((__local unsigned int *)des_SP)[get_local_id(0)+384] = des_d_sp_c[get_local_id(0)+384];
 
 	__private unsigned long load = data[get_global_id(0)];
 	__private unsigned int right = load;
 	__private unsigned int left = load>>32;
 	
 	__private unsigned int t,u;
-	__local unsigned char *des_SP = (__local unsigned char *) des_d_sp;
 
 	IP(right,left);
 

@@ -3,7 +3,6 @@
 
 - Try out write-combining with page locked memory and two different staging areas?
 - __threadfence_block instead of __syncthreads?
-- Directly lock memory for crypt if nbytes < RLIMIT_MEMLOCK
  
 - Why does speed decrease after 1MB / 256KB
 - Non-blocking kernel calls?
@@ -11,6 +10,8 @@
 - Adjust buffersize to device memory
 - cuPrintf inclusion OK?
 - Rambo is capped at 800MB/s, why?
+
+- Splitting SBoxes etc into parts wastes registers
 
 == OpenCL ==
 - Use constant memory for BF
