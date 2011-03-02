@@ -216,10 +216,8 @@ __global__ void DESencKernel(uint64_t *data) {
 	// Careful: Based on the assumption of a constant 128 threads!
 	// What happens for kernel calls with less than 128 threads, like the final padding 8-byte call?
 	// It seems to work, but might be because of a strange race condition. Watch out!
-	((uint32_t *)des_d_sp)[threadIdx.x] = ((uint32_t *)des_d_sp_c)[threadIdx.x];
-	((uint32_t *)des_d_sp)[threadIdx.x+128] = ((uint32_t *)des_d_sp_c)[threadIdx.x+128];
-	((uint32_t *)des_d_sp)[threadIdx.x+256] = ((uint32_t *)des_d_sp_c)[threadIdx.x+256];
-	((uint32_t *)des_d_sp)[threadIdx.x+384] = ((uint32_t *)des_d_sp_c)[threadIdx.x+384];
+	((uint64_t *)des_d_sp)[threadIdx.x] = ((uint64_t *)des_d_sp_c)[threadIdx.x];
+	((uint64_t *)des_d_sp)[threadIdx.x+128] = ((uint64_t *)des_d_sp_c)[threadIdx.x+128];
 
 	register uint64_t load = data[TX];
 	register uint32_t right = load;
@@ -263,10 +261,8 @@ __global__ void DESdecKernel(uint64_t *data) {
 	if(threadIdx.x < 16)
 		s[threadIdx.x] = cs[threadIdx.x];
 
-	((uint32_t *)des_d_sp)[threadIdx.x] = ((uint32_t *)des_d_sp_c)[threadIdx.x];
-	((uint32_t *)des_d_sp)[threadIdx.x+128] = ((uint32_t *)des_d_sp_c)[threadIdx.x+128];
-	((uint32_t *)des_d_sp)[threadIdx.x+256] = ((uint32_t *)des_d_sp_c)[threadIdx.x+256];
-	((uint32_t *)des_d_sp)[threadIdx.x+384] = ((uint32_t *)des_d_sp_c)[threadIdx.x+384];
+	((uint64_t *)des_d_sp)[threadIdx.x] = ((uint64_t *)des_d_sp_c)[threadIdx.x];
+	((uint64_t *)des_d_sp)[threadIdx.x+128] = ((uint64_t *)des_d_sp_c)[threadIdx.x+128];
 
 	//uint64_t load = data[TX];
 	uint32_t right = data[TX];

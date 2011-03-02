@@ -13,7 +13,7 @@ __constant__ uint64_t idea_constant_schedule[27];
 __shared__ uint64_t idea_schedule[27];
 
 #define idea_mul(r,a,b,ul) \
-ul=__umul24(a,b); \
+	ul=__umul24(a,b); \
 	if (ul != 0) { \
 		r=(ul&0xffff)-(ul>>16); \
 		r-=((r)>>16); \

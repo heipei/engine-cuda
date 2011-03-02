@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <cuda_runtime_api.h>
 
-#define TX (__umul24(blockIdx.x,__umul24(blockDim.x,blockDim.y)) + __umul24(blockDim.y,threadIdx.x) + threadIdx.y)
+#define TX (blockIdx.x * blockDim.x * blockDim.y + blockDim.y * threadIdx.x + threadIdx.y)
 
 #define _CUDA(call) {																	\
 	call;				                                												\

@@ -12,15 +12,15 @@
 			     ((s >> 8L) & 0xff000000)
 
 // Convert uint64_t endianness
-#define flip64(a)	(a= \
-			((a & 0x00000000000000FF) << 56) | \
+#define flip64(a)	(a = \
+			a << 56 | \
 			((a & 0x000000000000FF00) << 40) | \
 			((a & 0x0000000000FF0000) << 24) | \
 			((a & 0x00000000FF000000) << 8)  | \
 			((a & 0x000000FF00000000) >> 8)  | \
 			((a & 0x0000FF0000000000) >> 24) | \
 			((a & 0x00FF000000000000) >> 40) | \
-			((a & 0xFF00000000000000) >> 56))
+			a >> 56)
 
 // ###########
 // # BF ECB #
@@ -40,13 +40,12 @@
 // TODO: When using __constant memory for the key-schedule, each call to BF_ENC
 // increases the compilation-time by at least factor 2. Bug "filed" in NVIDIA
 // forums
-__kernel void BFencKernel(__global unsigned long *data, __global unsigned int *bf_constant_schedule) {
+__kernel void BFencKernel(__global unsigned long *data, __global unsigned int *p) {
 	__private unsigned int l, r;
 	__private unsigned long block = data[get_global_id(0)];
 	
 	nl2i(block,l,r);
 
-	__global unsigned int *p=&bf_constant_schedule[0];
 	__global unsigned int *s=p+18;
 
 	l^=p[0];
@@ -189,23 +188,18 @@ __kernel void DESencKernel(__global unsigned long *data, __local unsigned char *
 	L^=(((((a OP2 b)&0xffffffffL) OP3 c)&0xffffffffL) OP1 d)&0xffffffffL; \
 	}
 
-__kernel void CASTencKernel(__global unsigned long *data, __constant unsigned int *cast_constant_schedule, __global unsigned int *CAST_S_table) {
+__kernel void CASTencKernel(__global unsigned long *data, __constant unsigned int *k, __global unsigned int *CAST_S_table) {
 	__local unsigned int CAST_S_table0[256], CAST_S_table1[256], CAST_S_table2[256], CAST_S_table3[256];
 	__private unsigned int l,r,t;
-	__constant unsigned int *k = &cast_constant_schedule[0];
 
 	__private unsigned long block = data[get_global_id(0)];
 
 	nl2i(block,l,r);
 
-	CAST_S_table0[get_local_id(0)] = CAST_S_table[get_local_id(0)];
-	CAST_S_table0[get_local_id(0)+128] = CAST_S_table[get_local_id(0)+128];
-	CAST_S_table1[get_local_id(0)] = CAST_S_table[get_local_id(0)+256];
-	CAST_S_table1[get_local_id(0)+128] = CAST_S_table[get_local_id(0)+384];
-	CAST_S_table2[get_local_id(0)] = CAST_S_table[get_local_id(0)+512];
-	CAST_S_table2[get_local_id(0)+128] = CAST_S_table[get_local_id(0)+640];
-	CAST_S_table3[get_local_id(0)] = CAST_S_table[get_local_id(0)+768];
-	CAST_S_table3[get_local_id(0)+128] = CAST_S_table[get_local_id(0)+896];
+	((__local ulong *)CAST_S_table0)[get_local_id(0)] = ((__global ulong *)CAST_S_table)[get_local_id(0)];
+	((__local ulong *)CAST_S_table1)[get_local_id(0)] = ((__global ulong *)CAST_S_table)[get_local_id(0)+128];
+	((__local ulong *)CAST_S_table2)[get_local_id(0)] = ((__global ulong *)CAST_S_table)[get_local_id(0)+256];
+	((__local ulong *)CAST_S_table3)[get_local_id(0)] = ((__global ulong *)CAST_S_table)[get_local_id(0)+384];
 
 	barrier(CLK_LOCAL_MEM_FENCE);
 
@@ -264,29 +258,28 @@ __kernel void CASTencKernel(__global unsigned long *data, __constant unsigned in
 } while(0)
 
 __kernel void CMLLencKernel(__global unsigned long *data, __constant unsigned int *k, __global unsigned int *Camellia_global_SBOX) {
-	__private unsigned long block = data[get_global_id(0)*2];
-	__private unsigned long block2 = data[(get_global_id(0)*2)+1];
 	__local unsigned int Camellia_SBOX[4][256];
 
-	Camellia_SBOX[0][get_local_id(0)] = Camellia_global_SBOX[get_local_id(0)];
-	Camellia_SBOX[0][get_local_id(0)+128] = Camellia_global_SBOX[get_local_id(0)+128];
-	Camellia_SBOX[1][get_local_id(0)] = Camellia_global_SBOX[get_local_id(0)+256];
-	Camellia_SBOX[1][get_local_id(0)+128] = Camellia_global_SBOX[get_local_id(0)+384];
-	Camellia_SBOX[2][get_local_id(0)] = Camellia_global_SBOX[get_local_id(0)+512];
-	Camellia_SBOX[2][get_local_id(0)+128] = Camellia_global_SBOX[get_local_id(0)+640];
-	Camellia_SBOX[3][get_local_id(0)] = Camellia_global_SBOX[get_local_id(0)+768];
-	Camellia_SBOX[3][get_local_id(0)+128] = Camellia_global_SBOX[get_local_id(0)+896];
-
-	barrier(CLK_LOCAL_MEM_FENCE);
+	((__local ulong *)Camellia_SBOX[0])[get_local_id(0)] = ((__global ulong *)Camellia_global_SBOX)[get_local_id(0)];
+	((__local ulong *)Camellia_SBOX[1])[get_local_id(0)] = ((__global ulong *)Camellia_global_SBOX)[get_local_id(0)+128];
+	((__local ulong *)Camellia_SBOX[2])[get_local_id(0)] = ((__global ulong *)Camellia_global_SBOX)[get_local_id(0)+256];
+	((__local ulong *)Camellia_SBOX[3])[get_local_id(0)] = ((__global ulong *)Camellia_global_SBOX)[get_local_id(0)+384];
 
 	__private unsigned int s0,s1,s2,s3; 
-	//__constant unsigned int *k = cmll_constant_schedule;
 
-	s0 = GETU32((unsigned char *)&block)    ^ k[1];
-	s1 = GETU32(((unsigned char *)&block)+4)  ^ k[0];
-	s2 = GETU32((unsigned char *)&block2)  ^ k[3];
-	s3 = GETU32(((unsigned char *)&block2)+4) ^ k[2];
+	__private unsigned long block = data[get_global_id(0)*2];
+	nl2i(block,s0,s1);
+	s1 ^= k[0];
+	s0 ^= k[1];
+
+	block = data[(get_global_id(0)*2)+1];
+	nl2i(block,s2,s3);
+	s3 ^= k[2];
+	s2 ^= k[3];
+
 	k += 4;
+
+	barrier(CLK_LOCAL_MEM_FENCE);
 
 	Camellia_Feistel(s0,s1,s2,s3,k+0);
 	Camellia_Feistel(s2,s3,s0,s1,k+2);
@@ -327,12 +320,12 @@ __kernel void CMLLencKernel(__global unsigned long *data, __constant unsigned in
 	s2 ^= k[1], s3 ^= k[0], s0 ^= k[3], s1 ^= k[2];
 
 	block = ((unsigned long)s2) << 32 | s3;
-	block2 = ((unsigned long)s0) << 32 | s1;
 	flip64(block);
-	flip64(block2);
-
 	data[get_global_id(0)*2] = block;
-	data[(get_global_id(0)*2)+1] = block2;
+
+	block = ((unsigned long)s0) << 32 | s1;
+	flip64(block);
+	data[(get_global_id(0)*2)+1] = block;
 }
 
 #define idea_mul(r,a,b,ul) \

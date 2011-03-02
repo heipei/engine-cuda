@@ -5,13 +5,15 @@
 - __threadfence_block instead of __syncthreads?
  
 - Why does speed decrease after 1MB / 256KB
+ - Try OpenSSL compiled with 1MB encrypt block size
 - Non-blocking kernel calls?
 - Many calls to CudaMemcpy, where from?
 - Adjust buffersize to device memory
-- cuPrintf inclusion OK?
+
 - Rambo is capped at 800MB/s, why?
 
 - Splitting SBoxes etc into parts wastes registers
+- Unrolling loop increases register use?
 
 == OpenCL ==
 - Use constant memory for BF
