@@ -1,10 +1,11 @@
-#include <cuda_common.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <cuda_runtime_api.h>
-#include <common.h>
 #include <assert.h>
+
+#include "cuda_common.h"
+#include "common.h"
 
 #ifndef PAGEABLE
 extern "C" void transferHostToDevice_PINNED   (const unsigned char **input, uint32_t **deviceMem, uint8_t **hostMem, size_t *size) {
@@ -93,6 +94,8 @@ extern "C" void cuda_device_init(int *nm, int buffer_size, int output_verbosity,
 	if(buffer_size==0)
 		buffer_size=MAX_CHUNK_SIZE;
 	
+	//_CUDA(cudaSetDeviceFlags(cudaDeviceScheduleYield));
+	//_CUDA(cudaSetDeviceFlags(cudaDeviceScheduleYield|cudaDeviceBlockingSync));
 #if CUDART_VERSION >= 2000
 	*nm=deviceProp.multiProcessorCount;
 #endif

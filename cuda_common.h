@@ -7,14 +7,14 @@
 	call;				                                												\
 	cudaerrno=cudaGetLastError();																	\
 	if(cudaSuccess!=cudaerrno) {                                       					         						\
-		if (output_verbosity!=OUTPUT_QUIET) fprintf(stderr, "Cuda error in file '%s' in line %i: %s.\n",__FILE__,__LINE__,cudaGetErrorString(cudaerrno));	\
+		if (output_verbosity!=OUTPUT_QUIET) fprintf(stderr, "Cuda error %d in file '%s' in line %i: %s.\n",cudaerrno,__FILE__,__LINE__,cudaGetErrorString(cudaerrno));	\
 		exit(EXIT_FAILURE);                                                  											\
     } }
 
 #define _CUDA_N(msg) {                                    												\
 	cudaerrno=cudaGetLastError();																	\
 	if(cudaSuccess!=cudaerrno) {                                                											\
-		if (output_verbosity!=OUTPUT_QUIET) fprintf(stderr, "Cuda error in file '%s' in line %i: %s.\n",__FILE__,__LINE__-3,cudaGetErrorString(cudaerrno));	\
+		if (output_verbosity!=OUTPUT_QUIET) fprintf(stderr, "Cuda error %d in file '%s' in line %i: %s.\n",cudaerrno,__FILE__,__LINE__-3,cudaGetErrorString(cudaerrno));	\
 		exit(EXIT_FAILURE);                                                  											\
     } }
 
