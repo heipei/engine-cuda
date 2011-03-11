@@ -1,8 +1,8 @@
 == General ==
+
 - Test-Framework for single-file encryption with averaging
 
 - Try out write-combining with page locked memory and two different staging areas?
-- __threadfence_block instead of __syncthreads?
  
 - Why does speed decrease after 1MB / 256KB
  - Try OpenSSL compiled with 1MB encrypt block size
@@ -10,10 +10,9 @@
 - Many calls to CudaMemcpy, where from?
 - Adjust buffersize to device memory
 
-- Rambo is capped at 800MB/s, why?
+- Sboxes use large data types
 
-- Splitting SBoxes etc into parts wastes registers
-- Unrolling loop increases register use?
+- Why do 192 threads not work?
 
 == OpenCL ==
 - Use constant memory for BF

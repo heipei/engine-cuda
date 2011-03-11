@@ -5,10 +5,14 @@ AVG_RUNS=1
 CIPHERS=(bf-ecb camellia-128-ecb cast5-ecb des-ecb idea-ecb)
 ENGINE=cudamrg
 
-if [[ -n $3 ]]; then
-	ENGINE=$3
+if [[ -n $4 ]]; then
+	ENGINE=$4
 fi
-echo "Ciphers: $3\n==========="
+if [[ -n $3 ]]; then
+	echo "Ciphers: $3\n==========="
+	CIPHERS=$3
+fi
+
 
 for cipher in $CIPHERS; do
 	if [[ -n $2 ]]; then
