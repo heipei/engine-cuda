@@ -148,5 +148,5 @@ set fontpath
 set fit noerrorvariables
 set terminal png size 1000,500
 GNUTERM = "wxt"
-plot 'aes-128-ecb.dat' using 2 title 'AES 128 ECB GPU' with linespoints,'aes-192-ecb.dat' using 2 title 'AES 192 ECB GPU' with linespoint,'aes-256-ecb.dat' using 2 title 'AES 256 ECB GPU' with linespoint, 'aes-128-ecb-cpu.dat' using 2 title 'AES 128 ECB CPU' with linespoints,'aes-192-ecb-cpu.dat' using 2 title 'AES 192 ECB CPU' with linespoint,'aes-256-ecb-cpu.dat' using 2 title 'AES 256 ECB CPU' with linespoint
+plot './data/aes-128-ecb.dat' using 2 title 'AES 128 ECB GPU' with linespoints,'./data/aes-192-ecb.dat' using 2 title 'AES 192 ECB GPU' with linespoint,'./data/aes-256-ecb.dat' using 2 title 'AES 256 ECB GPU' with linespoint, './data/aes-128-ecb-cpu.dat' using 2 title 'AES 128 ECB CPU' with linespoints,'./data/aes-192-ecb-cpu.dat' using 2 title 'AES 192 ECB CPU' with linespoint,'./data/aes-256-ecb-cpu.dat' using 2 title 'AES 256 ECB CPU' with linespoint
 #    EOF

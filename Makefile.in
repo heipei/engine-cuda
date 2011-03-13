@@ -1,5 +1,5 @@
 #
-# @version 0.1.1 (2010)
+# @version 0.1.2 (2010)
 # @author Paolo Margara <paolo.margara@gmail.com>
 # 
 # Copyright 2010 Paolo Margara
@@ -36,9 +36,8 @@ CFLAGS= @CFLAGS@
 NVCFLAGS_LIBS = @NVCFLAGS@ --compiler-options '@CFLAGS@'
 NVCFLAGS_TEST = @NVCFLAGS@ --compiler-options '@CFLAGS_TEST@'
 
-LIBS_TEST = @LIBS_TEST@
-LIBS_LIBS = @LIBS@
 LIBS_OPENCL = -lcrypto -lOpenCL
+LIBS = @LIBS@
 
 LIBNAME = libcudamrg.so
 LIBNAME_OPENCL = libopencl.so
@@ -48,22 +47,33 @@ COMMONSRC_CUDA = common.h cuda_common.h cuda_common.cu Makefile
 COMMONSRC_OPENCL = common.h opencl_common.c opencl_common.h Makefile
 TESTSRC= teststate.c aes_cuda.cu
 
-LIBOBJ = e_cuda.o 
+LIBOBJ = e_cuda.o
 LIBOBJ_CUDA = aes_cuda.o des_cuda.o idea_cuda.o bf_cuda.o cast_cuda.o cmll_cuda.o cuda_common.o 
-
 LIBOBJ_OPENCL = e_opencl.o bf_opencl.o des_opencl.o cast_opencl.o cmll_opencl.o idea_opencl.o opencl_common.o
+
+SOURCES= aes_cuda.cu e_cuda.c teststate.c
+HEADERS= aes_cuda.h
+OTHERFILES= configure COPYING openssl.cnf.example README CHANGES configure.in Makefile.in
+OTHER_DIRS= openssl-patch test-enc test-speed test-file
+OTHER_DIRS_CONTENT= openssl-patch/openssl-0.9.8.k-apps_speed.c.patch test-enc/aes-ecb-decrypt.plt test-enc/test-enc-plot.sh test-speed/aes-ecb-decrypt.plt \
+	openssl-patch/openssl-0.9.8.k-crypto_evp_bio_enc.c.patch test-enc/aes-ecb-encrypt.plt test-file/test-file.sh test-speed/aes-ecb-encrypt.plt test-enc/aes-cbc-decrypt.plt \
+	test-enc/test-enc-cpu.sh test-speed/aes-cbc-decrypt.plt test-enc/aes-cbc-encrypt.plt test-enc/test-enc-gpu.sh test-speed/aes-cbc-encrypt.plt test-speed/test-speed.sh          
+ALLFILES=$(SOURCES) $(HEADERS) $(OTHERFILES) $(OTHER_DIRS)
+distdir= @DISTDIR@
+tarname= @TARNAME@
 
 TESTOBJ= aes_cuda.o teststate.o
 
 all: $(LIBNAME) $(LIBNAME_OPENCL)
 
-test: $(TESTNAME)
-
-$(TESTNAME): $(TESTSRC)
-	$(NVCC) $(NVCPPFLAGS) $(NVCFLAGS_TEST) $(NVLDFLAGS) $(LIBS_TEST) -o $(TESTNAME) $(TESTSRC)
-
 $(LIBNAME): $(LIBOBJ) $(LIBOBJ_CUDA)
-	$(CC) -fPIC -shared -Wl,-soname,$(LIBNAME) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) $(LIBS_LIBS) -o $(LIBNAME) $(LIBOBJ) $(LIBOBJ_CUDA)
+	$(CC) -fPIC -shared -Wl,-soname,$(LIBNAME) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) $(LIBS) -o $(LIBNAME) $(LIBOBJ) $(LIBOBJ_CUDA)
+
+$(LIBOBJ): %.o: %.c $(COMMONSRC_CUDA)
+	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -c -o $@ $<
+
+$(LIBOBJ_CUDA): %.o: %.cu $(COMMONSRC_CUDA)
+	$(NVCC) $(NVCPPFLAGS) $(NVCFLAGS_LIBS) -c -o $@ $<
 
 $(LIBNAME_OPENCL): $(LIBOBJ_OPENCL)
 	$(CC) -fPIC -shared -Wl,-soname,$(LIBNAME_OPENCL) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) $(LIBS_OPENCL) -o $(LIBNAME_OPENCL) $(LIBOBJ_OPENCL)
@@ -71,11 +81,8 @@ $(LIBNAME_OPENCL): $(LIBOBJ_OPENCL)
 $(LIBOBJ_OPENCL): %.o: %.c $(COMMONSRC_OPENCL)
 	$(CC) $(CFLAGS) -Wno-comments $(CPPFLAGS) $(LDFLAGS) -c -o $@ $<
 
-$(LIBOBJ_CUDA): %.o: %.cu $(COMMONSRC_CUDA)
-	$(NVCC) $(NVCPPFLAGS) $(NVCFLAGS_LIBS) -c -o $@ $<
-
-$(LIBOBJ): %.o: %.c $(COMMONSRC_CUDA)
-	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -c -o $@ $<
+test: $(TESTSRC)
+	$(NVCC) $(NVCPPFLAGS) $(NVCFLAGS_TEST) $(NVLDFLAGS) $(LIBS) -o $(TESTNAME) $(TESTSRC)
 
 ptx:
 kernels.ptx: opencl_kernels.cl
@@ -84,16 +91,34 @@ kernels.ptx: opencl_kernels.cl
 install: $(LIBNAME)
 	mkdir -p @prefix@/@ENGINEDIR@
 	cp $(LIBNAME) @prefix@/@ENGINEDIR@
+	chmod 644 @prefix@/@ENGINEDIR@/$(LIBNAME)
+
+uninstall:
+	-rm -f @prefix@/@ENGINEDIR@/$(LIBNAME)
+	
 
 clean:
 	rm -f *.o *.obj tags core .pure *.out .nfs* *.old *.bak fluff *.linkinfo *.so *.a teststate config.log config.status
 	rm -f *.cpp1.ii *.cpp2.i *.cpp3.i *.cpp4.ii *.cu.cpp *.cudafe1.c *.cudafe1.cpp *.cudafe1.gpu 
 	rm -f *.cudafe1.stub.c *.cudafe2.c *.cudafe2.gpu *.cudafe2.stub.c *.fatbin.c *.hash *.ptx *.sm_*.cubin
 
-distclean: clean
+distclean: clean FORCE
 	rm -f config.* Makefile
 
-tags:
-	/usr/bin/env ctags *.c *.h *.cu
+dist: $(tarname)
 
-.PHONY: all clean distclean install tags
+$(tarname): $(distdir)
+	tar cvzf $(tarname) $(distdir)
+	rm -rf $(distdir)
+
+$(distdir): $(ALLFILES) FORCE
+	mkdir -p $(distdir)
+	cp $(SOURCES) $(HEADERS) $(OTHERFILES) $(distdir)
+	for i in $(OTHER_DIRS); do mkdir -p $(distdir)/$$i; done
+	for i in $(OTHER_DIRS_CONTENT); do cp $$i $(distdir)/$$i; done
+
+FORCE:
+	-rm -rf $(distdir)
+	-rm -f $(tarname)
+
+.PHONY: all clean distclean dist FORCE install uninstall

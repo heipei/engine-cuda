@@ -148,5 +148,5 @@ set fontpath
 set fit noerrorvariables
 set terminal png size 1000,500
 GNUTERM = "wxt"
-plot 'aes-128-cbc-decrypt.dat' using 2 title 'AES 128 CBC GPU' with linespoints,'aes-192-cbc-decrypt.dat' using 2 title 'AES 192 CBC GPU' with linespoint,'aes-256-cbc-decrypt.dat' using 2 title 'AES 256 CBC GPU' with linespoint, 'aes-128-cbc-decrypt-cpu.dat' using 2 title 'AES 128 CBC CPU' with linespoints,'aes-192-cbc-decrypt-cpu.dat' using 2 title 'AES 192 CBC CPU' with linespoint,'aes-256-cbc-decrypt-cpu.dat' using 2 title 'AES 256 CBC CPU' with linespoint
+plot './data/aes-128-cbc-decrypt.dat' using 2 title 'AES 128 CBC GPU' with linespoints,'./data/aes-192-cbc-decrypt.dat' using 2 title 'AES 192 CBC GPU' with linespoint,'./data/aes-256-cbc-decrypt.dat' using 2 title 'AES 256 CBC GPU' with linespoint, './data/aes-128-cbc-decrypt-cpu.dat' using 2 title 'AES 128 CBC CPU' with linespoints,'./data/aes-192-cbc-decrypt-cpu.dat' using 2 title 'AES 192 CBC CPU' with linespoint,'./data/aes-256-cbc-decrypt-cpu.dat' using 2 title 'AES 256 CBC CPU' with linespoint
 #    EOF

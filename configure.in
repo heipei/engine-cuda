@@ -22,9 +22,9 @@
 
 define([PACKAGE_VERSION_MAJOR], [0])
 define([PACKAGE_VERSION_MINOR], [1])
-define([PACKAGE_VERSION_FIX],   [1])
+define([PACKAGE_VERSION_FIX],   [2])
 
-AC_INIT([engine_cudamrg],[PACKAGE_VERSION_MAJOR.PACKAGE_VERSION_MINOR.PACKAGE_VERSION_FIX],[paolo.margara@gmail.com],[engine_cudamrg],[http://code.google.com/p/engine-cuda/])
+AC_INIT([engine_cudamrg],[PACKAGE_VERSION_MAJOR.PACKAGE_VERSION_MINOR.PACKAGE_VERSION_FIX],[paolo.margara@gmail.com],[engine_cudamrg-v_''AC_PACKAGE_VERSION.tar.gz],[http://code.google.com/p/engine-cuda/])
 
 AC_PROG_CC
 AC_LANG_C
@@ -60,7 +60,7 @@ AC_ARG_WITH([cudatoolkitpath],AS_HELP_STRING([--with-cudatoolkitpath],[prefix wh
 
 AC_ARG_WITH([opensslenginedir],
 AS_HELP_STRING([--with-opensslenginedir],[specify the directory where openssl engine are located (default $PREFIX/lib/engines) ]),
-[ENGINEDIR="$with_opensslenginedir"],[ENGINEDIR="lib/engines/"])
+[ENGINEDIR="$with_opensslenginedir"],[ENGINEDIR="lib/engines"])
 
 AC_ARG_WITH([buffersize],AS_HELP_STRING([--with-buffersize],[specify the size of the buffer (default 8MB) ]),
 [NVCPPFLAGS="$NVCPPFLAGS -DMAX_CHUNK_SIZE=$with_buffersize"],[NVCPPFLAGS="$NVCPPFLAGS -DMAX_CHUNK_SIZE=8*1024*1024"])
@@ -102,7 +102,7 @@ AC_CHECK_HEADERS([openssl/aes.h],,AC_MSG_ERROR(openssl/aes.h required))
 AC_CHECK_HEADERS([openssl/engine.h],,AC_MSG_ERROR(openssl/engine.h required))
 AC_CHECK_HEADERS([cuda_runtime_api.h],,AC_MSG_ERROR(cuda_runtime_api.h required))
 
-AC_CHECK_LIB([crypto],AES_set_encrypt_key,[LIBS="-lcrypto";LIBS_TEST="-lcrypto"],[AC_MSG_ERROR([Cannot find crypto library])])
+AC_CHECK_LIB([crypto],AES_set_encrypt_key,[LIBS="-lcrypto"],[AC_MSG_ERROR([Cannot find crypto library])])
 AC_CHECK_LIB([cudart],cudaGetDeviceCount,[LIBS="$LIBS -lcudart"],[AC_MSG_ERROR([Cannot find cuda runtime library])])
 
 CFLAGS_TEST="$CFLAGS"
@@ -121,11 +121,15 @@ AC_SUBST(NVCFLAGS)
 AC_SUBST(CFLAGS_TEST)
 
 AC_SUBST(LIBS)
-AC_SUBST(LIBS_TEST)
 
 AC_SUBST(ENGINEDIR)
 
 VERSION="PACKAGE_VERSION_MAJOR.PACKAGE_VERSION_MINOR.PACKAGE_VERSION_FIX"
 AC_SUBST(VERSION)
+
+TARNAME="$PACKAGE_TARNAME"
+DISTDIR="$PACKAGE_NAME"
+AC_SUBST(TARNAME)
+AC_SUBST(DISTDIR)
 
 AC_OUTPUT(Makefile)
