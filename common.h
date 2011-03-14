@@ -10,6 +10,7 @@
 #define MAX_THREAD			128
 
 #define STATE_THREAD_AES	4
+#define AES_BLOCK_SIZE		16
 #define AES_KEY_SIZE_128	16
 #define AES_KEY_SIZE_192	24
 #define AES_KEY_SIZE_256	32
@@ -43,6 +44,7 @@
 
 void cuda_device_init(int *nm, int buffer_size, int output_verbosity, uint8_t **host_data, uint64_t **device_data);
 void cuda_device_finish(uint8_t *host_data, uint64_t *device_data);
+
 
 // Split uint64_t into two uint32_t and convert each from BE to LE
 #define nl2i(s,a,b)      a = ((s >> 24L) & 0x000000ff) | \

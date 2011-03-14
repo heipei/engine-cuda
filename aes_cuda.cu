@@ -1,64 +1,16 @@
-/**
- * @version 0.1.2 - Copyright (c) 2010.
- *
- * @author Paolo Margara <paolo.margara@gmail.com>
- *
- * Copyright 2010 Paolo Margara
- *
- * This file is part of Engine_cudamrg.
- *
- * Engine_cudamrg is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License or
- * any later version.
- * 
- * Engine_cudamrg is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Engine_cudamrg.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
-
-#ifndef __DEVICE_EMULATION__
-
+// vim:foldenable:foldmethod=marker:foldmarker=[[,]]
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <assert.h>
+#include <openssl/aes.h>
+#include <openssl/evp.h>
 #include <cuda_runtime_api.h>
 #include "cuda_common.h"
 #include "common.h"
 
-#define AES_ENCRYPT		1
-#define AES_DECRYPT		0
-#define AES_MAXNR		14
-#define AES_BLOCK_SIZE		16
-#define AES_KEY_SIZE_128	16
-#define AES_KEY_SIZE_192	24
-#define AES_KEY_SIZE_256	32
-
-typedef struct aes_key_st {
-	unsigned int rd_key[4 *(AES_MAXNR + 1)];
-	int rounds;
-	} AES_KEY;
-
-/*
-Te0[x] = S [x].[02, 01, 01, 03];
-Te1[x] = S [x].[03, 02, 01, 01];
-Te2[x] = S [x].[01, 03, 02, 01];
-Te3[x] = S [x].[01, 01, 03, 02];
-
-Td0[x] = Si[x].[0e, 09, 0d, 0b];
-Td1[x] = Si[x].[0b, 0e, 09, 0d];
-Td2[x] = Si[x].[0d, 0b, 0e, 09];
-Td3[x] = Si[x].[09, 0d, 0b, 0e];
-Td4[x] = Si[x].[01];
-*/
-
-uint32_t Td0_cpu[256] = {
+// S-Boxes [[
+uint32_t Td0_cpu[256] = { 
 	0x50a7f451U,0x5365417eU,0xc3a4171aU,0x965e273aU,
 	0xcb6bab3bU,0xf1459d1fU,0xab58faacU,0x9303e34bU,
 	0x55fa3020U,0xf66d76adU,0x9176cc88U,0x254c02f5U,
@@ -325,7 +277,6 @@ uint32_t Td3_cpu[256] = {
 	0x397101a8U,0x08deb30cU,0xd89ce4b4U,0x6490c156U,
 	0x7b6184cbU,0xd570b632U,0x48745c6cU,0xd04257b8U,
 	};
-
 __constant__ uint32_t Te0[256] = {
 	0xa56363c6U, 0x847c7cf8U, 0x997777eeU, 0x8d7b7bf6U,
 	0x0df2f2ffU, 0xbd6b6bd6U, 0xb16f6fdeU, 0x54c5c591U,
@@ -964,36 +915,7 @@ __constant__ uint8_t Td4[256] = {
     0xe1U, 0x69U, 0x14U, 0x63U, 0x55U, 0x21U, 0x0cU, 0x7dU,
 };
 
-__device__ uint32_t *rk;
-__device__ uint32_t *d_k;
-
-__device__ uint32_t  *d_s;
-__device__ uint32_t  *d_iv;
-__device__ uint32_t  *d_out;
-
-uint8_t  *h_s;
-uint8_t  *h_out;
-uint8_t  *h_iv;
-
-int *rounds;
-
-const textureReference *texref_RDK; 
-const textureReference *texref_RR; 
-
-cudaArray *arrayR, *arrayDK;
-
-float elapsed;
-cudaEvent_t start,stop;
-
-texture <unsigned int,1,cudaReadModeElementType> texref_dk;
-texture <int,1,cudaReadModeElementType> texref_r; 
-
-void (*transferHostToDevice) (const unsigned char  **input, uint32_t **deviceMem, uint8_t **hostMem, size_t *size);
-void (*transferDeviceToHost) (      unsigned char **output, uint32_t **deviceMem, uint8_t **hostMemS, uint8_t **hostMemOUT, size_t *size);
-
-#define GETU32(p) (*((uint32_t*)(p)))
-
-static const uint8_t Te4[256] = {
+static uint8_t Te4[256] = {
     0x63U, 0x7cU, 0x77U, 0x7bU, 0xf2U, 0x6bU, 0x6fU, 0xc5U,
     0x30U, 0x01U, 0x67U, 0x2bU, 0xfeU, 0xd7U, 0xabU, 0x76U,
     0xcaU, 0x82U, 0xc9U, 0x7dU, 0xfaU, 0x59U, 0x47U, 0xf0U,
@@ -1028,15 +950,17 @@ static const uint8_t Te4[256] = {
     0x41U, 0x99U, 0x2dU, 0x0fU, 0xb0U, 0x54U, 0xbbU, 0x16U
 };
 
-static const uint32_t rcon[] = {
+const uint32_t rcon[] = {
     0x00000001U, 0x00000002U, 0x00000004U, 0x00000008U,
     0x00000010U, 0x00000020U, 0x00000040U, 0x00000080U,
     0x0000001bU, 0x00000036U, /* for 128-bit blocks, Rijndael never uses more than 10 rcon values */
 };
+// ]]
 
-/* Expand the cipher key into the encryption key schedule. */
-int AES_cpu_set_encrypt_key(const unsigned char *userKey, const int bits, AES_KEY *key) {
-	uint32_t *rk;
+#define GETU32(p) (*((uint32_t*)(p)))
+
+extern "C" int AES_cuda_set_encrypt_key(const unsigned char *userKey, const int bits, AES_KEY *key) {
+uint32_t *rk;
    	int i = 0;
 	uint32_t temp;
 
@@ -1106,14 +1030,13 @@ int AES_cpu_set_encrypt_key(const unsigned char *userKey, const int bits, AES_KE
 	return 0;
 }
 
-/* Expand the cipher key into the decryption key schedule. */
-int AES_cpu_set_decrypt_key(const unsigned char *userKey, const int bits, AES_KEY *key) {
+extern "C" int AES_cuda_set_decrypt_key(const unsigned char *userKey, const int bits, AES_KEY *key) {
         uint32_t *rk;
 	int i, j, status;
 	uint32_t temp;
 
 	/* first, start with an encryption schedule */
-	status = AES_cpu_set_encrypt_key(userKey, bits, key);
+	status = AES_cuda_set_encrypt_key(userKey, bits, key);
 	if (status < 0)
 		return status;
 
@@ -1155,416 +1078,331 @@ int AES_cpu_set_decrypt_key(const unsigned char *userKey, const int bits, AES_KE
 	return 0;
 }
 
-#if defined T_TABLE_CONSTANT
-__global__ void AESencKernel(uint32_t state[]) {
+
+//__device__ uint32_t *rk;
+//__device__ uint32_t  *d_s;
+
+__constant__ uint32_t d_iv[4];
+//__device__ uint32_t  *d_out;
+
+uint8_t  *h_iv;
+int *rounds;
+
+const textureReference *texref_RDK; 
+cudaArray *arrayDK;
+
+float aes_elapsed;
+cudaEvent_t aes_start,aes_stop;
+
+texture <unsigned int,1,cudaReadModeElementType> texref_dk;
+
+#define ROW (__umul24(4,threadIdx.y))
+#define SX (ROW + threadIdx.x)
+
+#define AES_ENC_ROUND(n,D,S)	D[SX] = Te0[S[SX] & 0xff] ^ Te1[(S[(1+threadIdx.x)%4+ROW] >> 8) & 0xff] ^ \
+				Te2[(S[(2+threadIdx.x)%4+ROW] >>  16) & 0xff] ^ Te3[S[(3+threadIdx.x)%4+ROW] >> 24] ^ \
+				tex1Dfetch(texref_dk,n+threadIdx.x);
+#define AES_FINAL_ENC_ROUND(N)	register uint32_t p_state = (Te2[(t[SX]) & 0xff] & 0x000000ff)^ \
+				(Te3[(t[(1+threadIdx.x)%4+ROW] >>  8) & 0xff] & 0x0000ff00)^ \
+				(Te0[(t[(2+threadIdx.x)%4+ROW] >> 16) & 0xff] & 0x00ff0000)^ \
+				(Te1[(t[(3+threadIdx.x)%4+ROW] >> 24)       ] & 0xff000000)^ \
+				tex1Dfetch(texref_dk,threadIdx.x+N); \
+				data[blockIdx.x*MAX_THREAD+SX] = p_state; 
+
+__global__ void AES128encKernel(uint32_t data[]) {
 	__shared__ uint32_t t[MAX_THREAD];
 	__shared__ uint32_t s[MAX_THREAD];
 
-	s[threadIdx.x+4*threadIdx.y] = state[blockIdx.x*MAX_THREAD+threadIdx.x+4*threadIdx.y] ^ tex1Dfetch(texref_dk,threadIdx.x);
+	s[SX] = data[__umul24(blockIdx.x,MAX_THREAD)+SX] ^ tex1Dfetch(texref_dk,threadIdx.x);
 	
-	/* round 1: */
-   	t[threadIdx.x+4*threadIdx.y] = Te0[s[threadIdx.x+4*threadIdx.y] & 0xff] ^ Te1[(s[(1+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					 Te2[(s[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Te3[s[(3+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					 tex1Dfetch(texref_dk,4+threadIdx.x);
-	/* round 2: */
-   	s[threadIdx.x+4*threadIdx.y] = Te0[t[threadIdx.x+4*threadIdx.y] & 0xff] ^ Te1[(t[(1+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					 Te2[(t[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Te3[t[(3+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					 tex1Dfetch(texref_dk,8+threadIdx.x);
-	/* round 3: */
-   	t[threadIdx.x+4*threadIdx.y] = Te0[s[threadIdx.x+4*threadIdx.y] & 0xff] ^ Te1[(s[(1+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					 Te2[(s[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Te3[s[(3+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					 tex1Dfetch(texref_dk,12+threadIdx.x);
-   	/* round 4: */
-   	s[threadIdx.x+4*threadIdx.y] = Te0[t[threadIdx.x+4*threadIdx.y] & 0xff] ^ Te1[(t[(1+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					 Te2[(t[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Te3[t[(3+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					 tex1Dfetch(texref_dk,16+threadIdx.x);
-	/* round 5: */
-   	t[threadIdx.x+4*threadIdx.y] = Te0[s[threadIdx.x+4*threadIdx.y] & 0xff] ^ Te1[(s[(1+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					 Te2[(s[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Te3[s[(3+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					 tex1Dfetch(texref_dk,20+threadIdx.x);
-   	/* round 6: */
-   	s[threadIdx.x+4*threadIdx.y] = Te0[t[threadIdx.x+4*threadIdx.y] & 0xff] ^ Te1[(t[(1+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					 Te2[(t[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Te3[t[(3+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					 tex1Dfetch(texref_dk,24+threadIdx.x);
-	/* round 7: */
-   	t[threadIdx.x+4*threadIdx.y] = Te0[s[threadIdx.x+4*threadIdx.y] & 0xff] ^ Te1[(s[(1+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					 Te2[(s[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Te3[s[(3+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					 tex1Dfetch(texref_dk,28+threadIdx.x);
-   	/* round 8: */
-   	s[threadIdx.x+4*threadIdx.y] = Te0[t[threadIdx.x+4*threadIdx.y] & 0xff] ^ Te1[(t[(1+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					 Te2[(t[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Te3[t[(3+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					 tex1Dfetch(texref_dk,32+threadIdx.x);
-	/* round 9: */
-   	t[threadIdx.x+4*threadIdx.y] = Te0[s[threadIdx.x+4*threadIdx.y] & 0xff] ^ Te1[(s[(1+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					 Te2[(s[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Te3[s[(3+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					 tex1Dfetch(texref_dk,36+threadIdx.x);
-	if (tex1Dfetch(texref_r,0) > 10) {
-		/* round 10: */
-		s[threadIdx.x+4*threadIdx.y] = Te0[t[threadIdx.x+4*threadIdx.y] & 0xff] ^ Te1[(t[(1+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-						 Te2[(t[(2+threadIdx.x)%4+4*threadIdx.y] >> 16) & 0xff] ^ Te3[t[(3+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-						 tex1Dfetch(texref_dk,40+threadIdx.x);
-        	/* round 11: */
-   		t[threadIdx.x+4*threadIdx.y] = Te0[s[threadIdx.x+4*threadIdx.y] & 0xff] ^ Te1[(s[(1+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-						 Te2[(s[(2+threadIdx.x)%4+4*threadIdx.y] >> 16) & 0xff] ^ Te3[s[(3+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-						 tex1Dfetch(texref_dk,44+threadIdx.x);
-	        if (tex1Dfetch(texref_r,0) > 12) {
-			/* round 12: */
-			s[threadIdx.x+4*threadIdx.y] = Te0[ t[threadIdx.x        +4*threadIdx.y]        & 0xff] ^
-							 Te1[(t[(1+threadIdx.x)%4+4*threadIdx.y] >>  8) & 0xff] ^ 
-							 Te2[(t[(2+threadIdx.x)%4+4*threadIdx.y] >> 16) & 0xff] ^ 
-							 Te3[ t[(3+threadIdx.x)%4+4*threadIdx.y] >> 24        ] ^
-							 tex1Dfetch(texref_dk,48+threadIdx.x);
-			/* round 13: */
-			t[threadIdx.x+4*threadIdx.y] = Te0[ s[threadIdx.x        +4*threadIdx.y]        & 0xff] ^ 
-							 Te1[(s[(1+threadIdx.x)%4+4*threadIdx.y] >>  8) & 0xff] ^
-							 Te2[(s[(2+threadIdx.x)%4+4*threadIdx.y] >> 16) & 0xff] ^
-							 Te3[ s[(3+threadIdx.x)%4+4*threadIdx.y] >> 24        ] ^
-							 tex1Dfetch(texref_dk,52+threadIdx.x);
-			}
-		}
-        /* last round: */
-	state[blockIdx.x*MAX_THREAD+threadIdx.x+4*threadIdx.y]= (Te2[(t[threadIdx.x+4*threadIdx.y]            ) & 0xff] & 0x000000ff) ^ 
-								(Te3[(t[(1+threadIdx.x)%4+4*threadIdx.y] >>  8) & 0xff] & 0x0000ff00) ^
-								(Te0[(t[(2+threadIdx.x)%4+4*threadIdx.y] >> 16) & 0xff] & 0x00ff0000) ^ 
-								(Te1[(t[(3+threadIdx.x)%4+4*threadIdx.y] >> 24)       ] & 0xff000000) ^
-								tex1Dfetch(texref_dk,threadIdx.x+(tex1Dfetch(texref_r,0) << 2));
-	}
-
-__global__ void AESdecKernel(uint32_t state[]) {
-	__shared__ uint32_t t[MAX_THREAD];
-	__shared__ uint32_t s[MAX_THREAD];
-
-	s[threadIdx.x+4*threadIdx.y] = state[blockIdx.x*MAX_THREAD+threadIdx.x+4*threadIdx.y] ^ tex1Dfetch(texref_dk,threadIdx.x);
-	
-	/* round 1: */
-	t[threadIdx.x+4*threadIdx.y] = Td0[s[threadIdx.x+4*threadIdx.y] & 0xff] ^ Td1[(s[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Td2[(s[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Td3[s[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,4+threadIdx.x);
-	/* round 2: */
-	s[threadIdx.x+4*threadIdx.y] = Td0[t[threadIdx.x+4*threadIdx.y] & 0xff] ^ Td1[(t[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Td2[(t[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Td3[t[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,8+threadIdx.x);
-	/* round 3: */
-	t[threadIdx.x+4*threadIdx.y] = Td0[s[threadIdx.x+4*threadIdx.y] & 0xff] ^ Td1[(s[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Td2[(s[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Td3[s[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,12+threadIdx.x);
-	/* round 4: */
-	s[threadIdx.x+4*threadIdx.y] = Td0[t[threadIdx.x+4*threadIdx.y] & 0xff] ^ Td1[(t[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Td2[(t[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Td3[t[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,16+threadIdx.x);
-	/* round 5: */
-	t[threadIdx.x+4*threadIdx.y] = Td0[s[threadIdx.x+4*threadIdx.y] & 0xff] ^ Td1[(s[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Td2[(s[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Td3[s[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,20+threadIdx.x);
-	/* round 6: */
-	s[threadIdx.x+4*threadIdx.y] = Td0[t[threadIdx.x+4*threadIdx.y] & 0xff] ^ Td1[(t[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Td2[(t[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Td3[t[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,24+threadIdx.x);
-	/* round 7: */
-	t[threadIdx.x+4*threadIdx.y] = Td0[s[threadIdx.x+4*threadIdx.y] & 0xff] ^ Td1[(s[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Td2[(s[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Td3[s[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,28+threadIdx.x);
-	/* round 8: */
-	s[threadIdx.x+4*threadIdx.y] = Td0[t[threadIdx.x+4*threadIdx.y] & 0xff] ^ Td1[(t[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Td2[(t[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Td3[t[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,32+threadIdx.x);
-	/* round 9: */
-	t[threadIdx.x+4*threadIdx.y] = Td0[s[threadIdx.x+4*threadIdx.y] & 0xff] ^ Td1[(s[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Td2[(s[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Td3[s[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,36+threadIdx.x);
-	if (tex1Dfetch(texref_r,0) > 10) {
-        	/* round 10: */
-		s[threadIdx.x+4*threadIdx.y] = Td0[t[threadIdx.x+4*threadIdx.y] & 0xff] ^ Td1[(t[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-						Td2[(t[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Td3[t[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-						tex1Dfetch(texref_dk,40+threadIdx.x);
-        	/* round 11: */
-		t[threadIdx.x+4*threadIdx.y] = Td0[s[threadIdx.x+4*threadIdx.y] & 0xff] ^ Td1[(s[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-						Td2[(s[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Td3[s[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-						tex1Dfetch(texref_dk,44+threadIdx.x);
-	        if (tex1Dfetch(texref_r,0) > 12) {
-        		/* round 12: */
-			s[threadIdx.x+4*threadIdx.y] = Td0[t[threadIdx.x+4*threadIdx.y]                & 0xff] ^ 
-							Td1[(t[(3+threadIdx.x)%4+4*threadIdx.y] >>  8) & 0xff] ^ 
-							Td2[(t[(2+threadIdx.x)%4+4*threadIdx.y] >> 16) & 0xff] ^ 
-							Td3[ t[(1+threadIdx.x)%4+4*threadIdx.y] >> 24        ] ^
-							tex1Dfetch(texref_dk,48+threadIdx.x);
-            		/* round 13: */
-			t[threadIdx.x+4*threadIdx.y] = Td0[s[threadIdx.x+4*threadIdx.y]                & 0xff] ^ 
-							Td1[(s[(3+threadIdx.x)%4+4*threadIdx.y] >>  8) & 0xff] ^ 
-							Td2[(s[(2+threadIdx.x)%4+4*threadIdx.y] >> 16) & 0xff] ^
-							Td3[ s[(1+threadIdx.x)%4+4*threadIdx.y] >> 24        ] ^
-							tex1Dfetch(texref_dk,52+threadIdx.x);
-			}
-		}
-        /* last round: */
-	state[blockIdx.x*MAX_THREAD+threadIdx.x+4*threadIdx.y] =(Td4[(t[threadIdx.x+4*threadIdx.y]            ) & 0xff]      ) ^
-								(Td4[(t[(3+threadIdx.x)%4+4*threadIdx.y] >>  8) & 0xff] <<  8) ^
-								(Td4[(t[(2+threadIdx.x)%4+4*threadIdx.y] >> 16) & 0xff] << 16) ^
-								(Td4[(t[(1+threadIdx.x)%4+4*threadIdx.y] >> 24)       ] << 24) ^
-								tex1Dfetch(texref_dk,threadIdx.x+(tex1Dfetch(texref_r,0) << 2)); 
-	}
-
-#else
-
-__global__ void AESencKernel(uint32_t state[]) {
-	__shared__ uint32_t t[MAX_THREAD];
-	__shared__ uint32_t s[MAX_THREAD];
-
-	__shared__ uint32_t Tes0[256];
-	__shared__ uint32_t Tes1[256];
-	__shared__ uint32_t Tes2[256];
-	__shared__ uint32_t Tes3[256];
-
-	Tes0[threadIdx.x+4*threadIdx.y]=Te0[threadIdx.x+4*threadIdx.y];
-	Tes1[threadIdx.x+4*threadIdx.y]=Te1[threadIdx.x+4*threadIdx.y];
-	Tes2[threadIdx.x+4*threadIdx.y]=Te2[threadIdx.x+4*threadIdx.y];
-	Tes3[threadIdx.x+4*threadIdx.y]=Te3[threadIdx.x+4*threadIdx.y];
-
-	__syncthreads();	// __threadfence_block() could be enough
-	
-	s[threadIdx.x+4*threadIdx.y] = state[blockIdx.x*MAX_THREAD+threadIdx.x+4*threadIdx.y] ^ tex1Dfetch(texref_dk,threadIdx.x);
-
-	/* round 1: */
-   	t[threadIdx.x+4*threadIdx.y] = Tes0[s[threadIdx.x+4*threadIdx.y] & 0xff] ^ Tes1[(s[(1+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Tes2[(s[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Tes3[s[(3+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,4+threadIdx.x);
-	/* round 2: */
-   	s[threadIdx.x+4*threadIdx.y] = Tes0[t[threadIdx.x+4*threadIdx.y] & 0xff] ^ Tes1[(t[(1+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Tes2[(t[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Tes3[t[(3+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,8+threadIdx.x);
-	/* round 3: */
-   	t[threadIdx.x+4*threadIdx.y] = Tes0[s[threadIdx.x+4*threadIdx.y] & 0xff] ^ Tes1[(s[(1+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Tes2[(s[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Tes3[s[(3+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,12+threadIdx.x);
-   	/* round 4: */
-   	s[threadIdx.x+4*threadIdx.y] = Tes0[t[threadIdx.x+4*threadIdx.y] & 0xff] ^ Tes1[(t[(1+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Tes2[(t[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Tes3[t[(3+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,16+threadIdx.x);
-	/* round 5: */
-   	t[threadIdx.x+4*threadIdx.y] = Tes0[s[threadIdx.x+4*threadIdx.y] & 0xff] ^ Tes1[(s[(1+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Tes2[(s[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Tes3[s[(3+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,20+threadIdx.x);
-   	/* round 6: */
-   	s[threadIdx.x+4*threadIdx.y] = Tes0[t[threadIdx.x+4*threadIdx.y] & 0xff] ^ Tes1[(t[(1+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Tes2[(t[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Tes3[t[(3+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,24+threadIdx.x);
-	/* round 7: */
-   	t[threadIdx.x+4*threadIdx.y] = Tes0[s[threadIdx.x+4*threadIdx.y] & 0xff] ^ Tes1[(s[(1+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Tes2[(s[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Tes3[s[(3+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,28+threadIdx.x);
-   	/* round 8: */
-   	s[threadIdx.x+4*threadIdx.y] = Tes0[t[threadIdx.x+4*threadIdx.y] & 0xff] ^ Tes1[(t[(1+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Tes2[(t[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Tes3[t[(3+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,32+threadIdx.x);
-	/* round 9: */
-   	t[threadIdx.x+4*threadIdx.y] = Tes0[s[threadIdx.x+4*threadIdx.y] & 0xff] ^ Tes1[(s[(1+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Tes2[(s[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Tes3[s[(3+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,36+threadIdx.x);
-	if (tex1Dfetch(texref_r,0) > 10) {
-		/* round 10: */
-		s[threadIdx.x+4*threadIdx.y] = Tes0[t[threadIdx.x+4*threadIdx.y] & 0xff] ^ Tes1[(t[(1+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-						Tes2[(t[(2+threadIdx.x)%4+4*threadIdx.y] >> 16) & 0xff] ^ Tes3[t[(3+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-						tex1Dfetch(texref_dk,40+threadIdx.x);
-        	/* round 11: */
-   		t[threadIdx.x+4*threadIdx.y] = Tes0[s[threadIdx.x+4*threadIdx.y] & 0xff] ^ Tes1[(s[(1+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-						Tes2[(s[(2+threadIdx.x)%4+4*threadIdx.y] >> 16) & 0xff] ^ Tes3[s[(3+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-						tex1Dfetch(texref_dk,44+threadIdx.x);
-		if (tex1Dfetch(texref_r,0) > 12) {
-			/* round 12: */
-			s[threadIdx.x+4*threadIdx.y] = Tes0[ t[threadIdx.x       +4*threadIdx.y]        & 0xff] ^
-							Tes1[(t[(1+threadIdx.x)%4+4*threadIdx.y] >>  8) & 0xff] ^ 
-							Tes2[(t[(2+threadIdx.x)%4+4*threadIdx.y] >> 16) & 0xff] ^ 
-							Tes3[ t[(3+threadIdx.x)%4+4*threadIdx.y] >> 24        ] ^
-							tex1Dfetch(texref_dk,48+threadIdx.x);
-			/* round 13: */
-			t[threadIdx.x+4*threadIdx.y] = Tes0[ s[threadIdx.x       +4*threadIdx.y]        & 0xff] ^ 
-							Tes1[(s[(1+threadIdx.x)%4+4*threadIdx.y] >>  8) & 0xff] ^
-							Tes2[(s[(2+threadIdx.x)%4+4*threadIdx.y] >> 16) & 0xff] ^
-							Tes3[ s[(3+threadIdx.x)%4+4*threadIdx.y] >> 24        ] ^
-							tex1Dfetch(texref_dk,52+threadIdx.x);
-		}
-	}
-        /* last round: */
-	state[blockIdx.x*MAX_THREAD+threadIdx.x+4*threadIdx.y] =(Tes2[(t[threadIdx.x+4*threadIdx.y]            ) & 0xff] & 0x000000ff) ^ 
-								(Tes3[(t[(1+threadIdx.x)%4+4*threadIdx.y] >>  8) & 0xff] & 0x0000ff00) ^
-								(Tes0[(t[(2+threadIdx.x)%4+4*threadIdx.y] >> 16) & 0xff] & 0x00ff0000) ^ 
-								(Tes1[(t[(3+threadIdx.x)%4+4*threadIdx.y] >> 24)       ] & 0xff000000) ^
-								tex1Dfetch(texref_dk,threadIdx.x+(tex1Dfetch(texref_r,0) << 2));
-	}
-
-__global__ void AESdecKernel(uint32_t state[]) {
-	__shared__ uint32_t t[MAX_THREAD];
-	__shared__ uint32_t s[MAX_THREAD];
-
-	__shared__ uint32_t Tds0[256];
-	__shared__ uint32_t Tds1[256];
-	__shared__ uint32_t Tds2[256];
-	__shared__ uint32_t Tds3[256];
-	__shared__ uint32_t Tds4[256];
-
-	Tds0[threadIdx.x+4*threadIdx.y]=Td0[threadIdx.x+4*threadIdx.y];
-	Tds1[threadIdx.x+4*threadIdx.y]=Td1[threadIdx.x+4*threadIdx.y];
-	Tds2[threadIdx.x+4*threadIdx.y]=Td2[threadIdx.x+4*threadIdx.y];
-	Tds3[threadIdx.x+4*threadIdx.y]=Td3[threadIdx.x+4*threadIdx.y];
-	Tds4[threadIdx.x+4*threadIdx.y]=Td4[threadIdx.x+4*threadIdx.y];
-
-	__syncthreads();	// __threadfence_block() could be enough
-
-	s[threadIdx.x+4*threadIdx.y] = state[blockIdx.x*MAX_THREAD+threadIdx.x+4*threadIdx.y] ^ tex1Dfetch(texref_dk,threadIdx.x);
-
-	/* round 1: */
-	t[threadIdx.x+4*threadIdx.y] = Tds0[s[threadIdx.x+4*threadIdx.y] & 0xff] ^ Tds1[(s[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Tds2[(s[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Tds3[s[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,4+threadIdx.x);
-	/* round 2: */
-	s[threadIdx.x+4*threadIdx.y] = Tds0[t[threadIdx.x+4*threadIdx.y] & 0xff] ^ Tds1[(t[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Tds2[(t[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Tds3[t[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,8+threadIdx.x);
-	/* round 3: */
-	t[threadIdx.x+4*threadIdx.y] = Tds0[s[threadIdx.x+4*threadIdx.y] & 0xff] ^ Tds1[(s[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Tds2[(s[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Tds3[s[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,12+threadIdx.x);
-	/* round 4: */
-	s[threadIdx.x+4*threadIdx.y] = Tds0[t[threadIdx.x+4*threadIdx.y] & 0xff] ^ Tds1[(t[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Tds2[(t[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Tds3[t[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,16+threadIdx.x);
-	/* round 5: */
-	t[threadIdx.x+4*threadIdx.y] = Tds0[s[threadIdx.x+4*threadIdx.y] & 0xff] ^ Tds1[(s[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Tds2[(s[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Tds3[s[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,20+threadIdx.x);
-	/* round 6: */
-	s[threadIdx.x+4*threadIdx.y] = Tds0[t[threadIdx.x+4*threadIdx.y] & 0xff] ^ Tds1[(t[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Tds2[(t[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Tds3[t[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,24+threadIdx.x);
-	/* round 7: */
-	t[threadIdx.x+4*threadIdx.y] = Tds0[s[threadIdx.x+4*threadIdx.y] & 0xff] ^ Tds1[(s[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Tds2[(s[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Tds3[s[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,28+threadIdx.x);
-	/* round 8: */
-	s[threadIdx.x+4*threadIdx.y] = Tds0[t[threadIdx.x+4*threadIdx.y] & 0xff] ^ Tds1[(t[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Tds2[(t[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Tds3[t[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,32+threadIdx.x);
-	/* round 9: */
-	t[threadIdx.x+4*threadIdx.y] = Tds0[s[threadIdx.x+4*threadIdx.y] & 0xff] ^ Tds1[(s[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Tds2[(s[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Tds3[s[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,36+threadIdx.x);
-	if (tex1Dfetch(texref_r,0) > 10) {
-        	/* round 10: */
-		s[threadIdx.x+4*threadIdx.y] = Tds0[t[threadIdx.x+4*threadIdx.y] & 0xff] ^ Tds1[(t[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-						Tds2[(t[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Tds3[t[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-						tex1Dfetch(texref_dk,40+threadIdx.x);
-        	/* round 11: */
-		t[threadIdx.x+4*threadIdx.y] = Tds0[s[threadIdx.x+4*threadIdx.y] & 0xff] ^ Tds1[(s[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-						Tds2[(s[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Tds3[s[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-						tex1Dfetch(texref_dk,44+threadIdx.x);
-	        if (tex1Dfetch(texref_r,0) > 12) {
-        		/* round 12: */
-			s[threadIdx.x+4*threadIdx.y] = Tds0[t[threadIdx.x+4*threadIdx.y]                & 0xff] ^ 
-							Tds1[(t[(3+threadIdx.x)%4+4*threadIdx.y] >>  8) & 0xff] ^ 
-							Tds2[(t[(2+threadIdx.x)%4+4*threadIdx.y] >> 16) & 0xff] ^ 
-							Tds3[ t[(1+threadIdx.x)%4+4*threadIdx.y] >> 24        ] ^
-							tex1Dfetch(texref_dk,48+threadIdx.x);
-            		/* round 13: */
-			t[threadIdx.x+4*threadIdx.y] = Tds0[s[threadIdx.x+4*threadIdx.y]                & 0xff] ^ 
-							Tds1[(s[(3+threadIdx.x)%4+4*threadIdx.y] >>  8) & 0xff] ^ 
-							Tds2[(s[(2+threadIdx.x)%4+4*threadIdx.y] >> 16) & 0xff] ^
-							Tds3[ s[(1+threadIdx.x)%4+4*threadIdx.y] >> 24        ] ^
-							tex1Dfetch(texref_dk,52+threadIdx.x);
-			}
-		}
-        /* last round: */
-	state[blockIdx.x*MAX_THREAD+threadIdx.x+4*threadIdx.y] =(Tds4[(t[threadIdx.x+4*threadIdx.y]            ) & 0xff]      ) ^
-								(Tds4[(t[(3+threadIdx.x)%4+4*threadIdx.y] >>  8) & 0xff] <<  8) ^
-								(Tds4[(t[(2+threadIdx.x)%4+4*threadIdx.y] >> 16) & 0xff] << 16) ^
-								(Tds4[(t[(1+threadIdx.x)%4+4*threadIdx.y] >> 24)       ] << 24) ^
-								tex1Dfetch(texref_dk,threadIdx.x+(tex1Dfetch(texref_r,0) << 2)); 
-	}
-
-#endif
-
-/* Encrypt a single block in and out can overlap. */
-extern "C" void AES_cuda_encrypt(const unsigned char *in, unsigned char *out, size_t nbytes) {
-	if (output_verbosity==OUTPUT_VERBOSE) fprintf(stdout,"\nSize: %d\n",(int)nbytes);
-	if (output_verbosity==OUTPUT_VERBOSE) fprintf(stdout,"Starting encrypt...");
-	// definisco le variabili
-	cudaError_t cudaerrno;
-	// valido l'input
-	assert(in && out && nbytes);
-
-	transferHostToDevice (&in, &d_s, &h_s, &nbytes);
-
-	if (output_verbosity==OUTPUT_VERBOSE) fprintf(stdout,"kernel execution...");
-	if ((nbytes%(MAX_THREAD*STATE_THREAD_AES))==0) {
-		dim3 dimGrid(nbytes/(MAX_THREAD*STATE_THREAD_AES));
-		dim3 dimBlock(STATE_THREAD_AES,MAX_THREAD/STATE_THREAD_AES);
-		AESencKernel<<<dimGrid,dimBlock>>>(d_s);
-		_CUDA_N("kernel launch failure");
-		} else {
-			dim3 dimGrid(1);
-#if defined T_TABLE_CONSTANT
-			dim3 dimBlock(STATE_THREAD_AES,nbytes/AES_BLOCK_SIZE);
-#else
-			dim3 dimBlock(STATE_THREAD_AES,1024/AES_BLOCK_SIZE);
-#endif
-			AESencKernel<<<dimGrid,dimBlock>>>(d_s);
-			_CUDA_N("kernel launch failure");
-			}
-
-	transferDeviceToHost (&out, &d_s, &h_s, &h_s, &nbytes);
-	
-	if (output_verbosity==OUTPUT_VERBOSE) fprintf(stdout,"done!\n");
+	AES_ENC_ROUND( 4,t,s);
+	AES_ENC_ROUND( 8,s,t);
+	AES_ENC_ROUND(12,t,s);
+	AES_ENC_ROUND(16,s,t);
+	AES_ENC_ROUND(20,t,s);
+	AES_ENC_ROUND(24,s,t);
+	AES_ENC_ROUND(28,t,s);
+	AES_ENC_ROUND(32,s,t);
+	AES_ENC_ROUND(36,t,s);
+	AES_FINAL_ENC_ROUND(0x28);
 }
 
-/* Decrypt a single block in and out can overlap */
-extern "C" void AES_cuda_decrypt(const unsigned char *in, unsigned char *out,size_t nbytes) {
-	assert(in && out && nbytes);	// valido l'input
-	cudaError_t cudaerrno;		// dichiarazione vari
+__global__ void AES192encKernel(uint32_t data[]) {
+	__shared__ uint32_t t[MAX_THREAD];
+	__shared__ uint32_t s[MAX_THREAD];
 
-	if (output_verbosity==OUTPUT_VERBOSE) fprintf(stdout,"\nSize: %d\n",(int)nbytes);
-	if (output_verbosity==OUTPUT_VERBOSE) fprintf(stdout,"Starting decrypt...");
+	s[SX] = data[__umul24(blockIdx.x,MAX_THREAD)+SX] ^ tex1Dfetch(texref_dk,threadIdx.x);
+	
+	AES_ENC_ROUND( 4,t,s);
+	AES_ENC_ROUND( 8,s,t);
+	AES_ENC_ROUND(12,t,s);
+	AES_ENC_ROUND(16,s,t);
+	AES_ENC_ROUND(20,t,s);
+	AES_ENC_ROUND(24,s,t);
+	AES_ENC_ROUND(28,t,s);
+	AES_ENC_ROUND(32,s,t);
+	AES_ENC_ROUND(36,t,s);
+	AES_ENC_ROUND(40,s,t);
+	AES_ENC_ROUND(44,t,s);
+	AES_FINAL_ENC_ROUND(0x30);
+}
 
-	transferHostToDevice (&in, &d_s, &h_s, &nbytes);
+__global__ void AES256encKernel(uint32_t data[]) {
+	__shared__ uint32_t t[MAX_THREAD];
+	__shared__ uint32_t s[MAX_THREAD];
 
-	if (output_verbosity==OUTPUT_VERBOSE) fprintf(stdout,"kernel execution...");
+	s[SX] = data[__umul24(blockIdx.x,MAX_THREAD)+SX] ^ tex1Dfetch(texref_dk,threadIdx.x);
+	
+	AES_ENC_ROUND( 4,t,s);
+	AES_ENC_ROUND( 8,s,t);
+	AES_ENC_ROUND(12,t,s);
+	AES_ENC_ROUND(16,s,t);
+	AES_ENC_ROUND(20,t,s);
+	AES_ENC_ROUND(24,s,t);
+	AES_ENC_ROUND(28,t,s);
+	AES_ENC_ROUND(32,s,t);
+	AES_ENC_ROUND(36,t,s);
+	AES_ENC_ROUND(40,s,t);
+	AES_ENC_ROUND(44,t,s);
+	AES_ENC_ROUND(48,s,t);
+	AES_ENC_ROUND(52,t,s);
+	AES_FINAL_ENC_ROUND(0x38);
+}
+
+#define AES_DEC_ROUND(n,D,S)	D[SX] = Td0[S[SX] & 0xff] ^ Td1[(S[(3+threadIdx.x)%4+ROW] >> 8) & 0xff] ^ \
+				Td2[(S[(2+threadIdx.x)%4+ROW] >>  16) & 0xff] ^ Td3[S[(1+threadIdx.x)%4+ROW] >> 24] ^ \
+				tex1Dfetch(texref_dk,n+threadIdx.x);
+#define AES_FINAL_DEC_ROUND(N)	register uint32_t p_state =(Td4[(t[SX]) & 0xff])     ^ \
+				(Td4[(t[(3+threadIdx.x)%4+ROW] >>  8) & 0xff] <<  8) ^ \
+				(Td4[(t[(2+threadIdx.x)%4+ROW] >> 16) & 0xff] << 16) ^ \
+				(Td4[(t[(1+threadIdx.x)%4+ROW] >> 24)       ] << 24) ^ \
+				tex1Dfetch(texref_dk,threadIdx.x+N); \
+				data[blockIdx.x*MAX_THREAD+SX] = p_state; 
+
+__global__ void AES128decKernel(uint32_t *data) {
+	__shared__ uint32_t t[MAX_THREAD];
+	__shared__ uint32_t s[MAX_THREAD];
+
+	s[SX] = data[blockIdx.x*MAX_THREAD+SX] ^ tex1Dfetch(texref_dk,threadIdx.x);
+
+	AES_DEC_ROUND( 4,t,s);
+	AES_DEC_ROUND( 8,s,t);
+	AES_DEC_ROUND(12,t,s);
+	AES_DEC_ROUND(16,s,t);
+	AES_DEC_ROUND(20,t,s);
+	AES_DEC_ROUND(24,s,t);
+	AES_DEC_ROUND(28,t,s);
+	AES_DEC_ROUND(32,s,t);
+	AES_DEC_ROUND(36,t,s);
+	AES_FINAL_DEC_ROUND(0x28);
+}
+
+__global__ void AES192decKernel(uint32_t *data) {
+	__shared__ uint32_t t[MAX_THREAD];
+	__shared__ uint32_t s[MAX_THREAD];
+
+	s[SX] = data[blockIdx.x*MAX_THREAD+SX] ^ tex1Dfetch(texref_dk,threadIdx.x);
+
+	AES_DEC_ROUND( 4,t,s);
+	AES_DEC_ROUND( 8,s,t);
+	AES_DEC_ROUND(12,t,s);
+	AES_DEC_ROUND(16,s,t);
+	AES_DEC_ROUND(20,t,s);
+	AES_DEC_ROUND(24,s,t);
+	AES_DEC_ROUND(28,t,s);
+	AES_DEC_ROUND(32,s,t);
+	AES_DEC_ROUND(36,t,s);
+	AES_DEC_ROUND(40,s,t);
+	AES_DEC_ROUND(44,t,s);
+	AES_FINAL_DEC_ROUND(0x30);
+}
+
+__global__ void AES256decKernel(uint32_t data[]) {
+	__shared__ uint32_t t[MAX_THREAD];
+	__shared__ uint32_t s[MAX_THREAD];
+
+	s[SX] = data[blockIdx.x*MAX_THREAD+SX] ^ tex1Dfetch(texref_dk,threadIdx.x);
+
+	AES_DEC_ROUND( 4,t,s);
+	AES_DEC_ROUND( 8,s,t);
+	AES_DEC_ROUND(12,t,s);
+	AES_DEC_ROUND(16,s,t);
+	AES_DEC_ROUND(20,t,s);
+	AES_DEC_ROUND(24,s,t);
+	AES_DEC_ROUND(28,t,s);
+	AES_DEC_ROUND(32,s,t);
+	AES_DEC_ROUND(36,t,s);
+	AES_DEC_ROUND(40,s,t);
+	AES_DEC_ROUND(44,t,s);
+	AES_DEC_ROUND(48,t,s);
+	AES_DEC_ROUND(52,s,t);
+	AES_FINAL_DEC_ROUND(0x38);
+}
+
+#define AES_FINAL_DEC_ROUND_CBC(N)	register uint32_t p_state =(Td4[(t[SX]) & 0xff])     ^ \
+					(Td4[(t[(3+threadIdx.x)%4+ROW] >>  8) & 0xff] <<  8) ^ \
+					(Td4[(t[(2+threadIdx.x)%4+ROW] >> 16) & 0xff] << 16) ^ \
+					(Td4[(t[(1+threadIdx.x)%4+ROW] >> 24)       ] << 24) ^ \
+					tex1Dfetch(texref_dk,threadIdx.x+N); \
+
+__global__ void AES128decKernel_cbc(uint32_t data[]) {
+	__shared__ uint32_t t[MAX_THREAD];
+	__shared__ uint32_t s[MAX_THREAD];
+
+	s[SX] = data[blockIdx.x*MAX_THREAD+SX] ^ tex1Dfetch(texref_dk,threadIdx.x);
+
+	AES_DEC_ROUND( 4,t,s);
+	AES_DEC_ROUND( 8,s,t);
+	AES_DEC_ROUND(12,t,s);
+	AES_DEC_ROUND(16,s,t);
+	AES_DEC_ROUND(20,t,s);
+	AES_DEC_ROUND(24,s,t);
+	AES_DEC_ROUND(28,t,s);
+	AES_DEC_ROUND(32,s,t);
+	AES_DEC_ROUND(36,t,s);
+	AES_FINAL_DEC_ROUND_CBC(0x28);
+
+	if(blockIdx.x==0 && threadIdx.x <4 && threadIdx.y ==0) {
+		p_state ^= d_iv[threadIdx.x];
+	} else {
+		p_state ^= data[blockIdx.x*MAX_THREAD+SX-4];
+	}
+	__syncthreads();
+
+	// TODO: Might bug out for multiple blocks!
+	data[blockIdx.x*MAX_THREAD+SX] = p_state;
+}
+
+__global__ void AES192decKernel_cbc(uint32_t data[]) {
+	__shared__ uint32_t t[MAX_THREAD];
+	__shared__ uint32_t s[MAX_THREAD];
+
+	s[SX] = data[blockIdx.x*MAX_THREAD+SX] ^ tex1Dfetch(texref_dk,threadIdx.x);
+
+	AES_DEC_ROUND( 4,t,s);
+	AES_DEC_ROUND( 8,s,t);
+	AES_DEC_ROUND(12,t,s);
+	AES_DEC_ROUND(16,s,t);
+	AES_DEC_ROUND(20,t,s);
+	AES_DEC_ROUND(24,s,t);
+	AES_DEC_ROUND(28,t,s);
+	AES_DEC_ROUND(32,s,t);
+	AES_DEC_ROUND(36,t,s);
+	AES_DEC_ROUND(40,s,t);
+	AES_DEC_ROUND(44,t,s);
+	AES_FINAL_DEC_ROUND_CBC(0x30);
+
+	if(blockIdx.x==0 && threadIdx.x <4 && threadIdx.y ==0) {
+		p_state ^= d_iv[threadIdx.x];
+	} else {
+		p_state ^= data[blockIdx.x*MAX_THREAD+SX-4];
+	}
+	__syncthreads();
+
+	data[blockIdx.x*MAX_THREAD+SX] = p_state;
+}
+
+__global__ void AES256decKernel_cbc(uint32_t data[]) {
+	__shared__ uint32_t t[MAX_THREAD];
+	__shared__ uint32_t s[MAX_THREAD];
+
+	s[SX] = data[blockIdx.x*MAX_THREAD+SX] ^ tex1Dfetch(texref_dk,threadIdx.x);
+
+	AES_DEC_ROUND( 4,t,s);
+	AES_DEC_ROUND( 8,s,t);
+	AES_DEC_ROUND(12,t,s);
+	AES_DEC_ROUND(16,s,t);
+	AES_DEC_ROUND(20,t,s);
+	AES_DEC_ROUND(24,s,t);
+	AES_DEC_ROUND(28,t,s);
+	AES_DEC_ROUND(32,s,t);
+	AES_DEC_ROUND(36,t,s);
+	AES_DEC_ROUND(40,s,t);
+	AES_DEC_ROUND(44,t,s);
+	AES_DEC_ROUND(48,t,s);
+	AES_DEC_ROUND(52,s,t);
+	AES_FINAL_DEC_ROUND_CBC(0x38);
+
+	if(blockIdx.x==0 && threadIdx.x <4 && threadIdx.y ==0) {
+		p_state ^= d_iv[threadIdx.x];
+	} else {
+		p_state ^= data[blockIdx.x*MAX_THREAD+SX-4];
+	}
+	__syncthreads();
+
+	data[blockIdx.x*MAX_THREAD+SX] = p_state;
+}
+
+extern "C" void AES_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, EVP_CIPHER_CTX *ctx, uint8_t **host_data, uint64_t **device_data) {
+	int gridSize;
+	dim3 dimBlock(STATE_THREAD_AES,MAX_THREAD/STATE_THREAD_AES);
+
+	transferHostToDevice(&in, (uint32_t **)device_data, host_data, &nbytes);
 
 	if ((nbytes%(MAX_THREAD*STATE_THREAD_AES))==0) {
-		dim3 dimGrid(nbytes/(MAX_THREAD*STATE_THREAD_AES));
-		dim3 dimBlock(STATE_THREAD_AES,MAX_THREAD/STATE_THREAD_AES);
-		AESdecKernel<<<dimGrid,dimBlock>>>(d_s);
-		_CUDA_N("kernel launch failure");
-		} else {
-			dim3 dimGrid(1);
-#if defined T_TABLE_CONSTANT
-			dim3 dimBlock(STATE_THREAD_AES,nbytes/AES_BLOCK_SIZE);
-#else
-			dim3 dimBlock(STATE_THREAD_AES,1024/AES_BLOCK_SIZE);
-#endif
-			AESdecKernel<<<dimGrid,dimBlock>>>(d_s);
-			_CUDA_N("kernel launch failure");
-			}
-
-	transferDeviceToHost (&out, &d_s, &h_s, &h_s, &nbytes);
-	
-	if (output_verbosity==OUTPUT_VERBOSE) fprintf(stdout,"done!\n");
+		gridSize = nbytes/(MAX_THREAD*STATE_THREAD_AES);
+	} else {
+		gridSize = nbytes/(MAX_THREAD*STATE_THREAD_AES)+1;
 	}
 
-void AES_cuda_transfer_key(const AES_KEY *key) {
-	assert(key);
+	#ifdef DEBUG
+		fprintf(stdout,"Starting AES kernel for %zu bytes with (%d, (%d, %d))...\n", nbytes, gridSize, dimBlock.x, dimBlock.y);
+	#endif
+
+	if(ctx->encrypt && EVP_CIPHER_CTX_mode(ctx) == EVP_CIPH_ECB_MODE) {
+		switch(EVP_CIPHER_CTX_key_length(ctx)) {
+			case 16:
+				AES128encKernel<<<gridSize,dimBlock>>>((uint32_t *)*device_data);
+				break;
+			case 24:
+				AES192encKernel<<<gridSize,dimBlock>>>((uint32_t *)*device_data);
+				break;
+			case 32:
+				AES256encKernel<<<gridSize,dimBlock>>>((uint32_t *)*device_data);
+				break;
+		}
+	} else if (!ctx->encrypt && EVP_CIPHER_CTX_mode(ctx) == EVP_CIPH_ECB_MODE) {
+		switch(EVP_CIPHER_CTX_key_length(ctx)) {
+			case 16:
+				AES128decKernel<<<gridSize,dimBlock>>>((uint32_t *)*device_data);
+				break;
+			case 24:
+				AES192decKernel<<<gridSize,dimBlock>>>((uint32_t *)*device_data);
+				break;
+			case 32:
+				AES256decKernel<<<gridSize,dimBlock>>>((uint32_t *)*device_data);
+				break;
+		}
+	}
+
+	if (!ctx->encrypt && EVP_CIPHER_CTX_mode(ctx) == EVP_CIPH_CBC_MODE) {
+		switch(EVP_CIPHER_CTX_key_length(ctx)) {
+			case 16:
+				AES128decKernel_cbc<<<gridSize,dimBlock>>>((uint32_t *)*device_data);
+				break;
+			case 24:
+				AES192decKernel_cbc<<<gridSize,dimBlock>>>((uint32_t *)*device_data);
+				break;
+			case 32:
+				AES256decKernel_cbc<<<gridSize,dimBlock>>>((uint32_t *)*device_data);
+				break;
+		}
+	}
+
+	#ifdef DEBUG
+		cudaError_t cudaerrno;
+		_CUDA_N("AES kernel could not be launched!");
+	#endif
+
+	transferDeviceToHost(&out, (uint32_t **)device_data, host_data, host_data, &nbytes);
+}
+
+extern "C" void AES_cuda_transfer_key_schedule(AES_KEY *ks) {
+	assert(ks);
 	cudaError_t cudaerrno;
 
-	texref_r.addressMode[0] = cudaAddressModeClamp;
-	texref_r.addressMode[1] = cudaAddressModeClamp;
-	texref_r.filterMode = cudaFilterModePoint;
-	texref_r.normalized = false;    		// access with integer texture coordinates
-	
 	cudaChannelFormatDesc channelDescR = cudaCreateChannelDesc (32, 0, 0, 0, cudaChannelFormatKindSigned);
 	_CUDA_N("cudaCreateChannelDesc");
-
-	_CUDA(cudaMallocArray(&arrayR,&channelDescR,1,1));
-
-	_CUDA(cudaMemcpyToArray(arrayR,0,0,&key->rounds,sizeof(int), cudaMemcpyHostToDevice));
-	
-	_CUDA(cudaBindTextureToArray(texref_r, arrayR, channelDescR));
 
 	texref_dk.addressMode[0] = cudaAddressModeClamp;
 	texref_dk.addressMode[1] = cudaAddressModeClamp;
@@ -1576,574 +1414,14 @@ void AES_cuda_transfer_key(const AES_KEY *key) {
 	cudaChannelFormatDesc channelDescDK = cudaCreateChannelDesc (32, 0, 0, 0, cudaChannelFormatKindUnsigned);
 	_CUDA_N("cudaCreateChannelDesc");
 
-	_CUDA(cudaMallocArray(&arrayDK,&channelDescDK,4*(key->rounds+1),1));
+	_CUDA(cudaMallocArray(&arrayDK,&channelDescDK,4*(ks->rounds+1),1));
 
-	_CUDA(cudaMemcpyToArray(arrayDK,0,0, key->rd_key,4*(key->rounds+1)*sizeof(unsigned int), cudaMemcpyHostToDevice));
+	_CUDA(cudaMemcpyToArray(arrayDK,0,0, ks,4*(ks->rounds+1)*sizeof(unsigned int), cudaMemcpyHostToDevice));
 
 	_CUDA(cudaBindTextureToArray(texref_dk, arrayDK, channelDescDK));
-	}
-
-extern "C" int AES_cuda_set_encrypt_key(unsigned char *userKey, int bits, AES_KEY *key){
-	if(AES_cpu_set_encrypt_key(userKey,bits,key)!=0) return 1;
-	AES_cuda_transfer_key(key);
-	return 0;
-	}
-
-extern "C" int AES_cuda_set_decrypt_key(unsigned char *userKey, int bits, AES_KEY *key){
-	if(AES_cpu_set_decrypt_key(userKey,bits,key)!=0) return 1;
-	AES_cuda_transfer_key(key);
-	return 0;
-	}
-
-extern "C" void AES_cuda_finish() {
-	cudaError_t cudaerrno;
-
-#ifndef PAGEABLE 
-#if CUDART_VERSION >= 2020
-	if(isIntegrated) {
-		_CUDA(cudaFreeHost(h_s));
-		_CUDA(cudaFreeHost(h_out));
-		_CUDA(cudaFreeHost(h_iv));
-		} else {
-			_CUDA(cudaFree(d_s));
-			_CUDA(cudaFree(d_out));
-			_CUDA(cudaFree(d_iv));
-			}
-#else	
-	_CUDA(cudaFree(d_s));
-	_CUDA(cudaFree(d_out));
-	_CUDA(cudaFree(d_iv));
-#endif
-#else
-	_CUDA(cudaFree(d_s));
-	_CUDA(cudaFree(d_out));
-	_CUDA(cudaFree(d_iv));
-#endif	
-
-	_CUDA(cudaFree(d_k));
-	_CUDA(cudaFree(rounds));
-
-	_CUDA(cudaEventRecord(stop,0));
-
-	_CUDA(cudaEventSynchronize(stop));
-
-	_CUDA(cudaEventElapsedTime(&elapsed,start,stop));
-
-	if (output_verbosity>=OUTPUT_NORMAL) fprintf(stdout,"\nTotal time: %f milliseconds\n",elapsed);	
-	}
-
-extern "C" void AES_cuda_init(int* nm,int buffer_size_engine,int output_kind) {
-	assert(nm);
-	cudaError_t cudaerrno;
-   	int buffer_size;
-	cudaDeviceProp deviceProp;
-    	
-	output_verbosity=output_kind;
-
-	checkCUDADevice(&deviceProp, output_verbosity);
-	
-	if(buffer_size_engine==0)
-		buffer_size=MAX_CHUNK_SIZE;
-		else buffer_size=buffer_size_engine;
-	
-#if CUDART_VERSION >= 2000
-	*nm=deviceProp.multiProcessorCount;
-#endif
-
-#ifndef PAGEABLE 
-#if CUDART_VERSION >= 2020
-	isIntegrated=deviceProp.integrated;
-	if(isIntegrated) {
-        	//zero-copy memory mode - use special function to get OS-pinned memory
-		_CUDA(cudaSetDeviceFlags(cudaDeviceMapHost));
-        	if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"Using zero-copy memory.\n");
-        	_CUDA(cudaHostAlloc((void**)&h_s,buffer_size,cudaHostAllocMapped));
-		_CUDA(cudaHostAlloc((void**)&h_out,buffer_size,cudaHostAllocMapped));
-		_CUDA(cudaHostAlloc((void**)&h_iv,buffer_size,cudaHostAllocMapped));
-		transferHostToDevice = transferHostToDevice_ZEROCOPY;		// set memory transfer function
-		transferDeviceToHost = transferDeviceToHost_ZEROCOPY;		// set memory transfer function
-		_CUDA(cudaHostGetDevicePointer(&d_s,h_s, 0));
-		_CUDA(cudaHostGetDevicePointer(&d_out,h_out, 0));
-		_CUDA(cudaHostGetDevicePointer(&d_iv,h_iv, 0));
-		} else {
-       			//pinned memory mode - use special function to get OS-pinned memory
-        		_CUDA(cudaHostAlloc( (void**)&h_s, buffer_size, cudaHostAllocDefault));
-        		_CUDA(cudaHostAlloc( (void**)&h_out, buffer_size, cudaHostAllocDefault));
-        		_CUDA(cudaHostAlloc( (void**)&h_iv, buffer_size, cudaHostAllocDefault));
-        		if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"Using pinned memory: cudaHostAllocDefault.\n");
-			transferHostToDevice = transferHostToDevice_PINNED;	// set memory transfer function
-			transferDeviceToHost = transferDeviceToHost_PINNED;	// set memory transfer function
-			_CUDA(cudaMalloc((void **)&d_s,buffer_size));
-			_CUDA(cudaMalloc((void **)&d_out,buffer_size));
-			_CUDA(cudaMalloc((void **)&d_iv,AES_BLOCK_SIZE));
-			}
-#else
-        //pinned memory mode - use special function to get OS-pinned memory
-        _CUDA(cudaMallocHost((void**)&h_s, buffer_size));
-        _CUDA(cudaMallocHost((void**)&h_out, buffer_size));
-        _CUDA(cudaMallocHost((void**)&h_iv, buffer_size));
-        if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"Using pinned memory: cudaHostAllocDefault.\n");
-	transferHostToDevice = transferHostToDevice_PINNED;			// set memory transfer function
-	transferDeviceToHost = transferDeviceToHost_PINNED;			// set memory transfer function
-	_CUDA(cudaMalloc((void **)&d_s,buffer_size));
-	_CUDA(cudaMalloc((void **)&d_out,buffer_size));
-        _CUDA(cudaMalloc((void **)&d_iv,AES_BLOCK_SIZE));
-#endif
-#else
-        if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"Using pageable memory.\n");
-	transferHostToDevice = transferHostToDevice_PAGEABLE;			// set memory transfer function
-	transferDeviceToHost = transferDeviceToHost_PAGEABLE;			// set memory transfer function
-	_CUDA(cudaMalloc((void **)&d_s,buffer_size));
-	_CUDA(cudaMalloc((void **)&d_out,buffer_size));
-        _CUDA(cudaMalloc((void **)&d_iv,AES_BLOCK_SIZE));
-#endif
-
-	if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"The current buffer size is %d.\n\n", buffer_size);
-        _CUDA(cudaMalloc((void **)&d_k, 4*(AES_MAXNR + 1)*sizeof(uint32_t)));
-	_CUDA(cudaMalloc((void **)&rounds,4*sizeof(uint32_t)));
-
-	_CUDA(cudaEventCreate(&start));
-	_CUDA(cudaEventCreate(&stop));
-	_CUDA(cudaEventRecord(start,0));
-	}
-//
-// CBC parallel decrypt
-//
-
-#if defined T_TABLE_CONSTANT
-__global__ void AESdecKernel_cbc(uint32_t in[],uint32_t out[],uint32_t iv[]) {
-	__shared__ uint32_t t[MAX_THREAD];
-	__shared__ uint32_t s[MAX_THREAD];
-
-	s[threadIdx.x+4*threadIdx.y] = in[blockIdx.x*MAX_THREAD+threadIdx.x+4*threadIdx.y] ^ tex1Dfetch(texref_dk,threadIdx.x);
-
-	/* round 1: */
-	t[threadIdx.x+4*threadIdx.y] = Td0[s[threadIdx.x+4*threadIdx.y] & 0xff] ^ Td1[(s[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Td2[(s[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Td3[s[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,4+threadIdx.x);
-	/* round 2: */
-	s[threadIdx.x+4*threadIdx.y] = Td0[t[threadIdx.x+4*threadIdx.y] & 0xff] ^ Td1[(t[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Td2[(t[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Td3[t[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,8+threadIdx.x);
-	/* round 3: */
-	t[threadIdx.x+4*threadIdx.y] = Td0[s[threadIdx.x+4*threadIdx.y] & 0xff] ^ Td1[(s[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Td2[(s[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Td3[s[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,12+threadIdx.x);
-	/* round 4: */
-	s[threadIdx.x+4*threadIdx.y] = Td0[t[threadIdx.x+4*threadIdx.y] & 0xff] ^ Td1[(t[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Td2[(t[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Td3[t[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,16+threadIdx.x);
-	/* round 5: */
-	t[threadIdx.x+4*threadIdx.y] = Td0[s[threadIdx.x+4*threadIdx.y] & 0xff] ^ Td1[(s[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Td2[(s[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Td3[s[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,20+threadIdx.x);
-	/* round 6: */
-	s[threadIdx.x+4*threadIdx.y] = Td0[t[threadIdx.x+4*threadIdx.y] & 0xff] ^ Td1[(t[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Td2[(t[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Td3[t[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,24+threadIdx.x);
-	/* round 7: */
-	t[threadIdx.x+4*threadIdx.y] = Td0[s[threadIdx.x+4*threadIdx.y] & 0xff] ^ Td1[(s[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Td2[(s[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Td3[s[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,28+threadIdx.x);
-	/* round 8: */
-	s[threadIdx.x+4*threadIdx.y] = Td0[t[threadIdx.x+4*threadIdx.y] & 0xff] ^ Td1[(t[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Td2[(t[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Td3[t[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,32+threadIdx.x);
-	/* round 9: */
-	t[threadIdx.x+4*threadIdx.y] = Td0[s[threadIdx.x+4*threadIdx.y] & 0xff] ^ Td1[(s[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Td2[(s[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Td3[s[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,36+threadIdx.x);
-	if (tex1Dfetch(texref_r,0) > 10) {
-        	/* round 10: */
-		s[threadIdx.x+4*threadIdx.y] = Td0[t[threadIdx.x+4*threadIdx.y] & 0xff] ^ Td1[(t[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-						Td2[(t[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Td3[t[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-						tex1Dfetch(texref_dk,40+threadIdx.x);
-        	/* round 11: */
-		t[threadIdx.x+4*threadIdx.y] = Td0[s[threadIdx.x+4*threadIdx.y] & 0xff] ^ Td1[(s[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-						Td2[(s[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Td3[s[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-						tex1Dfetch(texref_dk,44+threadIdx.x);
-	        if (tex1Dfetch(texref_r,0) > 12) {
-        		/* round 12: */
-			s[threadIdx.x+4*threadIdx.y] = Td0[t[threadIdx.x+4*threadIdx.y]                & 0xff] ^ 
-							Td1[(t[(3+threadIdx.x)%4+4*threadIdx.y] >>  8) & 0xff] ^ 
-							Td2[(t[(2+threadIdx.x)%4+4*threadIdx.y] >> 16) & 0xff] ^ 
-							Td3[ t[(1+threadIdx.x)%4+4*threadIdx.y] >> 24        ] ^
-							tex1Dfetch(texref_dk,48+threadIdx.x);
-            		/* round 13: */
-			t[threadIdx.x+4*threadIdx.y] = Td0[s[threadIdx.x+4*threadIdx.y]                & 0xff] ^ 
-							Td1[(s[(3+threadIdx.x)%4+4*threadIdx.y] >>  8) & 0xff] ^ 
-							Td2[(s[(2+threadIdx.x)%4+4*threadIdx.y] >> 16) & 0xff] ^
-							Td3[ s[(1+threadIdx.x)%4+4*threadIdx.y] >> 24        ] ^
-							tex1Dfetch(texref_dk,52+threadIdx.x);
-			}
-		}
-        /* last round: */
-	s[threadIdx.x+4*threadIdx.y] = (Td4[(t[threadIdx.x+4*threadIdx.y]             ) & 0xff]      ) ^
-					(Td4[(t[(3+threadIdx.x)%4+4*threadIdx.y] >>  8) & 0xff] <<  8) ^
-					(Td4[(t[(2+threadIdx.x)%4+4*threadIdx.y] >> 16) & 0xff] << 16) ^
-					(Td4[(t[(1+threadIdx.x)%4+4*threadIdx.y] >> 24)       ] << 24) ^
-					tex1Dfetch(texref_dk,threadIdx.x+(tex1Dfetch(texref_r,0) << 2)); 
-	/* state ^ iv and write out*/
-	if(blockIdx.x==0 && threadIdx.x <4 && threadIdx.y ==0)
-		out[blockIdx.x*MAX_THREAD+threadIdx.x] = iv[threadIdx.x] ^ s[threadIdx.x];
-		else out[blockIdx.x*MAX_THREAD+threadIdx.x+4*threadIdx.y] = in[blockIdx.x*MAX_THREAD+(threadIdx.x+4*threadIdx.y)-4] ^
-										 s[threadIdx.x+4*threadIdx.y];
-//	if(blockIdx.x==(gridDim.x-1) && threadIdx.y==(blockDim.y-1))
-//		iv[threadIdx.x]=in[blockIdx.x*MAX_THREAD+4*threadIdx.y+threadIdx.x];
 }
 
-#else
-
-__global__ void AESdecKernel_cbc(uint32_t in[],uint32_t out[],uint32_t iv[]) {
-	__shared__ uint32_t t[MAX_THREAD];
-	__shared__ uint32_t s[MAX_THREAD];
-
-	__shared__ uint32_t Tds0[256];
-	__shared__ uint32_t Tds1[256];
-	__shared__ uint32_t Tds2[256];
-	__shared__ uint32_t Tds3[256];
-	__shared__ uint32_t Tds4[256];
-
-	Tds0[threadIdx.x+4*threadIdx.y]=Td0[threadIdx.x+4*threadIdx.y];
-	Tds1[threadIdx.x+4*threadIdx.y]=Td1[threadIdx.x+4*threadIdx.y];
-	Tds2[threadIdx.x+4*threadIdx.y]=Td2[threadIdx.x+4*threadIdx.y];
-	Tds3[threadIdx.x+4*threadIdx.y]=Td3[threadIdx.x+4*threadIdx.y];
-	Tds4[threadIdx.x+4*threadIdx.y]=Td4[threadIdx.x+4*threadIdx.y];
-
-	__syncthreads();	// __threadfence_block() could be enough
-
-	s[threadIdx.x+4*threadIdx.y] = in[blockIdx.x*MAX_THREAD+threadIdx.x+4*threadIdx.y] ^ tex1Dfetch(texref_dk,threadIdx.x);
-
-	/* round 1: */
-	t[threadIdx.x+4*threadIdx.y] = Tds0[s[threadIdx.x+4*threadIdx.y] & 0xff] ^ Tds1[(s[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Tds2[(s[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Tds3[s[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,4+threadIdx.x);
-	/* round 2: */
-	s[threadIdx.x+4*threadIdx.y] = Tds0[t[threadIdx.x+4*threadIdx.y] & 0xff] ^ Tds1[(t[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Tds2[(t[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Tds3[t[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,8+threadIdx.x);
-	/* round 3: */
-	t[threadIdx.x+4*threadIdx.y] = Tds0[s[threadIdx.x+4*threadIdx.y] & 0xff] ^ Tds1[(s[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Tds2[(s[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Tds3[s[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,12+threadIdx.x);
-	/* round 4: */
-	s[threadIdx.x+4*threadIdx.y] = Tds0[t[threadIdx.x+4*threadIdx.y] & 0xff] ^ Tds1[(t[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Tds2[(t[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Tds3[t[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,16+threadIdx.x);
-	/* round 5: */
-	t[threadIdx.x+4*threadIdx.y] = Tds0[s[threadIdx.x+4*threadIdx.y] & 0xff] ^ Tds1[(s[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Tds2[(s[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Tds3[s[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,20+threadIdx.x);
-	/* round 6: */
-	s[threadIdx.x+4*threadIdx.y] = Tds0[t[threadIdx.x+4*threadIdx.y] & 0xff] ^ Tds1[(t[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Tds2[(t[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Tds3[t[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,24+threadIdx.x);
-	/* round 7: */
-	t[threadIdx.x+4*threadIdx.y] = Tds0[s[threadIdx.x+4*threadIdx.y] & 0xff] ^ Tds1[(s[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Tds2[(s[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Tds3[s[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,28+threadIdx.x);
-	/* round 8: */
-	s[threadIdx.x+4*threadIdx.y] = Tds0[t[threadIdx.x+4*threadIdx.y] & 0xff] ^ Tds1[(t[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Tds2[(t[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Tds3[t[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,32+threadIdx.x);
-	/* round 9: */
-	t[threadIdx.x+4*threadIdx.y] = Tds0[s[threadIdx.x+4*threadIdx.y] & 0xff] ^ Tds1[(s[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-					Tds2[(s[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Tds3[s[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-					tex1Dfetch(texref_dk,36+threadIdx.x);
-	if (tex1Dfetch(texref_r,0) > 10) {
-        	/* round 10: */
-		s[threadIdx.x+4*threadIdx.y] = Tds0[t[threadIdx.x+4*threadIdx.y] & 0xff] ^ Tds1[(t[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-						Tds2[(t[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Tds3[t[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-						tex1Dfetch(texref_dk,40+threadIdx.x);
-        	/* round 11: */
-		t[threadIdx.x+4*threadIdx.y] = Tds0[s[threadIdx.x+4*threadIdx.y] & 0xff] ^ Tds1[(s[(3+threadIdx.x)%4+4*threadIdx.y] >> 8) & 0xff] ^ 
-						Tds2[(s[(2+threadIdx.x)%4+4*threadIdx.y] >>  16) & 0xff] ^ Tds3[s[(1+threadIdx.x)%4+4*threadIdx.y] >> 24] ^
-						tex1Dfetch(texref_dk,44+threadIdx.x);
-	        if (tex1Dfetch(texref_r,0) > 12) {
-        		/* round 12: */
-			s[threadIdx.x+4*threadIdx.y] = Tds0[t[threadIdx.x+4*threadIdx.y]                & 0xff] ^ 
-							Tds1[(t[(3+threadIdx.x)%4+4*threadIdx.y] >>  8) & 0xff] ^ 
-							Tds2[(t[(2+threadIdx.x)%4+4*threadIdx.y] >> 16) & 0xff] ^ 
-							Tds3[ t[(1+threadIdx.x)%4+4*threadIdx.y] >> 24        ] ^
-							tex1Dfetch(texref_dk,48+threadIdx.x);
-            		/* round 13: */
-			t[threadIdx.x+4*threadIdx.y] = Tds0[s[threadIdx.x+4*threadIdx.y]                & 0xff] ^ 
-							Tds1[(s[(3+threadIdx.x)%4+4*threadIdx.y] >>  8) & 0xff] ^ 
-							Tds2[(s[(2+threadIdx.x)%4+4*threadIdx.y] >> 16) & 0xff] ^
-							Tds3[ s[(1+threadIdx.x)%4+4*threadIdx.y] >> 24        ] ^
-							tex1Dfetch(texref_dk,52+threadIdx.x);
-			}
-		}
-        /* last round: */
-	s[threadIdx.x+4*threadIdx.y] = (Tds4[(t[threadIdx.x+4*threadIdx.y]             ) & 0xff]      ) ^
-					(Tds4[(t[(3+threadIdx.x)%4+4*threadIdx.y] >>  8) & 0xff] <<  8) ^
-					(Tds4[(t[(2+threadIdx.x)%4+4*threadIdx.y] >> 16) & 0xff] << 16) ^
-					(Tds4[(t[(1+threadIdx.x)%4+4*threadIdx.y] >> 24)       ] << 24) ^
-					tex1Dfetch(texref_dk,threadIdx.x+(tex1Dfetch(texref_r,0) << 2)); 
-	/* state ^ iv and write out*/
-	if(blockIdx.x==0 && threadIdx.x <4 && threadIdx.y ==0)
-		out[blockIdx.x*MAX_THREAD+threadIdx.x] = iv[threadIdx.x] ^ s[threadIdx.x];
-		else out[blockIdx.x*MAX_THREAD+threadIdx.x+4*threadIdx.y] = in[blockIdx.x*MAX_THREAD+(threadIdx.x+4*threadIdx.y)-4] ^
-										 s[threadIdx.x+4*threadIdx.y];
-//	if(blockIdx.x==(gridDim.x-1) && threadIdx.y==(blockDim.y-1))
-//		iv[threadIdx.x]=in[blockIdx.x*MAX_THREAD+4*threadIdx.y+threadIdx.x];
-	}
-
-#endif
-
 extern "C" void AES_cuda_transfer_iv(const unsigned char *iv) {
-	assert(iv);
-	size_t aes_block_size=AES_BLOCK_SIZE;
-	transferHostToDevice(&iv, &d_iv, &h_iv, &aes_block_size);
-	}
-
-extern "C" void AES_cuda_decrypt_cbc(const unsigned char *in, unsigned char *out, size_t nbytes) {
-	assert(in && out && nbytes);
 	cudaError_t cudaerrno;
-
-	if (output_verbosity==OUTPUT_VERBOSE) fprintf(stdout,"\nSize: %d\n",(int)nbytes);
-	if (output_verbosity==OUTPUT_VERBOSE) fprintf(stdout,"Starting decrypt...");
-
-	transferHostToDevice(&in, &d_s, &h_s, &nbytes);
-
-	if (output_verbosity==OUTPUT_VERBOSE) fprintf(stdout,"kernel execution...");
-
-	if ((nbytes%(MAX_THREAD*STATE_THREAD_AES))==0) {
-		dim3 dimGrid(nbytes/(MAX_THREAD*STATE_THREAD_AES));
-		dim3 dimBlock(STATE_THREAD_AES,MAX_THREAD/STATE_THREAD_AES);
-		AESdecKernel_cbc<<<dimGrid,dimBlock>>>(d_s,d_out,d_iv);
-		_CUDA_N("kernel launch failure");
-		} else {
-			dim3 dimGrid(1);
-#if defined T_TABLE_CONSTANT
-			dim3 dimBlock(STATE_THREAD_AES,nbytes/AES_BLOCK_SIZE);
-#else
-			dim3 dimBlock(STATE_THREAD_AES,1024/AES_BLOCK_SIZE);
-#endif
-			AESdecKernel_cbc<<<dimGrid,dimBlock>>>(d_s,d_out,d_iv);
-			_CUDA_N("kernel launch failure");
-			}
-
-	transferDeviceToHost(&out, &d_out, &h_s, &h_out, &nbytes);
-
-	if (output_verbosity==OUTPUT_VERBOSE) fprintf(stdout,"done!\n");
-	}
-
-#ifndef CBC_ENC_CPU
-//
-// CBC  encrypt
-//
-
-#if defined T_TABLE_CONSTANT
-__global__ void AESencKernel_cbc(uint32_t state[],uint32_t iv[],size_t length) {
-	__shared__ uint32_t t[STATE_THREAD_AES];
-	__shared__ uint32_t s[STATE_THREAD_AES];
-	__shared__ uint32_t current[STATE_THREAD_AES];
-
-	current[threadIdx.x]=0;
-
-	while(current[threadIdx.x]!=length) {
-		t[threadIdx.x] = state[current[threadIdx.x]/STATE_THREAD_AES+ threadIdx.x];
-
-		if(current[threadIdx.x]==0)
-			s[threadIdx.x]=iv[threadIdx.x] ^ t[threadIdx.x];
-			else s[threadIdx.x] = state[current[threadIdx.x]/STATE_THREAD_AES+threadIdx.x-4] ^ t[threadIdx.x];
-
-		s[threadIdx.x] = s[threadIdx.x] ^ tex1Dfetch(texref_dk,threadIdx.x);
-	
-		/* round 1: */
-   		t[threadIdx.x] = Te0[s[threadIdx.x] & 0xff] ^ Te1[(s[(1+threadIdx.x)%4] >> 8) & 0xff] ^ 
-				 Te2[(s[(2+threadIdx.x)%4] >>  16) & 0xff] ^ Te3[s[(3+threadIdx.x)%4] >> 24] ^
-				 tex1Dfetch(texref_dk,4+threadIdx.x);
-		/* round 2: */
-   		s[threadIdx.x] = Te0[t[threadIdx.x] & 0xff] ^ Te1[(t[(1+threadIdx.x)%4] >> 8) & 0xff] ^ 
-				 Te2[(t[(2+threadIdx.x)%4] >>  16) & 0xff] ^ Te3[t[(3+threadIdx.x)%4] >> 24] ^
-				 tex1Dfetch(texref_dk,8+threadIdx.x);
-		/* round 3: */
-   		t[threadIdx.x] = Te0[s[threadIdx.x] & 0xff] ^ Te1[(s[(1+threadIdx.x)%4] >> 8) & 0xff] ^ 
-				 Te2[(s[(2+threadIdx.x)%4] >>  16) & 0xff] ^ Te3[s[(3+threadIdx.x)%4] >> 24] ^
-				 tex1Dfetch(texref_dk,12+threadIdx.x);
-	   	/* round 4: */
-   		s[threadIdx.x] = Te0[t[threadIdx.x] & 0xff] ^ Te1[(t[(1+threadIdx.x)%4] >> 8) & 0xff] ^ 
-				 Te2[(t[(2+threadIdx.x)%4] >>  16) & 0xff] ^ Te3[t[(3+threadIdx.x)%4] >> 24] ^
-				 tex1Dfetch(texref_dk,16+threadIdx.x);
-		/* round 5: */
-	   	t[threadIdx.x] = Te0[s[threadIdx.x] & 0xff] ^ Te1[(s[(1+threadIdx.x)%4] >> 8) & 0xff] ^ 
-				 Te2[(s[(2+threadIdx.x)%4] >>  16) & 0xff] ^ Te3[s[(3+threadIdx.x)%4] >> 24] ^
-				 tex1Dfetch(texref_dk,20+threadIdx.x);
-   		/* round 6: */
-   		s[threadIdx.x] = Te0[t[threadIdx.x] & 0xff] ^ Te1[(t[(1+threadIdx.x)%4] >> 8) & 0xff] ^ 
-				 Te2[(t[(2+threadIdx.x)%4] >>  16) & 0xff] ^ Te3[t[(3+threadIdx.x)%4] >> 24] ^
-				 tex1Dfetch(texref_dk,24+threadIdx.x);
-		/* round 7: */
-   		t[threadIdx.x] = Te0[s[threadIdx.x] & 0xff] ^ Te1[(s[(1+threadIdx.x)%4] >> 8) & 0xff] ^ 
-				 Te2[(s[(2+threadIdx.x)%4] >>  16) & 0xff] ^ Te3[s[(3+threadIdx.x)%4] >> 24] ^
-				 tex1Dfetch(texref_dk,28+threadIdx.x);
-   		/* round 8: */
-   		s[threadIdx.x] = Te0[t[threadIdx.x] & 0xff] ^ Te1[(t[(1+threadIdx.x)%4] >> 8) & 0xff] ^ 
-				 Te2[(t[(2+threadIdx.x)%4] >>  16) & 0xff] ^ Te3[t[(3+threadIdx.x)%4] >> 24] ^
-				 tex1Dfetch(texref_dk,32+threadIdx.x);
-		/* round 9: */
-		t[threadIdx.x] = Te0[s[threadIdx.x] & 0xff] ^ Te1[(s[(1+threadIdx.x)%4] >> 8) & 0xff] ^ 
-				 Te2[(s[(2+threadIdx.x)%4] >>  16) & 0xff] ^ Te3[s[(3+threadIdx.x)%4] >> 24] ^
-				 tex1Dfetch(texref_dk,36+threadIdx.x);
-		if (tex1Dfetch(texref_r,0) > 10) {
-			/* round 10: */
-			s[threadIdx.x] = Te0[t[threadIdx.x] & 0xff] ^ Te1[(t[(1+threadIdx.x)%4] >> 8) & 0xff] ^ 
-					 Te2[(t[(2+threadIdx.x)%4] >> 16) & 0xff] ^ Te3[t[(3+threadIdx.x)%4] >> 24] ^
-					 tex1Dfetch(texref_dk,40+threadIdx.x);
-	        	/* round 11: */
-   			t[threadIdx.x] = Te0[s[threadIdx.x] & 0xff] ^ Te1[(s[(1+threadIdx.x)%4] >> 8) & 0xff] ^ 
-					 Te2[(s[(2+threadIdx.x)%4] >> 16) & 0xff] ^ Te3[s[(3+threadIdx.x)%4] >> 24] ^
-					 tex1Dfetch(texref_dk,44+threadIdx.x);
-			if (tex1Dfetch(texref_r,0) > 12) {
-				/* round 12: */
-				s[threadIdx.x] = Te0[t[threadIdx.x] & 0xff] ^ Te1[(t[(1+threadIdx.x)%4] >> 8) & 0xff] ^ 
-						 Te2[(t[(2+threadIdx.x)%4] >> 16) & 0xff] ^ Te3[t[(3+threadIdx.x)%4] >> 24] ^
-						 tex1Dfetch(texref_dk,48+threadIdx.x);
-				/* round 13: */
-				t[threadIdx.x] = Te0[s[threadIdx.x] & 0xff] ^ Te1[(s[(1+threadIdx.x)%4] >> 8) & 0xff] ^
-						 Te2[(s[(2+threadIdx.x)%4] >> 16) & 0xff] ^ Te3[s[(3+threadIdx.x)%4] >> 24] ^
-						 tex1Dfetch(texref_dk,52+threadIdx.x);
-				}
-			}
-	        /* last round: */
-		s[threadIdx.x]= (Te2[(t[threadIdx.x]            ) & 0xff] & 0x000000ff) ^ (Te3[(t[(1+threadIdx.x)%4] >>  8) & 0xff] & 0x0000ff00) ^
-				(Te0[(t[(2+threadIdx.x)%4] >> 16) & 0xff] & 0x00ff0000) ^ (Te1[(t[(3+threadIdx.x)%4] >> 24)       ] & 0xff000000) ^
-				tex1Dfetch(texref_dk,threadIdx.x+(tex1Dfetch(texref_r,0) << 2));
-
-		state[current[threadIdx.x]/STATE_THREAD_AES+threadIdx.x] = s[threadIdx.x];
-
-		current[threadIdx.x]+=AES_BLOCK_SIZE;
-		}
-	iv[threadIdx.x]=state[current[threadIdx.x]/STATE_THREAD_AES+threadIdx.x-4];
-	}
-
-#else
-
-__global__ void AESencKernel_cbc(uint32_t state[],uint32_t iv[],size_t length) {
-	__shared__ uint32_t t[STATE_THREAD_AES];
-	__shared__ uint32_t s[STATE_THREAD_AES];
-	__shared__ uint32_t current[STATE_THREAD_AES];
-
-	__shared__ uint32_t Tes0[256];
-	__shared__ uint32_t Tes1[256];
-	__shared__ uint32_t Tes2[256];
-	__shared__ uint32_t Tes3[256];
-
-	__shared__ int i;
-
-	for(i=0;i<256;i+=4) {
-		Tes0[threadIdx.x+i]=Te0[threadIdx.x+i];
-		Tes1[threadIdx.x+i]=Te1[threadIdx.x+i];
-		Tes2[threadIdx.x+i]=Te2[threadIdx.x+i];
-		Tes3[threadIdx.x+i]=Te3[threadIdx.x+i];
-		}
-
-	__syncthreads();	// __threadfence_block() could be enough
-
-	current[threadIdx.x]=0;
-
-	while(current[threadIdx.x]!=length) {
-		t[threadIdx.x] = state[current[threadIdx.x]/STATE_THREAD_AES+ threadIdx.x];
-
-		if(current[threadIdx.x]==0)
-			s[threadIdx.x]=iv[threadIdx.x] ^ t[threadIdx.x];
-			else s[threadIdx.x] = state[current[threadIdx.x]/STATE_THREAD_AES+threadIdx.x-4] ^ t[threadIdx.x];
-
-		s[threadIdx.x] = s[threadIdx.x] ^ tex1Dfetch(texref_dk,threadIdx.x);
-	
-		/* round 1: */
-   		t[threadIdx.x] = Tes0[s[threadIdx.x] & 0xff] ^ Tes1[(s[(1+threadIdx.x)%4] >> 8) & 0xff] ^ 
-				 Tes2[(s[(2+threadIdx.x)%4] >>  16) & 0xff] ^ Tes3[s[(3+threadIdx.x)%4] >> 24] ^
-				 tex1Dfetch(texref_dk,4+threadIdx.x);
-		/* round 2: */
-   		s[threadIdx.x] = Tes0[t[threadIdx.x] & 0xff] ^ Tes1[(t[(1+threadIdx.x)%4] >> 8) & 0xff] ^ 
-				 Tes2[(t[(2+threadIdx.x)%4] >>  16) & 0xff] ^ Tes3[t[(3+threadIdx.x)%4] >> 24] ^
-				 tex1Dfetch(texref_dk,8+threadIdx.x);
-		/* round 3: */
-   		t[threadIdx.x] = Tes0[s[threadIdx.x] & 0xff] ^ Tes1[(s[(1+threadIdx.x)%4] >> 8) & 0xff] ^ 
-				 Tes2[(s[(2+threadIdx.x)%4] >>  16) & 0xff] ^ Tes3[s[(3+threadIdx.x)%4] >> 24] ^
-				 tex1Dfetch(texref_dk,12+threadIdx.x);
-	   	/* round 4: */
-   		s[threadIdx.x] = Tes0[t[threadIdx.x] & 0xff] ^ Tes1[(t[(1+threadIdx.x)%4] >> 8) & 0xff] ^ 
-				 Tes2[(t[(2+threadIdx.x)%4] >>  16) & 0xff] ^ Tes3[t[(3+threadIdx.x)%4] >> 24] ^
-				 tex1Dfetch(texref_dk,16+threadIdx.x);
-		/* round 5: */
-	   	t[threadIdx.x] = Tes0[s[threadIdx.x] & 0xff] ^ Tes1[(s[(1+threadIdx.x)%4] >> 8) & 0xff] ^ 
-				 Tes2[(s[(2+threadIdx.x)%4] >>  16) & 0xff] ^ Tes3[s[(3+threadIdx.x)%4] >> 24] ^
-				 tex1Dfetch(texref_dk,20+threadIdx.x);
-   		/* round 6: */
-   		s[threadIdx.x] = Tes0[t[threadIdx.x] & 0xff] ^ Tes1[(t[(1+threadIdx.x)%4] >> 8) & 0xff] ^ 
-				 Tes2[(t[(2+threadIdx.x)%4] >>  16) & 0xff] ^ Tes3[t[(3+threadIdx.x)%4] >> 24] ^
-				 tex1Dfetch(texref_dk,24+threadIdx.x);
-		/* round 7: */
-   		t[threadIdx.x] = Tes0[s[threadIdx.x] & 0xff] ^ Tes1[(s[(1+threadIdx.x)%4] >> 8) & 0xff] ^ 
-				 Tes2[(s[(2+threadIdx.x)%4] >>  16) & 0xff] ^ Tes3[s[(3+threadIdx.x)%4] >> 24] ^
-				 tex1Dfetch(texref_dk,28+threadIdx.x);
-   		/* round 8: */
-   		s[threadIdx.x] = Tes0[t[threadIdx.x] & 0xff] ^ Tes1[(t[(1+threadIdx.x)%4] >> 8) & 0xff] ^ 
-				 Tes2[(t[(2+threadIdx.x)%4] >>  16) & 0xff] ^ Tes3[t[(3+threadIdx.x)%4] >> 24] ^
-				 tex1Dfetch(texref_dk,32+threadIdx.x);
-		/* round 9: */
-		t[threadIdx.x] = Tes0[s[threadIdx.x] & 0xff] ^ Tes1[(s[(1+threadIdx.x)%4] >> 8) & 0xff] ^ 
-				 Tes2[(s[(2+threadIdx.x)%4] >>  16) & 0xff] ^ Tes3[s[(3+threadIdx.x)%4] >> 24] ^
-				 tex1Dfetch(texref_dk,36+threadIdx.x);
-		if (tex1Dfetch(texref_r,0) > 10) {
-			/* round 10: */
-			s[threadIdx.x] = Tes0[t[threadIdx.x] & 0xff] ^ Tes1[(t[(1+threadIdx.x)%4] >> 8) & 0xff] ^ 
-					 Tes2[(t[(2+threadIdx.x)%4] >> 16) & 0xff] ^ Tes3[t[(3+threadIdx.x)%4] >> 24] ^
-					 tex1Dfetch(texref_dk,40+threadIdx.x);
-	        	/* round 11: */
-   			t[threadIdx.x] = Tes0[s[threadIdx.x] & 0xff] ^ Tes1[(s[(1+threadIdx.x)%4] >> 8) & 0xff] ^ 
-					 Tes2[(s[(2+threadIdx.x)%4] >> 16) & 0xff] ^ Tes3[s[(3+threadIdx.x)%4] >> 24] ^
-					 tex1Dfetch(texref_dk,44+threadIdx.x);
-			if (tex1Dfetch(texref_r,0) > 12) {
-				/* round 12: */
-				s[threadIdx.x] = Tes0[t[threadIdx.x] & 0xff] ^ Tes1[(t[(1+threadIdx.x)%4] >> 8) & 0xff] ^ 
-						 Tes2[(t[(2+threadIdx.x)%4] >> 16) & 0xff] ^ Tes3[t[(3+threadIdx.x)%4] >> 24] ^
-						 tex1Dfetch(texref_dk,48+threadIdx.x);
-				/* round 13: */
-				t[threadIdx.x] = Tes0[s[threadIdx.x] & 0xff] ^ Tes1[(s[(1+threadIdx.x)%4] >> 8) & 0xff] ^
-						 Tes2[(s[(2+threadIdx.x)%4] >> 16) & 0xff] ^ Tes3[s[(3+threadIdx.x)%4] >> 24] ^
-						 tex1Dfetch(texref_dk,52+threadIdx.x);
-				}
-			}
-	        /* last round: */
-		s[threadIdx.x]= (Tes2[(t[threadIdx.x]            ) & 0xff] & 0x000000ff) ^ (Tes3[(t[(1+threadIdx.x)%4] >>  8) & 0xff] & 0x0000ff00) ^
-				(Tes0[(t[(2+threadIdx.x)%4] >> 16) & 0xff] & 0x00ff0000) ^ (Tes1[(t[(3+threadIdx.x)%4] >> 24)       ] & 0xff000000) ^
-				tex1Dfetch(texref_dk,threadIdx.x+(tex1Dfetch(texref_r,0) << 2));
-
-		state[current[threadIdx.x]/STATE_THREAD_AES+threadIdx.x] = s[threadIdx.x];
-
-		current[threadIdx.x]+=AES_BLOCK_SIZE;
-		}
-	iv[threadIdx.x]=state[current[threadIdx.x]/STATE_THREAD_AES+threadIdx.x-4];
-	}
-
-#endif
-
-extern "C" void AES_cuda_encrypt_cbc(const unsigned char *in, unsigned char *out, size_t nbytes) {
-	assert(in && out && nbytes);
-	cudaError_t cudaerrno;
-
-	if (output_verbosity==OUTPUT_VERBOSE) fprintf(stdout,"\nSize: %d\n",(int)nbytes);
-	if (output_verbosity==OUTPUT_VERBOSE) fprintf(stdout,"Starting encrypt...");
-
-	transferHostToDevice(&in, &d_s, &h_s, &nbytes);
-
-	if (output_verbosity==OUTPUT_VERBOSE) fprintf(stdout,"kernel execution...");
-
-	dim3 dimGrid(1);
-	dim3 dimBlock(STATE_THREAD_AES);
-	AESencKernel_cbc<<<dimGrid,dimBlock>>>(d_s,d_iv,nbytes);
-	_CUDA_N("kernel launch failure");
-
-	transferDeviceToHost(&out, &d_s, &h_s, &h_s, &nbytes);
-
-	if (output_verbosity==OUTPUT_VERBOSE) fprintf(stdout,"done!\n");
-	}
-#endif
-#else
-#error "ERROR: DEVICE EMULATION is NOT supported."
-#endif
+	_CUDA(cudaMemcpyToSymbolAsync(d_iv,iv,AES_BLOCK_SIZE,0,cudaMemcpyHostToDevice));
+}
