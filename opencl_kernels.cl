@@ -125,9 +125,7 @@ __kernel void DESencKernel(__global unsigned long *data, __local unsigned char *
 	// What happens for kernel calls with less than 128 threads, like the final padding 8-byte call?
 	// It seems to work, but might be because of a strange race condition. Watch out!
 	((__local unsigned int *)des_SP)[get_local_id(0)] = des_d_sp_c[get_local_id(0)];
-	((__local unsigned int *)des_SP)[get_local_id(0)+128] = des_d_sp_c[get_local_id(0)+128];
 	((__local unsigned int *)des_SP)[get_local_id(0)+256] = des_d_sp_c[get_local_id(0)+256];
-	((__local unsigned int *)des_SP)[get_local_id(0)+384] = des_d_sp_c[get_local_id(0)+384];
 
 	__private unsigned long load = data[get_global_id(0)];
 	__private unsigned int right = load;
@@ -197,9 +195,9 @@ __kernel void CASTencKernel(__global unsigned long *data, __constant unsigned in
 	nl2i(block,l,r);
 
 	((__local ulong *)CAST_S_table0)[get_local_id(0)] = ((__global ulong *)CAST_S_table)[get_local_id(0)];
-	((__local ulong *)CAST_S_table1)[get_local_id(0)] = ((__global ulong *)CAST_S_table)[get_local_id(0)+128];
+	//((__local ulong *)CAST_S_table1)[get_local_id(0)] = ((__global ulong *)CAST_S_table)[get_local_id(0)+128];
 	((__local ulong *)CAST_S_table2)[get_local_id(0)] = ((__global ulong *)CAST_S_table)[get_local_id(0)+256];
-	((__local ulong *)CAST_S_table3)[get_local_id(0)] = ((__global ulong *)CAST_S_table)[get_local_id(0)+384];
+	//((__local ulong *)CAST_S_table3)[get_local_id(0)] = ((__global ulong *)CAST_S_table)[get_local_id(0)+384];
 
 	barrier(CLK_LOCAL_MEM_FENCE);
 

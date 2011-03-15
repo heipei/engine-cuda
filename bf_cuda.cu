@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <assert.h>
 #include <openssl/blowfish.h>
+#include <openssl/evp.h>
 #include <cuda_runtime_api.h>
 #include "cuda_common.h"
 #include "common.h"
@@ -70,7 +71,7 @@ __global__ void BFdecKernel(uint64_t *data) {
 	
 }
 
-extern "C" void BF_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, uint8_t **host_data, uint64_t **device_data) {
+extern "C" void BF_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, EVP_CIPHER_CTX *ctx, uint8_t **host_data, uint64_t **device_data) {
 	assert(in && out && nbytes);
 	cudaError_t cudaerrno;
 	int gridSize;
@@ -89,7 +90,7 @@ extern "C" void BF_cuda_crypt(const unsigned char *in, unsigned char *out, size_
 	if (output_verbosity==OUTPUT_VERBOSE)
 		fprintf(stdout,"Starting BF kernel for %zu bytes with (%d, (%d, %d))...\n", nbytes, gridSize, dimBlock.x, dimBlock.y);
 
-	if(enc == BF_ENCRYPT) {
+	if(ctx->encrypt == BF_ENCRYPT) {
 		BFencKernel<<<gridSize,dimBlock>>>(*device_data);
 		_CUDA_N("BF encryption kernel could not be launched!");
 	} else {

@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <assert.h>
 #include <openssl/idea.h>
+#include <openssl/evp.h>
 #include <cuda_runtime_api.h>
 #include "cuda_common.h"
 #include "common.h"
@@ -86,7 +87,7 @@ __global__ void IDEAdecKernel(uint64_t *data) {
 	
 }
 
-extern "C" void IDEA_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, uint8_t **host_data, uint64_t **device_data) {
+extern "C" void IDEA_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, EVP_CIPHER_CTX *ctx, uint8_t **host_data, uint64_t **device_data) {
 	assert(in && out && nbytes);
 	cudaError_t cudaerrno;
 	int gridSize;
@@ -103,7 +104,7 @@ extern "C" void IDEA_cuda_crypt(const unsigned char *in, unsigned char *out, siz
 		fprintf(stdout,"Starting IDEA kernel for %zu bytes with (%d, (%d))...\n", nbytes, gridSize, MAX_THREAD);
 	#endif
 
-	if(enc == IDEA_ENCRYPT) {
+	if(ctx->encrypt == IDEA_ENCRYPT) {
 		IDEAencKernel<<<gridSize,MAX_THREAD>>>(*device_data);
 		_CUDA_N("IDEA encryption kernel could not be launched!");
 	} else {

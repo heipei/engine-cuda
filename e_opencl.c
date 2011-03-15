@@ -100,7 +100,7 @@ int opencl_init(ENGINE * engine) {
 	printf("CL_DRIVER_VERSION: %s\n\n", cBuffer);
 
 	CL_ASSIGN(context = clCreateContext(NULL, 1, &device, NULL, NULL, &error));
-	CL_ASSIGN(queue = clCreateCommandQueue(context, device, 0, &error));
+	CL_ASSIGN(queue = clCreateCommandQueue(context, device, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, &error));
 	CL_ASSIGN(device_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE|CL_MEM_ALLOC_HOST_PTR, maxbytes, NULL, &error));
 	CL_ASSIGN(host_data = (unsigned char *)clEnqueueMapBuffer(queue,device_buffer,CL_TRUE,CL_MAP_WRITE|CL_MAP_READ,0,maxbytes,0,NULL,NULL,&error));
 
@@ -292,6 +292,7 @@ static int opencl_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsig
 	size_t current=0;
 	int chunk;
 
+	if (!device_kernel && !opencl_device_crypt) {
 	switch(EVP_CIPHER_CTX_nid(ctx)) {
 	  case NID_des_ecb:
 	    opencl_device_crypt = DES_opencl_crypt;
@@ -318,6 +319,7 @@ static int opencl_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsig
 	    break;
 	  default:
 	    return 0;
+	}
 	}
 
 	while (nbytes!=current) {

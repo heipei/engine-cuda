@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <assert.h>
 #include <openssl/camellia.h>
+#include <openssl/evp.h>
 #include <cuda_runtime_api.h>
 #include "cuda_common.h"
 #include "common.h"
@@ -216,10 +217,10 @@ __device__ uint32_t Camellia_constant_SBOX[1024] = {
 
 __global__ void CMLLencKernel(uint64_t *data) {
 
-	((uint64_t *)Camellia_SBOX[0])[threadIdx.x] = ((uint64_t *)Camellia_constant_SBOX)[threadIdx.x];
-	((uint64_t *)Camellia_SBOX[1])[threadIdx.x] = ((uint64_t *)Camellia_constant_SBOX)[threadIdx.x+128];
-	((uint64_t *)Camellia_SBOX[2])[threadIdx.x] = ((uint64_t *)Camellia_constant_SBOX)[threadIdx.x+256];
-	((uint64_t *)Camellia_SBOX[3])[threadIdx.x] = ((uint64_t *)Camellia_constant_SBOX)[threadIdx.x+384];
+	((uint32_t *)Camellia_SBOX[0])[threadIdx.x] = ((uint32_t *)Camellia_constant_SBOX)[threadIdx.x];
+	((uint32_t *)Camellia_SBOX[1])[threadIdx.x] = ((uint32_t *)Camellia_constant_SBOX)[threadIdx.x+256];
+	((uint32_t *)Camellia_SBOX[2])[threadIdx.x] = ((uint32_t *)Camellia_constant_SBOX)[threadIdx.x+512];
+	((uint32_t *)Camellia_SBOX[3])[threadIdx.x] = ((uint32_t *)Camellia_constant_SBOX)[threadIdx.x+768];
 
 	register uint32_t *k = (uint32_t *)&cmll_constant_schedule.u.rd_key;
 	register uint32_t s0,s1,s2,s3; 
@@ -289,7 +290,7 @@ __global__ void CMLLdecKernel(uint64_t *data) {
 	
 }
 
-extern "C" void CMLL_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, uint8_t **host_data, uint64_t **device_data) {
+extern "C" void CMLL_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, EVP_CIPHER_CTX *ctx, uint8_t **host_data, uint64_t **device_data) {
 	//assert(in && out && nbytes);
 	//cudaError_t cudaerrno;
 	int gridSize;
@@ -306,7 +307,7 @@ extern "C" void CMLL_cuda_crypt(const unsigned char *in, unsigned char *out, siz
 		fprintf(stdout,"Starting CMLL kernel for %zu bytes with (%d, (%d))...\n", nbytes, gridSize, MAX_THREAD);
 	#endif
 
-	if(enc == CAMELLIA_ENCRYPT) {
+	if(ctx->encrypt == CAMELLIA_ENCRYPT) {
 		CMLLencKernel<<<gridSize,MAX_THREAD>>>(*device_data);
 		//_CUDA_N("CMLL encryption kernel could not be launched!");
 	} else {

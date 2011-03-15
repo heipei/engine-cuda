@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <assert.h>
 #include <openssl/cast.h>
+#include <openssl/evp.h>
 #include <cuda_runtime_api.h>
 #include "cuda_common.h"
 #include "common.h"
@@ -171,15 +172,14 @@ __device__ CAST_LONG CAST_S_table_constant[1024]={
 
 __global__ void CASTencKernel(uint64_t *data) {
 	register uint32_t l,r,t;
-
 	register uint64_t block = data[TX];
 
 	nl2i(block,l,r);
 
-	((uint64_t *)CAST_S_table0)[threadIdx.x] = ((uint64_t *)CAST_S_table_constant)[threadIdx.x];
-	((uint64_t *)CAST_S_table1)[threadIdx.x] = ((uint64_t *)CAST_S_table_constant)[threadIdx.x+128];
-	((uint64_t *)CAST_S_table2)[threadIdx.x] = ((uint64_t *)CAST_S_table_constant)[threadIdx.x+256];
-	((uint64_t *)CAST_S_table3)[threadIdx.x] = ((uint64_t *)CAST_S_table_constant)[threadIdx.x+384];
+	((uint32_t *)CAST_S_table0)[threadIdx.x] = ((uint32_t *)CAST_S_table_constant)[threadIdx.x];
+	((uint32_t *)CAST_S_table1)[threadIdx.x] = ((uint32_t *)CAST_S_table_constant)[threadIdx.x+256];
+	((uint32_t *)CAST_S_table2)[threadIdx.x] = ((uint32_t *)CAST_S_table_constant)[threadIdx.x+512];
+	((uint32_t *)CAST_S_table3)[threadIdx.x] = ((uint32_t *)CAST_S_table_constant)[threadIdx.x+768];
 
 	__syncthreads();
 
@@ -210,7 +210,7 @@ __global__ void CASTdecKernel(uint64_t *data) {
 	
 }
 
-extern "C" void CAST_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, uint8_t **host_data, uint64_t **device_data) {
+extern "C" void CAST_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, EVP_CIPHER_CTX *ctx, uint8_t **host_data, uint64_t **device_data) {
 	assert(in && out && nbytes);
 	cudaError_t cudaerrno;
 	int gridSize;
@@ -227,7 +227,7 @@ extern "C" void CAST_cuda_crypt(const unsigned char *in, unsigned char *out, siz
 		fprintf(stdout,"Starting CAST kernel for %zu bytes with (%d, (%d))...\n", nbytes, gridSize, MAX_THREAD);
 	#endif
 
-	if(enc == CAST_ENCRYPT) {
+	if(ctx->encrypt == CAST_ENCRYPT) {
 		CASTencKernel<<<gridSize,MAX_THREAD>>>(*device_data);
 		_CUDA_N("CAST encryption kernel could not be launched!");
 	} else {

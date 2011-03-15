@@ -6,6 +6,7 @@
 #include <assert.h>
 #include <cuda_runtime_api.h>
 #include <openssl/des.h>
+#include <openssl/evp.h>
 #include "cuda_common.h"
 #include "common.h"
 
@@ -209,15 +210,12 @@ cudaEvent_t des_start,des_stop;
 
 __global__ void DESencKernel(uint64_t *data) {
 	
-	//if(threadIdx.x < 16)
+	if(threadIdx.x < 16)
 		s[threadIdx.x%16] = cs[threadIdx.x%16];
-	//__syncthreads();
 
-	// Careful: Based on the assumption of a constant 128 threads!
-	// What happens for kernel calls with less than 128 threads, like the final padding 8-byte call?
-	// It seems to work, but might be because of a strange race condition. Watch out!
+	// Careful: Based on the assumption of a constant 256 threads!
 	((uint64_t *)des_d_sp)[threadIdx.x] = ((uint64_t *)des_d_sp_c)[threadIdx.x];
-	((uint64_t *)des_d_sp)[threadIdx.x+128] = ((uint64_t *)des_d_sp_c)[threadIdx.x+128];
+	__syncthreads();
 
 	register uint64_t load = data[TX];
 	register uint32_t right = load;
@@ -262,12 +260,11 @@ __global__ void DESdecKernel(uint64_t *data) {
 		s[threadIdx.x] = cs[threadIdx.x];
 
 	((uint64_t *)des_d_sp)[threadIdx.x] = ((uint64_t *)des_d_sp_c)[threadIdx.x];
-	((uint64_t *)des_d_sp)[threadIdx.x+128] = ((uint64_t *)des_d_sp_c)[threadIdx.x+128];
 
-	//uint64_t load = data[TX];
-	uint32_t right = data[TX];
-	uint32_t left = data[TX]>>32;
-
+	register uint64_t load = data[TX];
+	register uint32_t right = load;
+	register uint32_t left = load >> 32;
+	
 	unsigned int t,u;
 	unsigned char *des_SP = (unsigned char *) (&des_d_sp);
 
@@ -300,7 +297,7 @@ __global__ void DESdecKernel(uint64_t *data) {
 	data[TX]=left|((uint64_t)right)<<32;
 }
 
-extern "C" void DES_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, uint8_t **host_data, uint64_t **device_data) {
+extern "C" void DES_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, EVP_CIPHER_CTX *ctx, uint8_t **host_data, uint64_t **device_data) {
 	assert(in && out && nbytes);
 	cudaError_t cudaerrno;
 	int gridSize;
@@ -317,7 +314,7 @@ extern "C" void DES_cuda_crypt(const unsigned char *in, unsigned char *out, size
 		fprintf(stdout,"Starting DES kernel for %zu bytes with (%d, (%d))...\n", nbytes, gridSize, MAX_THREAD);
 	#endif
 
-	if(enc == DES_ENCRYPT) {
+	if(ctx->encrypt == DES_ENCRYPT) {
 		DESencKernel<<<gridSize,MAX_THREAD>>>(*device_data);
 		_CUDA_N("DES encryption kernel could not be launched!");
 	} else {
