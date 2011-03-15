@@ -217,10 +217,17 @@ __device__ uint32_t Camellia_constant_SBOX[1024] = {
 
 __global__ void CMLLencKernel(uint64_t *data) {
 
-	((uint32_t *)Camellia_SBOX[0])[threadIdx.x] = ((uint32_t *)Camellia_constant_SBOX)[threadIdx.x];
-	((uint32_t *)Camellia_SBOX[1])[threadIdx.x] = ((uint32_t *)Camellia_constant_SBOX)[threadIdx.x+256];
-	((uint32_t *)Camellia_SBOX[2])[threadIdx.x] = ((uint32_t *)Camellia_constant_SBOX)[threadIdx.x+512];
-	((uint32_t *)Camellia_SBOX[3])[threadIdx.x] = ((uint32_t *)Camellia_constant_SBOX)[threadIdx.x+768];
+	#if MAX_THREAD == 128
+		((uint64_t *)Camellia_SBOX[0])[threadIdx.x] = ((uint64_t *)Camellia_constant_SBOX)[threadIdx.x];
+		((uint64_t *)Camellia_SBOX[1])[threadIdx.x] = ((uint64_t *)Camellia_constant_SBOX)[threadIdx.x+128];
+		((uint64_t *)Camellia_SBOX[2])[threadIdx.x] = ((uint64_t *)Camellia_constant_SBOX)[threadIdx.x+256];
+		((uint64_t *)Camellia_SBOX[3])[threadIdx.x] = ((uint64_t *)Camellia_constant_SBOX)[threadIdx.x+384];
+	#elif MAX_THREAD == 256
+		((uint32_t *)Camellia_SBOX[0])[threadIdx.x] = ((uint32_t *)Camellia_constant_SBOX)[threadIdx.x];
+		((uint32_t *)Camellia_SBOX[1])[threadIdx.x] = ((uint32_t *)Camellia_constant_SBOX)[threadIdx.x+256];
+		((uint32_t *)Camellia_SBOX[2])[threadIdx.x] = ((uint32_t *)Camellia_constant_SBOX)[threadIdx.x+512];
+		((uint32_t *)Camellia_SBOX[3])[threadIdx.x] = ((uint32_t *)Camellia_constant_SBOX)[threadIdx.x+768];
+	#endif
 
 	register uint32_t *k = (uint32_t *)&cmll_constant_schedule.u.rd_key;
 	register uint32_t s0,s1,s2,s3; 

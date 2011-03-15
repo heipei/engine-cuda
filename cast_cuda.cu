@@ -176,10 +176,17 @@ __global__ void CASTencKernel(uint64_t *data) {
 
 	nl2i(block,l,r);
 
-	((uint32_t *)CAST_S_table0)[threadIdx.x] = ((uint32_t *)CAST_S_table_constant)[threadIdx.x];
-	((uint32_t *)CAST_S_table1)[threadIdx.x] = ((uint32_t *)CAST_S_table_constant)[threadIdx.x+256];
-	((uint32_t *)CAST_S_table2)[threadIdx.x] = ((uint32_t *)CAST_S_table_constant)[threadIdx.x+512];
-	((uint32_t *)CAST_S_table3)[threadIdx.x] = ((uint32_t *)CAST_S_table_constant)[threadIdx.x+768];
+	#if MAX_THREAD == 128
+		((uint64_t *)CAST_S_table0)[threadIdx.x] = ((uint64_t *)CAST_S_table_constant)[threadIdx.x];
+		((uint64_t *)CAST_S_table1)[threadIdx.x] = ((uint64_t *)CAST_S_table_constant)[threadIdx.x+128];
+		((uint64_t *)CAST_S_table2)[threadIdx.x] = ((uint64_t *)CAST_S_table_constant)[threadIdx.x+256];
+		((uint64_t *)CAST_S_table3)[threadIdx.x] = ((uint64_t *)CAST_S_table_constant)[threadIdx.x+384];
+	#elif MAX_THREAD == 256
+		((uint32_t *)CAST_S_table0)[threadIdx.x] = ((uint32_t *)CAST_S_table_constant)[threadIdx.x];
+		((uint32_t *)CAST_S_table1)[threadIdx.x] = ((uint32_t *)CAST_S_table_constant)[threadIdx.x+256];
+		((uint32_t *)CAST_S_table2)[threadIdx.x] = ((uint32_t *)CAST_S_table_constant)[threadIdx.x+512];
+		((uint32_t *)CAST_S_table3)[threadIdx.x] = ((uint32_t *)CAST_S_table_constant)[threadIdx.x+768];
+	#endif
 
 	__syncthreads();
 

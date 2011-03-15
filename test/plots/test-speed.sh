@@ -2,7 +2,7 @@
 OPENSSL=openssl
 RUN=17
 AVG_RUNS=1
-CIPHERS=(bf-ecb camellia-128-ecb cast5-ecb des-ecb idea-ecb)
+CIPHERS=(aes-128-ecb aes-192-ecb aes-256-ecb bf-ecb camellia-128-ecb cast5-ecb des-ecb idea-ecb)
 ENGINE=cudamrg
 
 if [[ -n $4 ]]; then

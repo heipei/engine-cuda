@@ -213,8 +213,10 @@ __global__ void DESencKernel(uint64_t *data) {
 	if(threadIdx.x < 16)
 		s[threadIdx.x%16] = cs[threadIdx.x%16];
 
-	// Careful: Based on the assumption of a constant 256 threads!
 	((uint64_t *)des_d_sp)[threadIdx.x] = ((uint64_t *)des_d_sp_c)[threadIdx.x];
+	#if MAX_THREAD == 128
+		((uint64_t *)des_d_sp)[threadIdx.x+128] = ((uint64_t *)des_d_sp_c)[threadIdx.x+128];
+	#endif
 	__syncthreads();
 
 	register uint64_t load = data[TX];
@@ -260,6 +262,10 @@ __global__ void DESdecKernel(uint64_t *data) {
 		s[threadIdx.x] = cs[threadIdx.x];
 
 	((uint64_t *)des_d_sp)[threadIdx.x] = ((uint64_t *)des_d_sp_c)[threadIdx.x];
+	#if MAX_THREAD == 128
+		((uint64_t *)des_d_sp)[threadIdx.x+128] = ((uint64_t *)des_d_sp_c)[threadIdx.x+128];
+	#endif
+
 
 	register uint64_t load = data[TX];
 	register uint32_t right = load;

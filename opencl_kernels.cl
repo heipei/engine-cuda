@@ -1,4 +1,7 @@
 // vim:ft=opencl
+#ifndef MAX_THREAD
+	#define MAX_THREAD	256
+#endif
 #pragma OPENCL EXTENSION cl_khr_byte_addressable_store : enable
 
 // Split uint64_t into two uint32_t and convert each from BE to LE
@@ -124,8 +127,10 @@ __kernel void DESencKernel(__global unsigned long *data, __local unsigned char *
 	// Careful: Based on the assumption of a constant 128 threads!
 	// What happens for kernel calls with less than 128 threads, like the final padding 8-byte call?
 	// It seems to work, but might be because of a strange race condition. Watch out!
-	((__local unsigned int *)des_SP)[get_local_id(0)] = des_d_sp_c[get_local_id(0)];
-	((__local unsigned int *)des_SP)[get_local_id(0)+256] = des_d_sp_c[get_local_id(0)+256];
+	((__local ulong *)des_SP)[get_local_id(0)] = ((__global ulong *)des_d_sp_c)[get_local_id(0)];
+	#if MAX_THREAD == 128
+		((__local ulong *)des_SP)[get_local_id(0)+128] = ((__global ulong *)des_d_sp_c)[get_local_id(0)+128];
+	#endif
 
 	__private unsigned long load = data[get_global_id(0)];
 	__private unsigned int right = load;
@@ -194,10 +199,15 @@ __kernel void CASTencKernel(__global unsigned long *data, __constant unsigned in
 
 	nl2i(block,l,r);
 
-	((__local ulong *)CAST_S_table0)[get_local_id(0)] = ((__global ulong *)CAST_S_table)[get_local_id(0)];
-	//((__local ulong *)CAST_S_table1)[get_local_id(0)] = ((__global ulong *)CAST_S_table)[get_local_id(0)+128];
-	((__local ulong *)CAST_S_table2)[get_local_id(0)] = ((__global ulong *)CAST_S_table)[get_local_id(0)+256];
-	//((__local ulong *)CAST_S_table3)[get_local_id(0)] = ((__global ulong *)CAST_S_table)[get_local_id(0)+384];
+	#if MAX_THREAD == 128
+		((__local ulong *)CAST_S_table0)[get_local_id(0)] = ((__global ulong *)CAST_S_table)[get_local_id(0)];
+		((__local ulong *)CAST_S_table2)[get_local_id(0)] = ((__global ulong *)CAST_S_table)[get_local_id(0)+128];
+	#elif MAX_THREAD == 256
+		((__local uint *)CAST_S_table0)[get_local_id(0)] = ((__global uint *)CAST_S_table)[get_local_id(0)];
+		((__local uint *)CAST_S_table1)[get_local_id(0)] = ((__global uint *)CAST_S_table)[get_local_id(0)+256];
+		((__local uint *)CAST_S_table2)[get_local_id(0)] = ((__global uint *)CAST_S_table)[get_local_id(0)+512];
+		((__local uint *)CAST_S_table3)[get_local_id(0)] = ((__global uint *)CAST_S_table)[get_local_id(0)+768];
+	#endif
 
 	barrier(CLK_LOCAL_MEM_FENCE);
 
@@ -258,10 +268,17 @@ __kernel void CASTencKernel(__global unsigned long *data, __constant unsigned in
 __kernel void CMLLencKernel(__global unsigned long *data, __constant unsigned int *k, __global unsigned int *Camellia_global_SBOX) {
 	__local unsigned int Camellia_SBOX[4][256];
 
-	((__local ulong *)Camellia_SBOX[0])[get_local_id(0)] = ((__global ulong *)Camellia_global_SBOX)[get_local_id(0)];
-	((__local ulong *)Camellia_SBOX[1])[get_local_id(0)] = ((__global ulong *)Camellia_global_SBOX)[get_local_id(0)+128];
-	((__local ulong *)Camellia_SBOX[2])[get_local_id(0)] = ((__global ulong *)Camellia_global_SBOX)[get_local_id(0)+256];
-	((__local ulong *)Camellia_SBOX[3])[get_local_id(0)] = ((__global ulong *)Camellia_global_SBOX)[get_local_id(0)+384];
+	#if MAX_THREAD == 128
+		((__local ulong *)Camellia_SBOX[0])[get_local_id(0)] = ((__global ulong *)Camellia_global_SBOX)[get_local_id(0)];
+		((__local ulong *)Camellia_SBOX[1])[get_local_id(0)] = ((__global ulong *)Camellia_global_SBOX)[get_local_id(0)+128];
+		((__local ulong *)Camellia_SBOX[2])[get_local_id(0)] = ((__global ulong *)Camellia_global_SBOX)[get_local_id(0)+256];
+		((__local ulong *)Camellia_SBOX[3])[get_local_id(0)] = ((__global ulong *)Camellia_global_SBOX)[get_local_id(0)+384];
+	#elif MAX_THREAD == 256
+		((__local uint *)Camellia_SBOX[0])[get_local_id(0)] = ((__global uint *)Camellia_global_SBOX)[get_local_id(0)];
+		((__local uint *)Camellia_SBOX[1])[get_local_id(0)] = ((__global uint *)Camellia_global_SBOX)[get_local_id(0)+256];
+		((__local uint *)Camellia_SBOX[2])[get_local_id(0)] = ((__global uint *)Camellia_global_SBOX)[get_local_id(0)+512];
+		((__local uint *)Camellia_SBOX[3])[get_local_id(0)] = ((__global uint *)Camellia_global_SBOX)[get_local_id(0)+768];
+	#endif
 
 	__private unsigned int s0,s1,s2,s3; 
 
