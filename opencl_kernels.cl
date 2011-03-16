@@ -76,6 +76,54 @@ __kernel void BFencKernel(__global unsigned long *data, __global unsigned int *p
 }
 
 // ###########
+// # AES ECB #
+// ###########
+
+#define ROW (mul24(4,(int)get_local_id(1)))
+#define SX (ROW + get_local_id(0))
+#define GID (get_global_id(0) + mul24((int)get_global_id(1),(int)get_global_size(0)))
+
+#define AES_ENC_ROUND(n,D,S)	D[SX] = Te0[S[SX] & 0xff] ^ Te1[(S[(1+get_local_id(0))%4+ROW] >> 8) & 0xff] ^ \
+				Te2[(S[(2+get_local_id(0))%4+ROW] >>  16) & 0xff] ^ Te3[S[(3+get_local_id(0))%4+ROW] >> 24] ^ \
+				aes_dk[get_local_id(0)+n]; 
+
+#define AES_FINAL_ENC_ROUND(N)	__private unsigned int p_state = (Te2[(t[SX]) & 0xff] & 0x000000ff)^ \
+				(Te3[(t[(1+get_local_id(0))%4+ROW] >>  8) & 0xff] & 0x0000ff00)^ \
+				(Te0[(t[(2+get_local_id(0))%4+ROW] >> 16) & 0xff] & 0x00ff0000)^ \
+				(Te1[(t[(3+get_local_id(0))%4+ROW] >> 24)       ] & 0xff000000)^ \
+				aes_dk[get_local_id(0)+N]; \
+				data[GID] = p_state; 
+
+__kernel void AES128encKernel(__global unsigned int *data, __global unsigned int *Teg, __constant unsigned int *aes_dk) {
+	__local unsigned int t[MAX_THREAD];
+	__local unsigned int s[MAX_THREAD];
+	__local unsigned int Te0[256];
+	__local unsigned int Te1[256];
+	__local unsigned int Te2[256];
+	__local unsigned int Te3[256];
+
+	Te0[SX] = Teg[SX];
+	Te1[SX] = Teg[SX+256];
+	Te2[SX] = Teg[SX+512];
+	Te3[SX] = Teg[SX+768];
+
+	s[SX] = data[GID] ^ aes_dk[get_local_id(0)];
+
+	barrier(CLK_LOCAL_MEM_FENCE);
+	
+	AES_ENC_ROUND( 4,t,s);
+	AES_ENC_ROUND( 8,s,t);
+	AES_ENC_ROUND(12,t,s);
+	AES_ENC_ROUND(16,s,t);
+	AES_ENC_ROUND(20,t,s);
+	AES_ENC_ROUND(24,s,t);
+	AES_ENC_ROUND(28,t,s);
+	AES_ENC_ROUND(32,s,t);
+	AES_ENC_ROUND(36,t,s);
+	AES_FINAL_ENC_ROUND(0x28);
+}
+
+// ###########
 // # DES ECB #
 // ###########
 #define IP(left,right) \
@@ -124,9 +172,6 @@ __kernel void DESencKernel(__global unsigned long *data, __local unsigned char *
 	if(get_local_id(0) < 16)
 		s[get_local_id(0)] = cs[get_local_id(0)];
 
-	// Careful: Based on the assumption of a constant 128 threads!
-	// What happens for kernel calls with less than 128 threads, like the final padding 8-byte call?
-	// It seems to work, but might be because of a strange race condition. Watch out!
 	((__local ulong *)des_SP)[get_local_id(0)] = ((__global ulong *)des_d_sp_c)[get_local_id(0)];
 	#if MAX_THREAD == 128
 		((__local ulong *)des_SP)[get_local_id(0)+128] = ((__global ulong *)des_d_sp_c)[get_local_id(0)+128];

@@ -4,6 +4,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <libgen.h>
+#include <openssl/obj_mac.h>
 
 #include "ciphers_cuda.h"
 
@@ -147,10 +148,11 @@ int opencl_init(ENGINE * engine) {
 		fprintf(stdout, "Build log: %s\n", build_info);
 	}
 
-	CL_ASSIGN(des_kernel = clCreateKernel(device_program, "DESencKernel", &error));
+	CL_ASSIGN(aes_kernel = clCreateKernel(device_program, "AES128encKernel", &error));
 	CL_ASSIGN(bf_kernel = clCreateKernel(device_program, "BFencKernel", &error));
 	CL_ASSIGN(cast_kernel = clCreateKernel(device_program, "CASTencKernel", &error));
 	CL_ASSIGN(cmll_kernel = clCreateKernel(device_program, "CMLLencKernel", &error));
+	CL_ASSIGN(des_kernel = clCreateKernel(device_program, "DESencKernel", &error));
 	CL_ASSIGN(idea_kernel = clCreateKernel(device_program, "IDEAencKernel", &error));
 
 	gettimeofday(&curtime, NULL);
@@ -232,6 +234,7 @@ static int opencl_cipher_nids[] = {
 	NID_camellia_128_ecb,
 	NID_cast5_ecb,
 	NID_des_ecb,
+	NID_aes_128_ecb,
 	NID_idea_ecb
 };
 
@@ -239,6 +242,13 @@ static int opencl_cipher_nids_num = (sizeof(opencl_cipher_nids)/sizeof(opencl_ci
 
 static int opencl_init_key(EVP_CIPHER_CTX *ctx, const unsigned char *key, const unsigned char *iv, int enc) {
 	switch ((ctx->cipher)->nid) {
+	  case NID_aes_128_ecb:
+	    if (!quiet && verbose) fprintf(stdout,"Start calculating AES key schedule...\n");
+	    AES_KEY aes_key_schedule;
+	    AES_opencl_set_encrypt_key(key,128,&aes_key_schedule);
+	    device_schedule = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(AES_KEY), &aes_key_schedule, &error);
+	    AES_opencl_transfer_key_schedule(&aes_key_schedule,&device_schedule,queue);
+	    break;
 	  case NID_des_ecb:
 	  case NID_des_cbc:
 	    if (!quiet && verbose) fprintf(stdout,"Start calculating DES key schedule...");
@@ -294,6 +304,10 @@ static int opencl_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsig
 
 	if (!device_kernel && !opencl_device_crypt) {
 	switch(EVP_CIPHER_CTX_nid(ctx)) {
+	  case NID_aes_128_ecb:
+	    opencl_device_crypt = AES_opencl_crypt;
+	    device_kernel = &aes_kernel;
+	    break;
 	  case NID_des_ecb:
 	    opencl_device_crypt = DES_opencl_crypt;
 	    device_kernel = &des_kernel;
@@ -381,6 +395,7 @@ DECLARE_EVP(camellia,CAMELLIA,128,ecb,ECB);
 DECLARE_EVP(cast,CAST,128,ecb,ECB);
 DECLARE_EVP(des,DES,64,ecb,ECB);
 DECLARE_EVP(idea,IDEA,64,ecb,ECB);
+DECLARE_EVP(aes,AES,128,ecb,ECB);
 
 static int opencl_ciphers(ENGINE *e, const EVP_CIPHER **cipher, const int **nids, int nid) {
 	if (!cipher) {
@@ -388,6 +403,9 @@ static int opencl_ciphers(ENGINE *e, const EVP_CIPHER **cipher, const int **nids
 		return opencl_cipher_nids_num;
 	}
 	switch (nid) {
+	  case NID_aes_128_ecb:
+	    *cipher = &opencl_aes_128_ecb;
+	    break;
 	  case NID_bf_ecb:
 	    *cipher = &opencl_bf_ecb;
 	    break;

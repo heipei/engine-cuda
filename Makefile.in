@@ -49,7 +49,7 @@ TESTSRC= teststate.c aes_cuda.cu
 
 LIBOBJ = e_cuda.o
 LIBOBJ_CUDA = aes_cuda.o des_cuda.o idea_cuda.o bf_cuda.o cast_cuda.o cmll_cuda.o cuda_common.o 
-LIBOBJ_OPENCL = e_opencl.o bf_opencl.o des_opencl.o cast_opencl.o cmll_opencl.o idea_opencl.o opencl_common.o
+LIBOBJ_OPENCL = e_opencl.o aes_opencl.o bf_opencl.o des_opencl.o cast_opencl.o cmll_opencl.o idea_opencl.o opencl_common.o
 
 SOURCES= aes_cuda.cu e_cuda.c teststate.c
 HEADERS= aes_cuda.h

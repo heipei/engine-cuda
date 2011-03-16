@@ -30,6 +30,11 @@
 #include <openssl/engine.h>
 #include <CL/opencl.h>
 
+#include <openssl/aes.h>
+void AES_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, cl_mem *device_buffer, cl_mem *device_schedule, cl_command_queue queue, cl_kernel device_kernel, cl_context context);
+void AES_opencl_transfer_key_schedule(AES_KEY *ks, cl_mem *device_schedule,cl_command_queue queue);
+int AES_opencl_set_encrypt_key(const unsigned char *userKey, const int bits, AES_KEY *key);
+
 #include <openssl/blowfish.h>
 void BF_opencl_transfer_key_schedule(BF_KEY *ks,cl_mem *device_schedule,cl_command_queue queue);
 void BF_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, cl_mem *device_buffer, cl_mem *device_schedule, cl_command_queue queue, cl_kernel device_kernel, cl_context context);
