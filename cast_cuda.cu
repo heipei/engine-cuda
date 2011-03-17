@@ -213,13 +213,14 @@ __global__ void CASTencKernel(uint64_t *data) {
 	data[TX] = block;
 }
 
+/*
 __global__ void CASTdecKernel(uint64_t *data) {
 	
 }
+*/
 
 extern "C" void CAST_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, EVP_CIPHER_CTX *ctx, uint8_t **host_data, uint64_t **device_data) {
 	assert(in && out && nbytes);
-	cudaError_t cudaerrno;
 	int gridSize;
 
 	transferHostToDevice(&in, (uint32_t **)device_data, host_data, &nbytes);
@@ -231,16 +232,19 @@ extern "C" void CAST_cuda_crypt(const unsigned char *in, unsigned char *out, siz
 	}
 
 	#ifdef DEBUG
+		cudaError_t cudaerrno;
 		fprintf(stdout,"Starting CAST kernel for %zu bytes with (%d, (%d))...\n", nbytes, gridSize, MAX_THREAD);
 	#endif
 
 	if(ctx->encrypt == CAST_ENCRYPT) {
 		CASTencKernel<<<gridSize,MAX_THREAD>>>(*device_data);
-		_CUDA_N("CAST encryption kernel could not be launched!");
 	} else {
-		CASTdecKernel<<<gridSize,MAX_THREAD>>>(*device_data);
-		_CUDA_N("CAST decryption kernel could not be launched!");
+		//CASTdecKernel<<<gridSize,MAX_THREAD>>>(*device_data);
 	}
+	
+	#ifdef DEBUG
+		_CUDA_N("CAST kernel could not be launched!");
+	#endif
 
 	transferDeviceToHost(&out, (uint32_t **)device_data, host_data, host_data, &nbytes);
 }
@@ -248,32 +252,6 @@ extern "C" void CAST_cuda_crypt(const unsigned char *in, unsigned char *out, siz
 extern "C" void CAST_cuda_transfer_key_schedule(CAST_KEY *ks) {
 	cudaError_t cudaerrno;
 	_CUDA(cudaMemcpyToSymbolAsync(cast_constant_schedule,ks,sizeof(CAST_KEY),0,cudaMemcpyHostToDevice));
-}
-
-//
-// CBC parallel decrypt
-//
-
-__global__ void CASTdecKernel_cbc(uint32_t in[],uint32_t out[],uint32_t iv[]) {
-}
-
-extern "C" void CAST_cuda_transfer_iv(const unsigned char *iv) {
-}
-
-extern "C" void CAST_cuda_decrypt_cbc(const unsigned char *in, unsigned char *out, size_t nbytes) {
-}
-
-#ifndef CBC_ENC_CPU
-//
-// CBC  encrypt
-//
-
-__global__ void CASTencKernel_cbc(uint32_t state[],uint32_t iv[],size_t length) {
-}
-
-#endif
-
-extern "C" void CAST_cuda_encrypt_cbc(const unsigned char *in, unsigned char *out, size_t nbytes) {
 }
 #else
 #error "ERROR: DEVICE EMULATION is NOT supported."

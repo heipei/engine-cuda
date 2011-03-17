@@ -83,13 +83,14 @@ __global__ void IDEAencKernel(uint64_t *data) {
 	data[TX] = block;
 }
 
+/*
 __global__ void IDEAdecKernel(uint64_t *data) {
 	
 }
+*/
 
 extern "C" void IDEA_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, EVP_CIPHER_CTX *ctx, uint8_t **host_data, uint64_t **device_data) {
 	assert(in && out && nbytes);
-	cudaError_t cudaerrno;
 	int gridSize;
 
 	transferHostToDevice(&in, (uint32_t **)device_data, host_data, &nbytes);
@@ -101,16 +102,19 @@ extern "C" void IDEA_cuda_crypt(const unsigned char *in, unsigned char *out, siz
 	}
 
 	#ifdef DEBUG
+		cudaError_t cudaerrno;
 		fprintf(stdout,"Starting IDEA kernel for %zu bytes with (%d, (%d))...\n", nbytes, gridSize, MAX_THREAD);
 	#endif
 
 	if(ctx->encrypt == IDEA_ENCRYPT) {
 		IDEAencKernel<<<gridSize,MAX_THREAD>>>(*device_data);
-		_CUDA_N("IDEA encryption kernel could not be launched!");
 	} else {
-		IDEAdecKernel<<<gridSize,MAX_THREAD>>>(*device_data);
-		_CUDA_N("IDEA decryption kernel could not be launched!");
+		//IDEAdecKernel<<<gridSize,MAX_THREAD>>>(*device_data);
 	}
+	
+	#ifdef DEBUG
+		_CUDA_N("IDEA kernel could not be launched!");
+	#endif
 
 	transferDeviceToHost(&out, (uint32_t **)device_data, host_data, host_data, &nbytes);
 }
@@ -121,31 +125,6 @@ extern "C" void IDEA_cuda_transfer_key_schedule(IDEA_KEY_SCHEDULE *ks) {
 	_CUDA(cudaMemcpyToSymbolAsync(idea_constant_schedule,ks,sizeof(IDEA_KEY_SCHEDULE),0,cudaMemcpyHostToDevice));
 }
 
-//
-// CBC parallel decrypt
-//
-
-__global__ void IDEAdecKernel_cbc(uint32_t in[],uint32_t out[],uint32_t iv[]) {
-}
-
-extern "C" void IDEA_cuda_transfer_iv(const unsigned char *iv) {
-}
-
-extern "C" void IDEA_cuda_decrypt_cbc(const unsigned char *in, unsigned char *out, size_t nbytes) {
-}
-
-#ifndef CBC_ENC_CPU
-//
-// CBC  encrypt
-//
-
-__global__ void IDEAencKernel_cbc(uint32_t state[],uint32_t iv[],size_t length) {
-}
-
-#endif
-
-extern "C" void IDEA_cuda_encrypt_cbc(const unsigned char *in, unsigned char *out, size_t nbytes) {
-}
 #else
 #error "ERROR: DEVICE EMULATION is NOT supported."
 #endif

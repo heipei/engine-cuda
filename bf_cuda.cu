@@ -18,10 +18,10 @@ uint8_t  *bf_host_data;
 float bf_elapsed;
 cudaEvent_t bf_start,bf_stop;
 
-#define BF_M  (0xFF<<2)
-#define BF_0  (24-2)
-#define BF_1  (16-2)
-#define BF_2  ( 8-2)
+#define BF_M  0x3fc
+#define BF_0  22
+#define BF_1  14
+#define BF_2   6
 #define BF_3  2
 #define BF_ENC(LL,R,S,P) ( \
 	LL^=P, \
@@ -35,12 +35,12 @@ __global__ void BFencKernel(uint64_t *data) {
 	register uint32_t l, r;
 	register uint64_t block = data[TX];
 
-	nl2i(block, l, r);
-
 	register const uint32_t *p,*s;
 
 	p=&(bf_constant_schedule.P[0]);
 	s=&(bf_constant_schedule.S[0]);
+
+	nl2i(block, l, r);
 
 	l^=p[0];
 	BF_ENC(r,l,s,p[ 1]);
@@ -67,9 +67,11 @@ __global__ void BFencKernel(uint64_t *data) {
 
 }
 
+/*
 __global__ void BFdecKernel(uint64_t *data) {
 	
 }
+*/
 
 extern "C" void BF_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, EVP_CIPHER_CTX *ctx, uint8_t **host_data, uint64_t **device_data) {
 	assert(in && out && nbytes);
@@ -94,7 +96,7 @@ extern "C" void BF_cuda_crypt(const unsigned char *in, unsigned char *out, size_
 		BFencKernel<<<gridSize,dimBlock>>>(*device_data);
 		_CUDA_N("BF encryption kernel could not be launched!");
 	} else {
-		BFdecKernel<<<gridSize,dimBlock>>>(*device_data);
+		//BFdecKernel<<<gridSize,dimBlock>>>(*device_data);
 		_CUDA_N("BF decryption kernel could not be launched!");
 	}
 

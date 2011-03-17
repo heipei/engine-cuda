@@ -21,15 +21,11 @@ void transferDeviceToHost_ZEROCOPY (unsigned char **output, uint32_t **deviceMem
 void transferDeviceToHost_PAGEABLE (unsigned char **output, uint32_t **deviceMem, uint8_t **hostMemS, uint8_t **hostMemOUT, size_t *size) {
 }
 
-//void checkOPENCLDevice(struct openclDeviceProp *deviceProp, int output_verbosity) {
-//}
-
 void opencl_device_init(int buffer_size, cl_context *context, cl_command_queue *queue, cl_mem *device_buffer, cl_mem *device_output, uint8_t **host_data, uint64_t **device_data) {
 
 }
 
 void opencl_device_finish(cl_context *context, cl_command_queue *queue, cl_mem *device_buffer, cl_mem *device_output) {
-	//clReleaseMemObject(*device_output);
 }
 
 char *print_cl_errstring(cl_int err) {

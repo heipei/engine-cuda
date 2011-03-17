@@ -12,8 +12,6 @@
 
 - Sboxes use large data types
 
-- Why do 192 threads not work?
-
 == OpenCL ==
 - Use constant memory for BF
 
@@ -21,7 +19,6 @@
 - CBC
 - Does constant memory get copied on every invocation? (Constant mem DES for IDEA-ECB for example)
  - Better to use dynamic texture memory, which is cached as well
-- Same memory for in and out?
 - warp serializing / gst uncoalesced (CUDA profiler): bank conflicts. shared memory or texture memory?
 - warp serializing also on s (round key)
 - des_SP into texture memory (or shared memory) because access to it is _never_ coalesced?
@@ -29,7 +26,6 @@
 == BF ==
 
 == IDEA ==
-- Bring down register use to increase occupancy
 
 == Camellia ==
 - Try shared instead of constant memory, as usual

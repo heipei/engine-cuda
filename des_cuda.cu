@@ -10,7 +10,7 @@
 #include "cuda_common.h"
 #include "common.h"
 
-__constant__ uint32_t des_d_sp_c[8][64]={
+__device__ uint32_t des_d_sp_c[8][64]={
 {
 /* nibble 0 */
 0x02080800L, 0x00080000L, 0x02000002L, 0x02080802L,
@@ -199,14 +199,14 @@ cudaEvent_t des_start,des_stop;
 	t=R^ss>>32; \
 	t=ROTATE(t,4); \
 	LL^= \
-	*(const uint32_t *)(des_SP      +((u     )&0xfc))^ \
-	*(const uint32_t *)(des_SP+0x200+((u>> 8L)&0xfc))^ \
-	*(const uint32_t *)(des_SP+0x400+((u>>16L)&0xfc))^ \
-	*(const uint32_t *)(des_SP+0x600+((u>>24L)&0xfc))^ \
-	*(const uint32_t *)(des_SP+0x100+((t     )&0xfc))^ \
-	*(const uint32_t *)(des_SP+0x300+((t>> 8L)&0xfc))^ \
-	*(const uint32_t *)(des_SP+0x500+((t>>16L)&0xfc))^ \
-	*(const uint32_t *)(des_SP+0x700+((t>>24L)&0xfc)); }
+	*(uint32_t *)(des_SP      +((u     )&0xfc))^ \
+	*(uint32_t *)(des_SP+0x200+((u>> 8L)&0xfc))^ \
+	*(uint32_t *)(des_SP+0x400+((u>>16L)&0xfc))^ \
+	*(uint32_t *)(des_SP+0x600+((u>>24L)&0xfc))^ \
+	*(uint32_t *)(des_SP+0x100+((t     )&0xfc))^ \
+	*(uint32_t *)(des_SP+0x300+((t>> 8L)&0xfc))^ \
+	*(uint32_t *)(des_SP+0x500+((t>>16L)&0xfc))^ \
+	*(uint32_t *)(des_SP+0x700+((t>>24L)&0xfc)); }
 
 __global__ void DESencKernel(uint64_t *data) {
 	
@@ -305,7 +305,6 @@ __global__ void DESdecKernel(uint64_t *data) {
 
 extern "C" void DES_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, EVP_CIPHER_CTX *ctx, uint8_t **host_data, uint64_t **device_data) {
 	assert(in && out && nbytes);
-	cudaError_t cudaerrno;
 	int gridSize;
 
 	transferHostToDevice(&in, (uint32_t **)device_data, host_data, &nbytes);
@@ -318,15 +317,18 @@ extern "C" void DES_cuda_crypt(const unsigned char *in, unsigned char *out, size
 
 	#ifdef DEBUG
 		fprintf(stdout,"Starting DES kernel for %zu bytes with (%d, (%d))...\n", nbytes, gridSize, MAX_THREAD);
+		cudaError_t cudaerrno;
 	#endif
 
 	if(ctx->encrypt == DES_ENCRYPT) {
 		DESencKernel<<<gridSize,MAX_THREAD>>>(*device_data);
-		_CUDA_N("DES encryption kernel could not be launched!");
 	} else {
 		DESdecKernel<<<gridSize,MAX_THREAD>>>(*device_data);
-		_CUDA_N("DES decryption kernel could not be launched!");
 	}
+	
+	#ifdef DEBUG
+		_CUDA_N("DES kernel could not be launched!");
+	#endif
 
 	transferDeviceToHost(&out, (uint32_t **)device_data, host_data, host_data, &nbytes);
 }
@@ -336,31 +338,6 @@ extern "C" void DES_cuda_transfer_key_schedule(DES_key_schedule *ks) {
 	_CUDA(cudaMemcpyToSymbolAsync(cs,ks,sizeof(DES_key_schedule),0,cudaMemcpyHostToDevice));
 }
 
-//
-// CBC parallel decrypt
-//
-
-__global__ void DESdecKernel_cbc(uint32_t in[],uint32_t out[],uint32_t iv[]) {
-}
-
-extern "C" void DES_cuda_transfer_iv(const unsigned char *iv) {
-}
-
-extern "C" void DES_cuda_decrypt_cbc(const unsigned char *in, unsigned char *out, size_t nbytes) {
-}
-
-#ifndef CBC_ENC_CPU
-//
-// CBC  encrypt
-//
-
-__global__ void DESencKernel_cbc(uint32_t state[],uint32_t iv[],size_t length) {
-}
-
-#endif
-
-extern "C" void DES_cuda_encrypt_cbc(const unsigned char *in, unsigned char *out, size_t nbytes) {
-}
 #else
 #error "ERROR: DEVICE EMULATION is NOT supported."
 #endif

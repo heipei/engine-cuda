@@ -17,7 +17,7 @@ __constant__ CAMELLIA_KEY cmll_constant_schedule;
 #define SBOX2_0222 Camellia_SBOX[2]
 #define SBOX3_3033 Camellia_SBOX[3]
 __device__ __shared__ uint32_t Camellia_SBOX[4][256];
-__device__ uint32_t Camellia_constant_SBOX[1024] = {
+__device__ uint32_t Camellia_global_SBOX[1024] = {
     0x70707000, 0x82828200, 0x2c2c2c00, 0xececec00, 0xb3b3b300, 0x27272700, 
     0xc0c0c000, 0xe5e5e500, 0xe4e4e400, 0x85858500, 0x57575700, 0x35353500, 
     0xeaeaea00, 0x0c0c0c00, 0xaeaeae00, 0x41414100, 0x23232300, 0xefefef00, 
@@ -218,15 +218,15 @@ __device__ uint32_t Camellia_constant_SBOX[1024] = {
 __global__ void CMLLencKernel(uint64_t *data) {
 
 	#if MAX_THREAD == 128
-		((uint64_t *)Camellia_SBOX[0])[threadIdx.x] = ((uint64_t *)Camellia_constant_SBOX)[threadIdx.x];
-		((uint64_t *)Camellia_SBOX[1])[threadIdx.x] = ((uint64_t *)Camellia_constant_SBOX)[threadIdx.x+128];
-		((uint64_t *)Camellia_SBOX[2])[threadIdx.x] = ((uint64_t *)Camellia_constant_SBOX)[threadIdx.x+256];
-		((uint64_t *)Camellia_SBOX[3])[threadIdx.x] = ((uint64_t *)Camellia_constant_SBOX)[threadIdx.x+384];
+		((uint64_t *)Camellia_SBOX[0])[threadIdx.x] = ((uint64_t *)Camellia_global_SBOX)[threadIdx.x];
+		((uint64_t *)Camellia_SBOX[1])[threadIdx.x] = ((uint64_t *)Camellia_global_SBOX)[threadIdx.x+128];
+		((uint64_t *)Camellia_SBOX[2])[threadIdx.x] = ((uint64_t *)Camellia_global_SBOX)[threadIdx.x+256];
+		((uint64_t *)Camellia_SBOX[3])[threadIdx.x] = ((uint64_t *)Camellia_global_SBOX)[threadIdx.x+384];
 	#elif MAX_THREAD == 256
-		((uint32_t *)Camellia_SBOX[0])[threadIdx.x] = ((uint32_t *)Camellia_constant_SBOX)[threadIdx.x];
-		((uint32_t *)Camellia_SBOX[1])[threadIdx.x] = ((uint32_t *)Camellia_constant_SBOX)[threadIdx.x+256];
-		((uint32_t *)Camellia_SBOX[2])[threadIdx.x] = ((uint32_t *)Camellia_constant_SBOX)[threadIdx.x+512];
-		((uint32_t *)Camellia_SBOX[3])[threadIdx.x] = ((uint32_t *)Camellia_constant_SBOX)[threadIdx.x+768];
+		((uint32_t *)Camellia_SBOX[0])[threadIdx.x] = ((uint32_t *)Camellia_global_SBOX)[threadIdx.x];
+		((uint32_t *)Camellia_SBOX[1])[threadIdx.x] = ((uint32_t *)Camellia_global_SBOX)[threadIdx.x+256];
+		((uint32_t *)Camellia_SBOX[2])[threadIdx.x] = ((uint32_t *)Camellia_global_SBOX)[threadIdx.x+512];
+		((uint32_t *)Camellia_SBOX[3])[threadIdx.x] = ((uint32_t *)Camellia_global_SBOX)[threadIdx.x+768];
 	#endif
 
 	register uint32_t *k = (uint32_t *)&cmll_constant_schedule.u.rd_key;
@@ -293,13 +293,13 @@ __global__ void CMLLencKernel(uint64_t *data) {
 	data[(TX*2)+1] = block;
 }
 
+/*
 __global__ void CMLLdecKernel(uint64_t *data) {
 	
 }
+*/
 
 extern "C" void CMLL_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, EVP_CIPHER_CTX *ctx, uint8_t **host_data, uint64_t **device_data) {
-	//assert(in && out && nbytes);
-	//cudaError_t cudaerrno;
 	int gridSize;
 
 	transferHostToDevice(&in, (uint32_t **)device_data, host_data, &nbytes);
@@ -311,16 +311,19 @@ extern "C" void CMLL_cuda_crypt(const unsigned char *in, unsigned char *out, siz
 	}
 
 	#ifdef DEBUG
+		cudaError_t cudaerrno;
 		fprintf(stdout,"Starting CMLL kernel for %zu bytes with (%d, (%d))...\n", nbytes, gridSize, MAX_THREAD);
 	#endif
 
 	if(ctx->encrypt == CAMELLIA_ENCRYPT) {
 		CMLLencKernel<<<gridSize,MAX_THREAD>>>(*device_data);
-		//_CUDA_N("CMLL encryption kernel could not be launched!");
 	} else {
-		CMLLdecKernel<<<gridSize,MAX_THREAD>>>(*device_data);
-		//_CUDA_N("CMLL decryption kernel could not be launched!");
+		//CMLLdecKernel<<<gridSize,MAX_THREAD>>>(*device_data);
 	}
+	
+	#ifdef DEBUG
+		_CUDA_N("Camellia kernel could not be launched!");
+	#endif
 
 	transferDeviceToHost(&out, (uint32_t **)device_data, host_data, host_data, &nbytes);
 }
@@ -330,31 +333,6 @@ extern "C" void CMLL_cuda_transfer_key_schedule(CAMELLIA_KEY *ks) {
 	_CUDA(cudaMemcpyToSymbolAsync(cmll_constant_schedule,ks,sizeof(CAMELLIA_KEY),0,cudaMemcpyHostToDevice));
 }
 
-//
-// CBC parallel decrypt
-//
-
-__global__ void CMLLdecKernel_cbc(uint32_t in[],uint32_t out[],uint32_t iv[]) {
-}
-
-extern "C" void CMLL_cuda_transfer_iv(const unsigned char *iv) {
-}
-
-extern "C" void CMLL_cuda_decrypt_cbc(const unsigned char *in, unsigned char *out, size_t nbytes) {
-}
-
-#ifndef CBC_ENC_CPU
-//
-// CBC  encrypt
-//
-
-__global__ void CMLLencKernel_cbc(uint32_t state[],uint32_t iv[],size_t length) {
-}
-
-#endif
-
-extern "C" void CMLL_cuda_encrypt_cbc(const unsigned char *in, unsigned char *out, size_t nbytes) {
-}
 #else
 #error "ERROR: DEVICE EMULATION is NOT supported."
 #endif
