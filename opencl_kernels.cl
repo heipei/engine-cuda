@@ -123,6 +123,69 @@ __kernel void AES128encKernel(__global unsigned int *data, __global unsigned int
 	AES_FINAL_ENC_ROUND(0x28);
 }
 
+__kernel void AES192encKernel(__global unsigned int *data, __global unsigned int *Teg, __constant unsigned int *aes_dk) {
+	__local unsigned int t[MAX_THREAD];
+	__local unsigned int s[MAX_THREAD];
+	__local unsigned int Te0[256];
+	__local unsigned int Te1[256];
+	__local unsigned int Te2[256];
+	__local unsigned int Te3[256];
+
+	Te0[SX] = Teg[SX];
+	Te1[SX] = Teg[SX+256];
+	Te2[SX] = Teg[SX+512];
+	Te3[SX] = Teg[SX+768];
+
+	s[SX] = data[GID] ^ aes_dk[get_local_id(0)];
+
+	barrier(CLK_LOCAL_MEM_FENCE);
+	
+	AES_ENC_ROUND( 4,t,s);
+	AES_ENC_ROUND( 8,s,t);
+	AES_ENC_ROUND(12,t,s);
+	AES_ENC_ROUND(16,s,t);
+	AES_ENC_ROUND(20,t,s);
+	AES_ENC_ROUND(24,s,t);
+	AES_ENC_ROUND(28,t,s);
+	AES_ENC_ROUND(32,s,t);
+	AES_ENC_ROUND(36,t,s);
+	AES_ENC_ROUND(40,s,t);
+	AES_ENC_ROUND(44,t,s);
+	AES_FINAL_ENC_ROUND(0x30);
+}
+
+__kernel void AES256encKernel(__global unsigned int *data, __global unsigned int *Teg, __constant unsigned int *aes_dk) {
+	__local unsigned int t[MAX_THREAD];
+	__local unsigned int s[MAX_THREAD];
+	__local unsigned int Te0[256];
+	__local unsigned int Te1[256];
+	__local unsigned int Te2[256];
+	__local unsigned int Te3[256];
+
+	Te0[SX] = Teg[SX];
+	Te1[SX] = Teg[SX+256];
+	Te2[SX] = Teg[SX+512];
+	Te3[SX] = Teg[SX+768];
+
+	s[SX] = data[GID] ^ aes_dk[get_local_id(0)];
+
+	barrier(CLK_LOCAL_MEM_FENCE);
+	
+	AES_ENC_ROUND( 4,t,s);
+	AES_ENC_ROUND( 8,s,t);
+	AES_ENC_ROUND(12,t,s);
+	AES_ENC_ROUND(16,s,t);
+	AES_ENC_ROUND(20,t,s);
+	AES_ENC_ROUND(24,s,t);
+	AES_ENC_ROUND(28,t,s);
+	AES_ENC_ROUND(32,s,t);
+	AES_ENC_ROUND(36,t,s);
+	AES_ENC_ROUND(40,s,t);
+	AES_ENC_ROUND(44,t,s);
+	AES_ENC_ROUND(48,s,t);
+	AES_ENC_ROUND(52,t,s);
+	AES_FINAL_ENC_ROUND(0x38);
+}
 // ###########
 // # DES ECB #
 // ###########
