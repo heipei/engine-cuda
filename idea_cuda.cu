@@ -47,7 +47,7 @@ __global__ void IDEAencKernel(uint64_t *data) {
 		idea_schedule[threadIdx.x] = idea_constant_schedule[threadIdx.x];
 
 	unsigned int *p = (unsigned int *)&idea_schedule;
-	uint32_t x1,x2,x3,x4,t0,t1,ul,l0,l1;
+	uint32_t x1,x2,x3,x4,t0,t1,ul;
 
 	register uint64_t block = data[TX];
 
@@ -75,12 +75,112 @@ __global__ void IDEAencKernel(uint64_t *data) {
 	x4&=0xffff;
 	idea_mul(x4,x4,*p,ul);
 
-	l0=(t0&0xffff)|((x1&0xffff)<<16);
-	l1=(x4&0xffff)|((t1&0xffff)<<16);
+	x2=(t0&0xffff)|((x1&0xffff)<<16);
+	x3=(x4&0xffff)|((t1&0xffff)<<16);
 
-	block = ((uint64_t)l0) << 32 | l1;
+	block = ((uint64_t)x2) << 32 | x3;
 	flip64(block);
 	data[TX] = block;
+
+	p = (unsigned int *)&idea_schedule;
+
+	block = data[__umul24(gridDim.x,blockDim.x) + TX];
+
+	nl2i(block,x2,x4);
+
+	x1=(x2>>16);
+	x3=(x4>>16);
+
+	E_IDEA(0);
+	E_IDEA(1);
+	E_IDEA(2);
+	E_IDEA(3);
+	E_IDEA(4);
+	E_IDEA(5);
+	E_IDEA(6);
+	E_IDEA(7);
+
+	x1&=0xffff;
+	idea_mul(x1,x1,*p,ul); p++;
+
+	t0= x3+ *(p++);
+	t1= x2+ *(p++);
+
+	x4&=0xffff;
+	idea_mul(x4,x4,*p,ul);
+
+	x2=(t0&0xffff)|((x1&0xffff)<<16);
+	x3=(x4&0xffff)|((t1&0xffff)<<16);
+
+	block = ((uint64_t)x2) << 32 | x3;
+	flip64(block);
+	data[__umul24(gridDim.x,blockDim.x) + TX] = block;
+	p = (unsigned int *)&idea_schedule;
+
+	block = data[__umul24(gridDim.x,blockDim.x)*2 + TX];
+
+	nl2i(block,x2,x4);
+
+	x1=(x2>>16);
+	x3=(x4>>16);
+
+	E_IDEA(0);
+	E_IDEA(1);
+	E_IDEA(2);
+	E_IDEA(3);
+	E_IDEA(4);
+	E_IDEA(5);
+	E_IDEA(6);
+	E_IDEA(7);
+
+	x1&=0xffff;
+	idea_mul(x1,x1,*p,ul); p++;
+
+	t0= x3+ *(p++);
+	t1= x2+ *(p++);
+
+	x4&=0xffff;
+	idea_mul(x4,x4,*p,ul);
+
+	x2=(t0&0xffff)|((x1&0xffff)<<16);
+	x3=(x4&0xffff)|((t1&0xffff)<<16);
+
+	block = ((uint64_t)x2) << 32 | x3;
+	flip64(block);
+	data[__umul24(gridDim.x,blockDim.x)*2 + TX] = block;
+	p = (unsigned int *)&idea_schedule;
+
+	block = data[__umul24(gridDim.x,blockDim.x)*3 + TX];
+
+	nl2i(block,x2,x4);
+
+	x1=(x2>>16);
+	x3=(x4>>16);
+
+	E_IDEA(0);
+	E_IDEA(1);
+	E_IDEA(2);
+	E_IDEA(3);
+	E_IDEA(4);
+	E_IDEA(5);
+	E_IDEA(6);
+	E_IDEA(7);
+
+	x1&=0xffff;
+	idea_mul(x1,x1,*p,ul); p++;
+
+	t0= x3+ *(p++);
+	t1= x2+ *(p++);
+
+	x4&=0xffff;
+	idea_mul(x4,x4,*p,ul);
+
+	x2=(t0&0xffff)|((x1&0xffff)<<16);
+	x3=(x4&0xffff)|((t1&0xffff)<<16);
+
+	block = ((uint64_t)x2) << 32 | x3;
+	flip64(block);
+	data[__umul24(gridDim.x,blockDim.x)*3 + TX] = block;
 }
 
 /*
@@ -95,10 +195,10 @@ extern "C" void IDEA_cuda_crypt(const unsigned char *in, unsigned char *out, siz
 
 	transferHostToDevice(&in, (uint32_t **)device_data, host_data, &nbytes);
 
-	if ((nbytes%(MAX_THREAD*IDEA_BLOCK_SIZE))==0) {
-		gridSize = nbytes/(MAX_THREAD*IDEA_BLOCK_SIZE);
+	if ((nbytes%(MAX_THREAD*IDEA_BLOCK_SIZE*4))==0) {
+		gridSize = nbytes/(MAX_THREAD*IDEA_BLOCK_SIZE*4);
 	} else {
-		gridSize = nbytes/(MAX_THREAD*IDEA_BLOCK_SIZE)+1;
+		gridSize = nbytes/(MAX_THREAD*IDEA_BLOCK_SIZE*4)+1;
 	}
 
 	#ifdef DEBUG
