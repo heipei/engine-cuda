@@ -95,6 +95,7 @@ extern "C" void cuda_device_init(int *nm, int buffer_size, int output_verbosity,
 		buffer_size=MAX_CHUNK_SIZE;
 	
 	//_CUDA(cudaSetDeviceFlags(cudaDeviceScheduleYield));
+	//_CUDA(cudaSetDeviceFlags(cudaDeviceScheduleSpin));
 	//_CUDA(cudaSetDeviceFlags(cudaDeviceScheduleYield|cudaDeviceBlockingSync));
 #if CUDART_VERSION >= 2000
 	*nm=deviceProp.multiProcessorCount;

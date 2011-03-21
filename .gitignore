@@ -1,6 +1,7 @@
 Makefile
 config.log
 config.status
+cscope.out
 
 tags
 teststate

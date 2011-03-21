@@ -56,4 +56,4 @@ for cipher in $CIPHERS; do
 	fi
 done
 
-./ecb-encrypt.plt > ecb-encrypt.png
+./plots.plt
