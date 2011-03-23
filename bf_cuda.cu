@@ -10,7 +10,8 @@
 #include "cuda_common.h"
 #include "common.h"
 
-__constant__ BF_KEY bf_constant_schedule;
+__device__ BF_KEY bf_global_schedule;
+__shared__ BF_KEY bf_schedule;
 
 __device__ uint64_t *bf_device_data;
 uint8_t  *bf_host_data;
@@ -35,10 +36,25 @@ __global__ void BFencKernel(uint64_t *data) {
 	register uint32_t l, r;
 	register uint64_t block = data[TX];
 
+	if(threadIdx.x < 18)
+		bf_schedule.P[threadIdx.x] = bf_global_schedule.P[threadIdx.x];
+
+	bf_schedule.S[threadIdx.x] = bf_global_schedule.S[threadIdx.x];
+	bf_schedule.S[threadIdx.x+256] = bf_global_schedule.S[threadIdx.x+256];
+	bf_schedule.S[threadIdx.x+512] = bf_global_schedule.S[threadIdx.x+512];
+	bf_schedule.S[threadIdx.x+768] = bf_global_schedule.S[threadIdx.x+768];
+	#if MAX_THREAD == 128
+		bf_schedule.S[threadIdx.x+128] = bf_global_schedule.S[threadIdx.x+128];
+		bf_schedule.S[threadIdx.x+384] = bf_global_schedule.S[threadIdx.x+384];
+		bf_schedule.S[threadIdx.x+640] = bf_global_schedule.S[threadIdx.x+640];
+		bf_schedule.S[threadIdx.x+896] = bf_global_schedule.S[threadIdx.x+896];
+	#endif
+	__syncthreads();
+
 	register const uint32_t *p,*s;
 
-	p=&(bf_constant_schedule.P[0]);
-	s=&(bf_constant_schedule.S[0]);
+	p=&(bf_schedule.P[0]);
+	s=&(bf_schedule.S[0]);
 
 	nl2i(block, l, r);
 
@@ -75,30 +91,44 @@ __global__ void BFdecKernel(uint64_t *data) {
 
 extern "C" void BF_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, EVP_CIPHER_CTX *ctx, uint8_t **host_data, uint64_t **device_data) {
 	assert(in && out && nbytes);
-	cudaError_t cudaerrno;
 	int gridSize;
-	dim3 dimBlock(MAX_THREAD, 1, 1);
 
 	transferHostToDevice(&in, (uint32_t **)device_data, host_data, &nbytes);
 
 	if ((nbytes%(MAX_THREAD*BF_BLOCK_SIZE))==0) {
 		gridSize = nbytes/(MAX_THREAD*BF_BLOCK_SIZE);
 	} else {
-		if (nbytes < MAX_THREAD*BF_BLOCK_SIZE)
-			dimBlock.x = nbytes / 8;
 		gridSize = nbytes/(MAX_THREAD*BF_BLOCK_SIZE)+1;
 	}
 
 	if (output_verbosity==OUTPUT_VERBOSE)
-		fprintf(stdout,"Starting BF kernel for %zu bytes with (%d, (%d, %d))...\n", nbytes, gridSize, dimBlock.x, dimBlock.y);
+		fprintf(stdout,"Starting BF kernel for %zu bytes with (%d, (%d))...\n", nbytes, gridSize, MAX_THREAD);
+
+	#ifdef DEBUG
+		cudaEvent_t start, stop;
+		cudaEventCreate(&start);
+		cudaEventCreate(&stop);
+		struct timeval starttime,curtime,difference;
+		gettimeofday(&starttime, NULL);
+		cudaEventRecord(start,0);
+	#endif
 
 	if(ctx->encrypt == BF_ENCRYPT) {
-		BFencKernel<<<gridSize,dimBlock>>>(*device_data);
-		_CUDA_N("BF encryption kernel could not be launched!");
+		BFencKernel<<<gridSize,MAX_THREAD>>>(*device_data);
 	} else {
 		//BFdecKernel<<<gridSize,dimBlock>>>(*device_data);
-		_CUDA_N("BF decryption kernel could not be launched!");
 	}
+
+	#ifdef DEBUG
+		cudaEventRecord(stop,0);
+		cudaThreadSynchronize();
+		float cu_time;
+		cudaEventElapsedTime(&cu_time,start,stop);
+		fprintf(stdout, "BF         CUDi %zu bytes, %06d usecs, %u Mb/s\n", nbytes, (int) (cu_time * 1000), 1000000/(unsigned int)(cu_time * 1000) * 8 * ((unsigned int)nbytes/1024)/1024);
+		gettimeofday(&curtime, NULL);
+		timeval_subtract(&difference,&curtime,&starttime);
+		fprintf(stdout, "BF         CUDA %zu bytes, %06d usecs, %u Mb/s\n", nbytes, (int)difference.tv_usec, (1000000/(unsigned int)difference.tv_usec * 8 * ((unsigned int)nbytes/1024)/1024));
+	#endif
 
 	transferDeviceToHost(&out, (uint32_t **)device_data, host_data, host_data, &nbytes);
 }
@@ -107,7 +137,7 @@ extern "C" void BF_cuda_transfer_key_schedule(BF_KEY *ks) {
 	assert(ks);
 	cudaError_t cudaerrno;
 	size_t ks_size = sizeof(BF_KEY);
-	_CUDA(cudaMemcpyToSymbolAsync(bf_constant_schedule,ks,ks_size,0,cudaMemcpyHostToDevice));
+	_CUDA(cudaMemcpyToSymbolAsync(bf_global_schedule,ks,ks_size,0,cudaMemcpyHostToDevice));
 }
 
 //

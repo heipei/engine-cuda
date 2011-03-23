@@ -3,13 +3,15 @@
 
 SIZE=100
 CIPHERS=(aes-128-ecb aes-192-ecb aes-256-ecb bf-ecb camellia-128-ecb cast5-ecb des-ecb idea-ecb)
+BUFSIZE=8388608
 # TODO: Use getopt or zparseopts
 
 if [[ $ARGC -le 1 ]]; then
-	echo " Usage: ./test.sh <algo> <file> <key>"
+	echo " Usage: ./test.sh <algo> <file> <key> <bufsize>"
+	echo "        ./test.sh <algo> <file> <key>"
 	echo "        ./test.sh <algo> <file>"
 	echo ""
-	echo "        <algo> in {bf-ecb,camellia-128-ecb,cast-ecb,des-ecb,idea-ecb,aes-ecb} or"
+	echo "        <algo> in {aes-128-ecb,aes-192-ecb,aes-256-ecb,bf-ecb,camellia-128-ecb,cast-ecb,des-ecb,idea-ecb} or"
 	echo "        <algo> = all"
 	exit 0
 fi
@@ -25,6 +27,10 @@ if [[ $1 != "all" ]]; then
 	CIPHERS=$1
 fi
 
+if [[ -n $4 ]]; then
+	BUFSIZE=$4;
+fi
+
 if [[ $2 == "sample.in" && ! -e sample.in ]]; then;
 	echo "Creating a 100 MB sample.in file..."
 	dd bs=1048576 count=100 if=/dev/urandom of=sample.in
@@ -34,10 +40,10 @@ for cipher in $CIPHERS; do
 	echo "==== $cipher tests ===="
 	echo ">> CUDA encryption"
 	echo "---------------"
-	time openssl enc -engine cudamrg -e -$cipher -nosalt -nopad -v -in $2 -out $cipher.out.cuda -bufsize 8388608 -K "$KEY"
+	time openssl enc -engine cudamrg -e -$cipher -nosalt -nopad -v -in $2 -out $cipher.out.cuda -bufsize $BUFSIZE -K "$KEY"
 	echo ">> OpenCL encryption"
 	echo "---------------"
-	time openssl enc -engine opencl -e -$cipher -nosalt -nopad -v -in $2 -out $cipher.out.opencl -bufsize 8388608 -K "$KEY"
+	time openssl enc -engine opencl -e -$cipher -nosalt -nopad -v -in $2 -out $cipher.out.opencl -bufsize $BUFSIZE -K "$KEY"
 	echo -e "\n>> CPU encryption"
 	echo "--------------"
 	time openssl enc -e -$cipher -nosalt -nopad -v -in $2 -out $cipher.out.cpu -K "$KEY"

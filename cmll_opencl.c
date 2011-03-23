@@ -208,21 +208,31 @@ void CMLL_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbyte
 		clSetKernelArg(device_kernel, 2, sizeof(cl_mem), &cmll_stable);
 	}
 
+	clEnqueueWriteBuffer(queue,*device_buffer,CL_TRUE,0,nbytes,in,0,NULL,NULL);
+	
 	#ifdef DEBUG
+		cl_event event;
+		clFinish(queue);
 		struct timeval starttime,curtime,difference;
 		gettimeofday(&starttime, NULL);
 		fprintf(stdout, "nbytes: %zu, gridsize: %zu, blocksize: %zu\n", nbytes, gridSize[0], blockSize[0]);
-	#endif
-	
-	clEnqueueWriteBuffer(queue,*device_buffer,CL_TRUE,0,nbytes,in,0,NULL,NULL);
-	clEnqueueNDRangeKernel(queue,device_kernel, 1, NULL,gridSize, blockSize, 0, NULL, NULL);
-	clEnqueueReadBuffer(queue,*device_buffer,CL_TRUE,0,nbytes,out,0,NULL,NULL);
+		
+		clEnqueueNDRangeKernel(queue,device_kernel, 1, NULL,gridSize, blockSize, 0, NULL, &event);
 
-	#ifdef DEBUG
+		clFinish(queue);
+		cl_ulong start, end;
+		clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_END,sizeof(cl_ulong), &end, NULL);
+		clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_START,sizeof(cl_ulong), &start, NULL);
 		gettimeofday(&curtime, NULL);
 		timeval_subtract(&difference,&curtime,&starttime);
-		fprintf(stdout, "OpenCL kernel: %d.%06d\n", (int)difference.tv_sec, (int)difference.tv_usec);
+		unsigned long opencl_time = (end - start) / 1000;
+		fprintf(stdout, "CMLL-128 OpenCi %zu bytes, %06lu usecs, %lu Mb/s\n", nbytes, opencl_time, (1000000/opencl_time * 8 * ((unsigned int)nbytes/1024)/1024));
+		fprintf(stdout, "CMLL-128 OpenCL %zu bytes, %06d usecs, %u Mb/s\n", nbytes, (int)difference.tv_usec, (1000000/(unsigned int)difference.tv_usec * 8 * ((unsigned int)nbytes/1024)/1024));
+	#else
+		clEnqueueNDRangeKernel(queue,device_kernel, 1, NULL,gridSize, blockSize, 0, NULL, NULL);
 	#endif
+
+	clEnqueueReadBuffer(queue,*device_buffer,CL_TRUE,0,nbytes,out,0,NULL,NULL);
 }
 
 void CMLL_opencl_transfer_key_schedule(CAMELLIA_KEY *ks, cl_mem *device_schedule, cl_command_queue queue) {

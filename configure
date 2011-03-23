@@ -2875,7 +2875,7 @@ $as_echo "no" >&6; }
 fi
 
 
-CFLAGS=" -O3 -Wall"
+CFLAGS="$CFLAGS -O3 -Wall"
 
 
 # Check whether --with-cudatoolkitpath was given.

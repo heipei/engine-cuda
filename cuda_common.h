@@ -1,5 +1,8 @@
 #include <stdint.h>
 #include <cuda_runtime_api.h>
+#ifdef DEBUG
+	#include <sys/time.h>
+#endif
 
 #define TX (blockIdx.x * blockDim.x * blockDim.y + blockDim.y * threadIdx.x + threadIdx.y)
 
@@ -36,6 +39,7 @@ extern "C" void transferDeviceToHost_PAGEABLE (unsigned char **output, uint32_t 
 extern "C" void (*transferHostToDevice) (const unsigned char  **input, uint32_t **deviceMem, uint8_t **hostMem, size_t *size);
 extern "C" void (*transferDeviceToHost) (      unsigned char **output, uint32_t **deviceMem, uint8_t **hostMemS, uint8_t **hostMemOUT, size_t *size);
 
+extern "C" int timeval_subtract (struct timeval *result, struct timeval *x, struct timeval *y);
 extern "C" void checkCUDADevice(struct cudaDeviceProp *deviceProp, int output_verbosity);
 extern "C" void cuda_device_init(int *nm, int buffer_size, int output_verbosity, uint8_t**, uint64_t**);
 extern "C" void cuda_device_finish(uint8_t *host_data, uint64_t *device_data);

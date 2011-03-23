@@ -52,6 +52,27 @@ extern "C" void transferDeviceToHost_PAGEABLE (unsigned char **output, uint32_t 
 float time_elapsed;
 cudaEvent_t time_start,time_stop;
 
+#ifdef DEBUG
+#include <sys/time.h>
+int timeval_subtract (struct timeval *result, struct timeval *x, struct timeval *y) {
+  if (x->tv_usec < y->tv_usec) {
+    int nsec = (y->tv_usec - x->tv_usec) / 1000000 + 1;
+    y->tv_usec -= 1000000 * nsec;
+    y->tv_sec += nsec;
+  }
+  if (x->tv_usec - y->tv_usec > 1000000) {
+    int nsec = (x->tv_usec - y->tv_usec) / 1000000;
+    y->tv_usec += 1000000 * nsec;
+    y->tv_sec -= nsec;
+  }
+
+  result->tv_sec = x->tv_sec - y->tv_sec;
+  result->tv_usec = x->tv_usec - y->tv_usec;
+
+  return x->tv_sec < y->tv_sec;
+}
+#endif
+
 void checkCUDADevice(struct cudaDeviceProp *deviceProp, int output_verbosity) {
 	int deviceCount;
 	cudaError_t cudaerrno;
@@ -96,6 +117,7 @@ extern "C" void cuda_device_init(int *nm, int buffer_size, int output_verbosity,
 	
 	//_CUDA(cudaSetDeviceFlags(cudaDeviceScheduleYield));
 	//_CUDA(cudaSetDeviceFlags(cudaDeviceScheduleSpin));
+	//_CUDA(cudaSetDeviceFlags(cudaDeviceBlockingSync));
 	//_CUDA(cudaSetDeviceFlags(cudaDeviceScheduleYield|cudaDeviceBlockingSync));
 #if CUDART_VERSION >= 2000
 	*nm=deviceProp.multiProcessorCount;

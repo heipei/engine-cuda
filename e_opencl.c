@@ -103,7 +103,11 @@ int opencl_init(ENGINE * engine) {
 	printf("CL_DRIVER_VERSION: %s\n\n", cBuffer);
 
 	CL_ASSIGN(context = clCreateContext(NULL, 1, &device, NULL, NULL, &error));
-	CL_ASSIGN(queue = clCreateCommandQueue(context, device, CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, &error));
+	#ifdef DEBUG
+		CL_ASSIGN(queue = clCreateCommandQueue(context, device,CL_QUEUE_PROFILING_ENABLE|CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, &error));
+	#else
+		CL_ASSIGN(queue = clCreateCommandQueue(context, device,CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, &error));
+	#endif
 	CL_ASSIGN(device_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE|CL_MEM_ALLOC_HOST_PTR, maxbytes, NULL, &error));
 	CL_ASSIGN(host_data = (unsigned char *)clEnqueueMapBuffer(queue,device_buffer,CL_TRUE,CL_MAP_WRITE|CL_MAP_READ,0,maxbytes,0,NULL,NULL,&error));
 
@@ -370,14 +374,13 @@ static int opencl_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsig
 	while (nbytes!=current) {
 		chunk=(nbytes-current)/maxbytes;
 		if(chunk>=1) {
-			memcpy(host_data,in_arg+current,maxbytes);
-			opencl_device_crypt(host_data,host_data,maxbytes,ctx->encrypt,&device_buffer,&device_schedule,queue,*device_kernel, context);
-			memcpy(out_arg+current,host_data,maxbytes);
+			//memcpy(host_data,in_arg+current,maxbytes);
+			opencl_device_crypt(in_arg+current,out_arg+current,maxbytes,ctx->encrypt,&device_buffer,&device_schedule,queue,*device_kernel, context);
+			//memcpy(out_arg+current,host_data,maxbytes);
 			current+=maxbytes;  
 		} else {
-			memcpy(host_data,in_arg+current,nbytes-current);
-			opencl_device_crypt(host_data,host_data,(nbytes-current),ctx->encrypt,&device_buffer,&device_schedule,queue,*device_kernel, context);
-			memcpy(out_arg+current,host_data,nbytes-current);
+			//memcpy(host_data,in_arg+current,nbytes-current);
+			opencl_device_crypt(in_arg+current,out_arg+current,(nbytes-current),ctx->encrypt,&device_buffer,&device_schedule,queue,*device_kernel, context);
 			current+=(nbytes-current);
 		}
 	}

@@ -2,6 +2,9 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <CL/opencl.h>
+#ifdef DEBUG
+	#include <sys/time.h>
+#endif
 
 void transferHostToDevice_PINNED   (const unsigned char **input, uint32_t **deviceMem, uint8_t **hostMem, size_t *size);
 void transferDeviceToHost_PINNED   (unsigned char **output, uint32_t **deviceMem, uint8_t **hostMemS, uint8_t **hostMemOUT, size_t *size);

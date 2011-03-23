@@ -31,7 +31,7 @@ AC_LANG_C
         
 AC_PROG_MAKE_SET
 
-CFLAGS=" -O3 -Wall"
+CFLAGS="$CFLAGS -O3 -Wall"
 
 AC_ARG_WITH([cudatoolkitpath],AS_HELP_STRING([--with-cudatoolkitpath],[prefix where cuda is installed (default=/usr/local/cuda)]),
 [
