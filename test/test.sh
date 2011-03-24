@@ -28,7 +28,11 @@ if [[ $1 != "all" ]]; then
 fi
 
 if [[ -n $4 ]]; then
-	BUFSIZE=$4;
+	if [[ $4 == "auto" ]]; then
+		BUFSIZE=`ls -l $2|awk {'print $5'}`
+	else
+		BUFSIZE=$4;
+	fi
 fi
 
 if [[ $2 == "sample.in" && ! -e sample.in ]]; then;

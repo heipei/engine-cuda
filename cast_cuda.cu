@@ -234,14 +234,7 @@ extern "C" void CAST_cuda_crypt(const unsigned char *in, unsigned char *out, siz
 	if (output_verbosity==OUTPUT_VERBOSE)
 		fprintf(stdout,"Starting CAST kernel for %zu bytes with (%d, (%d))...\n", nbytes, gridSize, MAX_THREAD);
 
-	#ifdef DEBUG
-		cudaEvent_t start, stop;
-		cudaEventCreate(&start);
-		cudaEventCreate(&stop);
-		struct timeval starttime,curtime,difference;
-		gettimeofday(&starttime, NULL);
-		cudaEventRecord(start,0);
-	#endif
+	CUDA_START_TIME
 
 	if(ctx->encrypt == CAST_ENCRYPT) {
 		CASTencKernel<<<gridSize,MAX_THREAD>>>(*device_data);
@@ -249,16 +242,7 @@ extern "C" void CAST_cuda_crypt(const unsigned char *in, unsigned char *out, siz
 		//CASTdecKernel<<<gridSize,MAX_THREAD>>>(*device_data);
 	}
 	
-	#ifdef DEBUG
-		cudaEventRecord(stop,0);
-		cudaThreadSynchronize();
-		float cu_time;
-		cudaEventElapsedTime(&cu_time,start,stop);
-		fprintf(stdout, "CAST5      CUDi %zu bytes, %06d usecs, %u Mb/s\n", nbytes, (int) (cu_time * 1000), 1000000/(unsigned int)(cu_time * 1000) * 8 * ((unsigned int)nbytes/1024)/1024);
-		gettimeofday(&curtime, NULL);
-		timeval_subtract(&difference,&curtime,&starttime);
-		fprintf(stdout, "CAST5      CUDA %zu bytes, %06d usecs, %u Mb/s\n", nbytes, (int)difference.tv_usec, (1000000/(unsigned int)difference.tv_usec * 8 * ((unsigned int)nbytes/1024)/1024));
-	#endif
+	CUDA_STOP_TIME("CAST5      ")
 
 	transferDeviceToHost(&out, (uint32_t **)device_data, host_data, host_data, &nbytes);
 }

@@ -186,27 +186,7 @@ void DES_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes
 
 	clEnqueueWriteBuffer(queue,*device_buffer,CL_TRUE,0,nbytes,in,0,NULL,NULL);
 
-	#ifdef DEBUG
-		cl_event event;
-		clFinish(queue);
-		struct timeval starttime,curtime,difference;
-		gettimeofday(&starttime, NULL);
-		fprintf(stdout, "nbytes: %zu, gridsize: %zu, blocksize: %zu\n", nbytes, gridSize[0], blockSize[0]);
-		
-		clEnqueueNDRangeKernel(queue,device_kernel, 1, NULL,gridSize, blockSize, 0, NULL, &event);
-
-		clFinish(queue);
-		cl_ulong start, end;
-		clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_END,sizeof(cl_ulong), &end, NULL);
-		clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_START,sizeof(cl_ulong), &start, NULL);
-		gettimeofday(&curtime, NULL);
-		timeval_subtract(&difference,&curtime,&starttime);
-		unsigned long opencl_time = (end - start) / 1000;
-		fprintf(stdout, "DES      OpenCi %zu bytes, %06lu usecs, %lu Mb/s\n", nbytes, opencl_time, (1000000/opencl_time * 8 * ((unsigned int)nbytes/1024)/1024));
-		fprintf(stdout, "DES      OpenCL %zu bytes, %06d usecs, %u Mb/s\n", nbytes, (int)difference.tv_usec, (1000000/(unsigned int)difference.tv_usec * 8 * ((unsigned int)nbytes/1024)/1024));
-	#else
-		clEnqueueNDRangeKernel(queue,device_kernel, 1, NULL,gridSize, blockSize, 0, NULL, NULL);
-	#endif
+	OPENCL_TIME_KERNEL("DES     ",1)
 
 	clEnqueueReadBuffer(queue,*device_buffer,CL_TRUE,0,nbytes,out,0,NULL,NULL);
 
