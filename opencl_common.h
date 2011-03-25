@@ -37,8 +37,8 @@ const char *cl_error_to_str(cl_int e);
 		gettimeofday(&curtime, NULL); \
 		timeval_subtract(&difference,&curtime,&starttime); \
 		unsigned long opencl_time = (end - start) / 1000; \
-		fprintf(stdout, NAME " OpenCi %zu bytes, %06lu usecs, %lu Mb/s\n", nbytes, opencl_time, (1000000/opencl_time * 8 * (unsigned int)nbytes / 1024 / 1024)); \
-		fprintf(stdout, NAME " OpenCL %zu bytes, %06d usecs, %u Mb/s\n", nbytes, (int)difference.tv_usec, (1000000/(unsigned int)difference.tv_usec * 8 * (unsigned int)nbytes / 1024 / 1024));
+		fprintf(stdout, NAME " OpenCL %zu bytes, %06lu usecs, %lu Mb/s\n", nbytes, opencl_time, (1000000/opencl_time * 8 * (unsigned int)nbytes / 1024 / 1024)); \
+		fprintf(stdout, NAME " OpenCs %zu bytes, %06d usecs, %u Mb/s\n", nbytes, (int)difference.tv_usec, (1000000/(unsigned int)difference.tv_usec * 8 * (unsigned int)nbytes / 1024 / 1024));
 #else
 	#define OPENCL_TIME_KERNEL(NAME,DIM) \
 		clEnqueueNDRangeKernel(queue,device_kernel, DIM, NULL,gridSize, blockSize, 0, NULL, NULL); 

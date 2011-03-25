@@ -21,6 +21,7 @@ plot 'bf-ecb_gpu_cudamrg.dat' using ($2/1048576) title 'Blowfish CUDA' with line
      'bf-ecb_cpu.dat' using ($2/1048576) title 'Blowfish CPU' with linespoints
 
 set title "Encryption performance CAST5-ECB" 
+set key inside left top vertical Right autotitles width 3 box linetype 1 linewidth 1.000
 set output "ecb-encrypt_cast5.pdf"
 plot 'cast5-ecb_gpu_cudamrg.dat' using ($2/1048576) title 'CAST5 CUDA' with linespoints, \
      'cast5-ecb_gpu_opencl.dat' using ($2/1048576) title 'CAST5 OpenCL' with linespoints, \

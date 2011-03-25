@@ -36,10 +36,10 @@
 			cudaThreadSynchronize(); \
 			float cu_time; \
 			cudaEventElapsedTime(&cu_time,start,stop); \
-			fprintf(stdout, NAME "CUDi %zu bytes, %06d usecs, %.0f Mb/s\n", nbytes, (int) (cu_time * 1000), 1000/cu_time * (unsigned int)nbytes * 8 / 1024 / 1024); \
+			fprintf(stdout, NAME "CUDA %zu bytes, %06d usecs, %.0f Mb/s\n", nbytes, (int) (cu_time * 1000), 1000/cu_time * (unsigned int)nbytes * 8 / 1024 / 1024); \
 			gettimeofday(&curtime, NULL); \
 			timeval_subtract(&difference,&curtime,&starttime); \
-			fprintf(stdout, NAME "CUDA %zu bytes, %06d usecs, %u Mb/s\n", nbytes, (int)difference.tv_usec, (1000000/(unsigned int)difference.tv_usec * 8 * (unsigned int)nbytes / 1024 / 1024));
+			fprintf(stdout, NAME "CUDs %zu bytes, %06d usecs, %u Mb/s\n", nbytes, (int)difference.tv_usec, (1000000/(unsigned int)difference.tv_usec * 8 * (unsigned int)nbytes / 1024 / 1024));
 #else
 	#define CUDA_START_TIME
 	#define CUDA_STOP_TIME(NAME)

@@ -21,9 +21,6 @@ set grid nopolar
 set grid xtics nomxtics ytics nomytics noztics nomztics \
  nox2tics nomx2tics noy2tics nomy2tics nocbtics nomcbtics
 set grid layerdefault   linetype 0 linewidth 1.000,  linetype 0 linewidth 1.000
-set key title ""
-set key inside left top vertical Right noreverse enhanced autotitles box linetype 1 linewidth 1.000
-set key noinvert samplen 4 spacing 1 width 0 height 0 
 unset label
 unset arrow
 set style increment default
@@ -119,5 +116,9 @@ set colorbox vertical origin screen 0.9, 0.2, 0 size screen 0.05, 0.6, 0 front b
 set loadpath 
 set fontpath 
 set fit noerrorvariables
+set key title ""
+#set key inside left top vertical Right noreverse enhanced autotitles box linetype 1 linewidth 1.000
+set key inside left top vertical Right autotitles width 2 box linetype 1 linewidth 1.000
+#set key noinvert samplen 4 spacing 1 width 0 height 0 
 set terminal pdf size 15cm,9cm font "Palatino"
 GNUTERM = "wxt"
