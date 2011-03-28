@@ -20,8 +20,7 @@
 # You should have received a copy of the GNU General Public License
 # along with Engine_cudamrg.  If not, see <http://www.gnu.org/licenses/>.
 #
-infile_e='./trailer.mp4'
-infile_d='./trailer.aes'
+infile_e='/home/paolomargara/zero-filled-1G-file'
 outfile='/dev/null'
 key='c26d8562740cdcea548efc08babd19a3d1aaedf6'
 cmd='/usr/bin/openssl'
