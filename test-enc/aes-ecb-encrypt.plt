@@ -13,7 +13,7 @@
 #    	The gnuplot FAQ is available from http://www.gnuplot.info/faq/
 #    
 #    	Send bug reports and suggestions to <http://sourceforge.net/projects/gnuplot>
-#    
+#
 # set terminal png nocrop font /usr/share/fonts/truetype/ttf-liberation/LiberationSans-Regular.ttf 12 size 200,100 
 # set output
 unset clip points
@@ -103,7 +103,7 @@ set nox2tics
 set noy2tics
 set cbtics border in scale 1,0.5 mirror norotate  offset character 0, 0, 0
 set cbtics autofreq  norangelimit
-set title "Encryption performance with AES ECB 256 on GPU" 
+set title "Encryption performance with AES ECB" 
 set title  offset character 0, 0, 0 font "" norotate
 set timestamp bottom 
 set timestamp "" 
@@ -148,5 +148,5 @@ set fontpath
 set fit noerrorvariables
 set terminal png size 1000,500
 GNUTERM = "wxt"
-plot 'urandom-constant/aes-256-ecb.dat' using 1 title 'constant memory - urandom-filled data' with linespoints,'zero-constant/aes-256-ecb.dat' using 1 title 'constant memory - zero-filled data' with linespoint,'urandom-shared/aes-256-ecb.dat' using 1 title 'shared memory - urandom-filled data' with linespoint, 'zero-shared/aes-256-ecb.dat' using 1 title 'shared memory - zero-filled data' with linespoints
+plot 'aes-128-ecb.dat' using 1 title 'AES 128 ECB GPU' with linespoints,'aes-192-ecb.dat' using 1 title 'AES 192 ECB GPU' with linespoint,'aes-256-ecb.dat' using 1 title 'AES 256 ECB GPU' with linespoint, 'aes-128-ecb-cpu.dat' using 1 title 'AES 128 ECB CPU' with linespoints,'aes-192-ecb-cpu.dat' using 1 title 'AES 192 ECB CPU' with linespoint,'aes-256-ecb-cpu.dat' using 1 title 'AES 256 ECB CPU' with linespoint
 #    EOF
