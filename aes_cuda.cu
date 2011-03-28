@@ -775,19 +775,39 @@ texture <unsigned int,1,cudaReadModeElementType> texref_dk;
 #define ROW (__umul24(4,threadIdx.y))
 #define SX (ROW + threadIdx.x)
 
-#define AES_ENC_ROUND(n,D,S)	D[SX] = Te0[S[SX] & 0xff] ^ Te1[(S[(1+threadIdx.x)%4+ROW] >> 8) & 0xff] ^ \
-				Te2[(S[(2+threadIdx.x)%4+ROW] >>  16) & 0xff] ^ Te3[S[(3+threadIdx.x)%4+ROW] >> 24] ^ \
+#define AES_ENC_ROUND(n,D,S)	D[SX] = TE(0)[S[SX] & 0xff] ^ TE(1)[(S[(1+threadIdx.x)%4+ROW] >> 8) & 0xff] ^ \
+				TE(2)[(S[(2+threadIdx.x)%4+ROW] >>  16) & 0xff] ^ TE(3)[S[(3+threadIdx.x)%4+ROW] >> 24] ^ \
 				tex1Dfetch(texref_dk,n+threadIdx.x);
-#define AES_FINAL_ENC_ROUND(N)	register uint32_t p_state = (Te2[(t[SX]) & 0xff] & 0x000000ff)^ \
-				(Te3[(t[(1+threadIdx.x)%4+ROW] >>  8) & 0xff] & 0x0000ff00)^ \
-				(Te0[(t[(2+threadIdx.x)%4+ROW] >> 16) & 0xff] & 0x00ff0000)^ \
-				(Te1[(t[(3+threadIdx.x)%4+ROW] >> 24)       ] & 0xff000000)^ \
+#define AES_FINAL_ENC_ROUND(N)	register uint32_t p_state = (TE(2)[(t[SX]) & 0xff] & 0x000000ff)^ \
+				(TE(3)[(t[(1+threadIdx.x)%4+ROW] >>  8) & 0xff] & 0x0000ff00)^ \
+				(TE(0)[(t[(2+threadIdx.x)%4+ROW] >> 16) & 0xff] & 0x00ff0000)^ \
+				(TE(1)[(t[(3+threadIdx.x)%4+ROW] >> 24)       ] & 0xff000000)^ \
 				tex1Dfetch(texref_dk,threadIdx.x+N); \
 				data[blockIdx.x*MAX_THREAD+SX] = p_state; 
+
+#ifdef T_TABLE_CONSTANT
+	#define COPY_CONSTANT_SHARED_ENC
+	#define TE(n)	Te##n
+#else
+	#define TE(n)	Tes##n
+	#define COPY_CONSTANT_SHARED_ENC\
+		__shared__ uint32_t Tes0[256];\
+		__shared__ uint32_t Tes1[256];\
+		__shared__ uint32_t Tes2[256];\
+		__shared__ uint32_t Tes3[256];\
+		Tes0[SX] = Te0[SX];\
+		Tes1[SX] = Te1[SX];\
+		Tes2[SX] = Te2[SX];\
+		Tes3[SX] = Te3[SX];\
+		__syncthreads();
+#endif
+	
 
 __global__ void AES128encKernel(uint32_t data[]) {
 	__shared__ uint32_t t[MAX_THREAD];
 	__shared__ uint32_t s[MAX_THREAD];
+
+	COPY_CONSTANT_SHARED_ENC
 
 	s[SX] = data[__umul24(blockIdx.x,MAX_THREAD)+SX] ^ tex1Dfetch(texref_dk,threadIdx.x);
 	
@@ -806,6 +826,8 @@ __global__ void AES128encKernel(uint32_t data[]) {
 __global__ void AES192encKernel(uint32_t data[]) {
 	__shared__ uint32_t t[MAX_THREAD];
 	__shared__ uint32_t s[MAX_THREAD];
+
+	COPY_CONSTANT_SHARED_ENC
 
 	s[SX] = data[__umul24(blockIdx.x,MAX_THREAD)+SX] ^ tex1Dfetch(texref_dk,threadIdx.x);
 	
@@ -827,6 +849,8 @@ __global__ void AES256encKernel(uint32_t data[]) {
 	__shared__ uint32_t t[MAX_THREAD];
 	__shared__ uint32_t s[MAX_THREAD];
 
+	COPY_CONSTANT_SHARED_ENC
+
 	s[SX] = data[__umul24(blockIdx.x,MAX_THREAD)+SX] ^ tex1Dfetch(texref_dk,threadIdx.x);
 	
 	AES_ENC_ROUND( 4,t,s);
@@ -845,8 +869,27 @@ __global__ void AES256encKernel(uint32_t data[]) {
 	AES_FINAL_ENC_ROUND(0x38);
 }
 
-#define AES_DEC_ROUND(n,D,S)	D[SX] = Td0[S[SX] & 0xff] ^ Td1[(S[(3+threadIdx.x)%4+ROW] >> 8) & 0xff] ^ \
-				Td2[(S[(2+threadIdx.x)%4+ROW] >>  16) & 0xff] ^ Td3[S[(1+threadIdx.x)%4+ROW] >> 24] ^ \
+
+#ifdef T_TABLE_CONSTANT
+	#define COPY_CONSTANT_SHARED_DEC
+	#define TD(n)	Td##n
+#else
+	#define COPY_CONSTANT_SHARED_DEC\
+		__shared__ uint32_t Tds0[256];\
+		__shared__ uint32_t Tds1[256];\
+		__shared__ uint32_t Tds2[256];\
+		__shared__ uint32_t Tds3[256];\
+		Tds0[SX] = Td0[SX];\
+		Tds1[SX] = Td1[SX];\
+		Tds2[SX] = Td2[SX];\
+		Tds3[SX] = Td3[SX];\
+		Tds3[SX] = Td3[SX];\
+		__syncthreads();
+	#define TD(n)	Tds##n
+#endif
+
+#define AES_DEC_ROUND(n,D,S)	D[SX] = TD(0)[S[SX] & 0xff] ^ TD(1)[(S[(3+threadIdx.x)%4+ROW] >> 8) & 0xff] ^ \
+				TD(2)[(S[(2+threadIdx.x)%4+ROW] >>  16) & 0xff] ^ TD(3)[S[(1+threadIdx.x)%4+ROW] >> 24] ^ \
 				tex1Dfetch(texref_dk,n+threadIdx.x);
 #define AES_FINAL_DEC_ROUND(N)	register uint32_t p_state =(Td4[(t[SX]) & 0xff])     ^ \
 				(Td4[(t[(3+threadIdx.x)%4+ROW] >>  8) & 0xff] <<  8) ^ \
@@ -854,10 +897,17 @@ __global__ void AES256encKernel(uint32_t data[]) {
 				(Td4[(t[(1+threadIdx.x)%4+ROW] >> 24)       ] << 24) ^ \
 				tex1Dfetch(texref_dk,threadIdx.x+N); \
 				data[blockIdx.x*MAX_THREAD+SX] = p_state; 
+#define AES_FINAL_DEC_ROUND_CBC(N)	register uint32_t p_state =(Td4[(t[SX]) & 0xff])     ^ \
+					(Td4[(t[(3+threadIdx.x)%4+ROW] >>  8) & 0xff] <<  8) ^ \
+					(Td4[(t[(2+threadIdx.x)%4+ROW] >> 16) & 0xff] << 16) ^ \
+					(Td4[(t[(1+threadIdx.x)%4+ROW] >> 24)       ] << 24) ^ \
+					tex1Dfetch(texref_dk,threadIdx.x+N); \
 
 __global__ void AES128decKernel(uint32_t *data) {
 	__shared__ uint32_t t[MAX_THREAD];
 	__shared__ uint32_t s[MAX_THREAD];
+
+	COPY_CONSTANT_SHARED_DEC
 
 	s[SX] = data[blockIdx.x*MAX_THREAD+SX] ^ tex1Dfetch(texref_dk,threadIdx.x);
 
@@ -876,6 +926,8 @@ __global__ void AES128decKernel(uint32_t *data) {
 __global__ void AES192decKernel(uint32_t *data) {
 	__shared__ uint32_t t[MAX_THREAD];
 	__shared__ uint32_t s[MAX_THREAD];
+
+	COPY_CONSTANT_SHARED_DEC
 
 	s[SX] = data[blockIdx.x*MAX_THREAD+SX] ^ tex1Dfetch(texref_dk,threadIdx.x);
 
@@ -897,6 +949,8 @@ __global__ void AES256decKernel(uint32_t data[]) {
 	__shared__ uint32_t t[MAX_THREAD];
 	__shared__ uint32_t s[MAX_THREAD];
 
+	COPY_CONSTANT_SHARED_DEC
+
 	s[SX] = data[blockIdx.x*MAX_THREAD+SX] ^ tex1Dfetch(texref_dk,threadIdx.x);
 
 	AES_DEC_ROUND( 4,t,s);
@@ -915,15 +969,11 @@ __global__ void AES256decKernel(uint32_t data[]) {
 	AES_FINAL_DEC_ROUND(0x38);
 }
 
-#define AES_FINAL_DEC_ROUND_CBC(N)	register uint32_t p_state =(Td4[(t[SX]) & 0xff])     ^ \
-					(Td4[(t[(3+threadIdx.x)%4+ROW] >>  8) & 0xff] <<  8) ^ \
-					(Td4[(t[(2+threadIdx.x)%4+ROW] >> 16) & 0xff] << 16) ^ \
-					(Td4[(t[(1+threadIdx.x)%4+ROW] >> 24)       ] << 24) ^ \
-					tex1Dfetch(texref_dk,threadIdx.x+N); \
-
 __global__ void AES128decKernel_cbc(uint32_t data[]) {
 	__shared__ uint32_t t[MAX_THREAD];
 	__shared__ uint32_t s[MAX_THREAD];
+
+	COPY_CONSTANT_SHARED_DEC
 
 	s[SX] = data[blockIdx.x*MAX_THREAD+SX] ^ tex1Dfetch(texref_dk,threadIdx.x);
 
@@ -953,6 +1003,8 @@ __global__ void AES192decKernel_cbc(uint32_t data[]) {
 	__shared__ uint32_t t[MAX_THREAD];
 	__shared__ uint32_t s[MAX_THREAD];
 
+	COPY_CONSTANT_SHARED_DEC
+
 	s[SX] = data[blockIdx.x*MAX_THREAD+SX] ^ tex1Dfetch(texref_dk,threadIdx.x);
 
 	AES_DEC_ROUND( 4,t,s);
@@ -981,6 +1033,8 @@ __global__ void AES192decKernel_cbc(uint32_t data[]) {
 __global__ void AES256decKernel_cbc(uint32_t data[]) {
 	__shared__ uint32_t t[MAX_THREAD];
 	__shared__ uint32_t s[MAX_THREAD];
+
+	COPY_CONSTANT_SHARED_DEC
 
 	s[SX] = data[blockIdx.x*MAX_THREAD+SX] ^ tex1Dfetch(texref_dk,threadIdx.x);
 
