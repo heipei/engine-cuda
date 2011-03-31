@@ -548,21 +548,32 @@
 	0x7bcbb0b0U, 0xa8fc5454U, 0x6dd6bbbbU, 0x2c3a1616U, \
 	};
 
-Td0(__constant__,Td0);
+#ifdef T_TABLE_CONSTANT
+	Td0(__constant__,Td0);
+	Td1(__constant__,Td1);
+	Td2(__constant__,Td2);
+	Td3(__constant__,Td3);
+	Te0(__constant__,Te0);
+	Te1(__constant__,Te1);
+	Te2(__constant__,Te2);
+	Te3(__constant__,Te3);
+# else
+	Td0(__device__,Td0);
+	Td1(__device__,Td1);
+	Td2(__device__,Td2);
+	Td3(__device__,Td3);
+	Te0(__device__,Te0);
+	Te1(__device__,Te1);
+	Te2(__device__,Te2);
+	Te3(__device__,Te3);
+#endif
 Td0(,Td0_cpu);
-Td1(__constant__,Td1);
 Td1(,Td1_cpu);
-Td2(__constant__,Td2);
 Td2(,Td2_cpu);
-Td3(__constant__,Td3);
 Td3(,Td3_cpu);
-Te0(__constant__,Te0);
-Te1(__constant__,Te1);
-Te2(__constant__,Te2);
 Te2(,Te2_cpu);
-Te3(__constant__,Te3);
 
-__constant__ uint8_t Td4[256] = {
+__device__ uint8_t Td4[256] = {
     0x52U, 0x09U, 0x6aU, 0xd5U, 0x30U, 0x36U, 0xa5U, 0x38U,
     0xbfU, 0x40U, 0xa3U, 0x9eU, 0x81U, 0xf3U, 0xd7U, 0xfbU,
     0x7cU, 0xe3U, 0x39U, 0x82U, 0x9bU, 0x2fU, 0xffU, 0x87U,
@@ -761,19 +772,10 @@ extern "C" int AES_cuda_set_decrypt_key(const unsigned char *userKey, const int 
 }
 
 
+__constant__ uint32_t aes_key[61];
 __constant__ uint32_t d_iv[4];
-//__device__ uint32_t  *d_out;
 
 uint8_t  *h_iv;
-int *rounds;
-
-const textureReference *texref_RDK; 
-cudaArray *arrayDK;
-
-float aes_elapsed;
-cudaEvent_t aes_start,aes_stop;
-
-texture <unsigned int,1,cudaReadModeElementType> texref_dk;
 
 #define ROW (__umul24(4,threadIdx.y))
 #define SX (ROW + threadIdx.x)
@@ -782,12 +784,12 @@ texture <unsigned int,1,cudaReadModeElementType> texref_dk;
 				D[SX] ^= TE(1)[(S[(1+threadIdx.x)%4+ROW] >> 8) & 0xff]; \
 				D[SX] ^= TE(2)[(S[(2+threadIdx.x)%4+ROW] >>  16) & 0xff]; \
 				D[SX] ^= TE(3)[S[(3+threadIdx.x)%4+ROW] >> 24]; \
-				D[SX] ^= tex1Dfetch(texref_dk,n+threadIdx.x);
+				D[SX] ^= aes_key[n+threadIdx.x];
 #define AES_FINAL_ENC_ROUND(N)	register uint32_t p_state = (TE(0)[(t[(2+threadIdx.x)%4+ROW] >> 16) & 0xff] & 0x00ff0000); \
 				p_state ^= (TE(2)[(t[SX]) & 0xff] & 0x000000ff); \
 				p_state ^= (TE(1)[(t[(3+threadIdx.x)%4+ROW] >> 24)       ] & 0xff000000); \
 				p_state ^= (TE(3)[(t[(1+threadIdx.x)%4+ROW] >>  8) & 0xff] & 0x0000ff00); \
-				p_state ^= tex1Dfetch(texref_dk,threadIdx.x+N); \
+				p_state ^= aes_key[N+threadIdx.x]; \
 				data[blockIdx.x*MAX_THREAD+SX] = p_state; 
 
 #ifdef T_TABLE_CONSTANT
@@ -814,7 +816,7 @@ __global__ void AES128encKernel(uint32_t data[]) {
 
 	COPY_CONSTANT_SHARED_ENC
 
-	s[SX] = data[__umul24(blockIdx.x,MAX_THREAD)+SX] ^ tex1Dfetch(texref_dk,threadIdx.x);
+	s[SX] = data[__umul24(blockIdx.x,MAX_THREAD)+SX] ^ aes_key[threadIdx.x];
 	
 	AES_ENC_ROUND( 4,t,s);
 	AES_ENC_ROUND( 8,s,t);
@@ -828,13 +830,14 @@ __global__ void AES128encKernel(uint32_t data[]) {
 	AES_FINAL_ENC_ROUND(0x28);
 }
 
+
 __global__ void AES192encKernel(uint32_t data[]) {
 	__shared__ uint32_t t[MAX_THREAD];
 	__shared__ uint32_t s[MAX_THREAD];
 
 	COPY_CONSTANT_SHARED_ENC
 
-	s[SX] = data[__umul24(blockIdx.x,MAX_THREAD)+SX] ^ tex1Dfetch(texref_dk,threadIdx.x);
+	s[SX] = data[__umul24(blockIdx.x,MAX_THREAD)+SX] ^ aes_key[threadIdx.x];
 	
 	AES_ENC_ROUND( 4,t,s);
 	AES_ENC_ROUND( 8,s,t);
@@ -856,7 +859,7 @@ __global__ void AES256encKernel(uint32_t data[]) {
 
 	COPY_CONSTANT_SHARED_ENC
 
-	s[SX] = data[__umul24(blockIdx.x,MAX_THREAD)+SX] ^ tex1Dfetch(texref_dk,threadIdx.x);
+	s[SX] = data[__umul24(blockIdx.x,MAX_THREAD)+SX] ^ aes_key[threadIdx.x];
 	
 	AES_ENC_ROUND( 4,t,s);
 	AES_ENC_ROUND( 8,s,t);
@@ -873,7 +876,6 @@ __global__ void AES256encKernel(uint32_t data[]) {
 	AES_ENC_ROUND(52,t,s);
 	AES_FINAL_ENC_ROUND(0x38);
 }
-
 
 #ifdef T_TABLE_CONSTANT
 	#define COPY_CONSTANT_SHARED_DEC
@@ -893,20 +895,24 @@ __global__ void AES256encKernel(uint32_t data[]) {
 	#define TD(n)	Tds##n
 #endif
 
-#define AES_DEC_ROUND(n,D,S)	D[SX] = TD(0)[S[SX] & 0xff] ^ TD(1)[(S[(3+threadIdx.x)%4+ROW] >> 8) & 0xff] ^ \
-				TD(2)[(S[(2+threadIdx.x)%4+ROW] >>  16) & 0xff] ^ TD(3)[S[(1+threadIdx.x)%4+ROW] >> 24] ^ \
-				tex1Dfetch(texref_dk,n+threadIdx.x);
-#define AES_FINAL_DEC_ROUND(N)	register uint32_t p_state =(Td4[(t[SX]) & 0xff])     ^ \
-				(Td4[(t[(3+threadIdx.x)%4+ROW] >>  8) & 0xff] <<  8) ^ \
-				(Td4[(t[(2+threadIdx.x)%4+ROW] >> 16) & 0xff] << 16) ^ \
-				(Td4[(t[(1+threadIdx.x)%4+ROW] >> 24)       ] << 24) ^ \
-				tex1Dfetch(texref_dk,threadIdx.x+N); \
-				data[blockIdx.x*MAX_THREAD+SX] = p_state; 
-#define AES_FINAL_DEC_ROUND_CBC(N)	register uint32_t p_state =(Td4[(t[SX]) & 0xff])     ^ \
-					(Td4[(t[(3+threadIdx.x)%4+ROW] >>  8) & 0xff] <<  8) ^ \
-					(Td4[(t[(2+threadIdx.x)%4+ROW] >> 16) & 0xff] << 16) ^ \
-					(Td4[(t[(1+threadIdx.x)%4+ROW] >> 24)       ] << 24) ^ \
-					tex1Dfetch(texref_dk,threadIdx.x+N); \
+#define AES_DEC_ROUND(n,D,S)	D[SX] = TD(0)[S[SX] & 0xff];\
+				D[SX] ^= TD(1)[(S[(3+threadIdx.x)%4+ROW] >> 8) & 0xff]; \
+				D[SX] ^= TD(2)[(S[(2+threadIdx.x)%4+ROW] >>  16) & 0xff]; \
+				D[SX] ^= TD(3)[S[(1+threadIdx.x)%4+ROW] >> 24]; \
+				D[SX] ^= aes_key[n+threadIdx.x];
+
+#define AES_FINAL_DEC_ROUND(N)	register uint32_t p_state = (Td4[(t[SX]) & 0xff]); \
+				p_state ^= (Td4[(t[(3+threadIdx.x)%4+ROW] >>  8) & 0xff] <<  8); \
+				p_state ^= (Td4[(t[(2+threadIdx.x)%4+ROW] >> 16) & 0xff] << 16); \
+				p_state ^= (Td4[(t[(1+threadIdx.x)%4+ROW] >> 24)       ] << 24); \
+				p_state ^= aes_key[N+threadIdx.x]; \
+				data[__umul24(blockIdx.x,MAX_THREAD)+SX] = p_state; 
+
+#define AES_FINAL_DEC_ROUND_CBC(N)	register uint32_t p_state = (Td4[(t[SX]) & 0xff]); \
+					p_state ^= (Td4[(t[(3+threadIdx.x)%4+ROW] >>  8) & 0xff] <<  8); \
+					p_state ^= (Td4[(t[(2+threadIdx.x)%4+ROW] >> 16) & 0xff] << 16); \
+					p_state ^= (Td4[(t[(1+threadIdx.x)%4+ROW] >> 24)       ] << 24); \
+					p_state ^= aes_key[threadIdx.x+N];
 
 __global__ void AES128decKernel(uint32_t *data) {
 	__shared__ uint32_t t[MAX_THREAD];
@@ -914,7 +920,7 @@ __global__ void AES128decKernel(uint32_t *data) {
 
 	COPY_CONSTANT_SHARED_DEC
 
-	s[SX] = data[blockIdx.x*MAX_THREAD+SX] ^ tex1Dfetch(texref_dk,threadIdx.x);
+	s[SX] = data[__umul24(blockIdx.x,MAX_THREAD)+SX] ^ aes_key[threadIdx.x];
 
 	AES_DEC_ROUND( 4,t,s);
 	AES_DEC_ROUND( 8,s,t);
@@ -934,7 +940,7 @@ __global__ void AES192decKernel(uint32_t *data) {
 
 	COPY_CONSTANT_SHARED_DEC
 
-	s[SX] = data[blockIdx.x*MAX_THREAD+SX] ^ tex1Dfetch(texref_dk,threadIdx.x);
+	s[SX] = data[__umul24(blockIdx.x,MAX_THREAD)+SX] ^ aes_key[threadIdx.x];
 
 	AES_DEC_ROUND( 4,t,s);
 	AES_DEC_ROUND( 8,s,t);
@@ -956,7 +962,7 @@ __global__ void AES256decKernel(uint32_t data[]) {
 
 	COPY_CONSTANT_SHARED_DEC
 
-	s[SX] = data[blockIdx.x*MAX_THREAD+SX] ^ tex1Dfetch(texref_dk,threadIdx.x);
+	s[SX] = data[__umul24(blockIdx.x,MAX_THREAD)+SX] ^ aes_key[threadIdx.x];
 
 	AES_DEC_ROUND( 4,t,s);
 	AES_DEC_ROUND( 8,s,t);
@@ -980,7 +986,7 @@ __global__ void AES128decKernel_cbc(uint32_t data[]) {
 
 	COPY_CONSTANT_SHARED_DEC
 
-	s[SX] = data[blockIdx.x*MAX_THREAD+SX] ^ tex1Dfetch(texref_dk,threadIdx.x);
+	s[SX] = data[__umul24(blockIdx.x,MAX_THREAD)+SX] ^ aes_key[threadIdx.x];
 
 	AES_DEC_ROUND( 4,t,s);
 	AES_DEC_ROUND( 8,s,t);
@@ -1010,7 +1016,7 @@ __global__ void AES192decKernel_cbc(uint32_t data[]) {
 
 	COPY_CONSTANT_SHARED_DEC
 
-	s[SX] = data[blockIdx.x*MAX_THREAD+SX] ^ tex1Dfetch(texref_dk,threadIdx.x);
+	s[SX] = data[__umul24(blockIdx.x,MAX_THREAD)+SX] ^ aes_key[threadIdx.x];
 
 	AES_DEC_ROUND( 4,t,s);
 	AES_DEC_ROUND( 8,s,t);
@@ -1041,7 +1047,7 @@ __global__ void AES256decKernel_cbc(uint32_t data[]) {
 
 	COPY_CONSTANT_SHARED_DEC
 
-	s[SX] = data[blockIdx.x*MAX_THREAD+SX] ^ tex1Dfetch(texref_dk,threadIdx.x);
+	s[SX] = data[__umul24(blockIdx.x,MAX_THREAD)+SX] ^ aes_key[threadIdx.x];
 
 	AES_DEC_ROUND( 4,t,s);
 	AES_DEC_ROUND( 8,s,t);
@@ -1067,6 +1073,7 @@ __global__ void AES256decKernel_cbc(uint32_t data[]) {
 
 	data[blockIdx.x*MAX_THREAD+SX] = p_state;
 }
+
 
 extern "C" void AES_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, EVP_CIPHER_CTX *ctx, uint8_t **host_data, uint64_t **device_data) {
 	int gridSize;
@@ -1130,25 +1137,8 @@ extern "C" void AES_cuda_crypt(const unsigned char *in, unsigned char *out, size
 extern "C" void AES_cuda_transfer_key_schedule(AES_KEY *ks) {
 	assert(ks);
 	cudaError_t cudaerrno;
-
-	cudaChannelFormatDesc channelDescR = cudaCreateChannelDesc (32, 0, 0, 0, cudaChannelFormatKindSigned);
-	_CUDA_N("cudaCreateChannelDesc");
-
-	texref_dk.addressMode[0] = cudaAddressModeClamp;
-	texref_dk.addressMode[1] = cudaAddressModeClamp;
-	texref_dk.filterMode = cudaFilterModePoint;
-	texref_dk.normalized = false;    				// access with integer texture coordinates
-
-	_CUDA(cudaGetTextureReference(&texref_RDK,"texref_dk"));
-
-	cudaChannelFormatDesc channelDescDK = cudaCreateChannelDesc (32, 0, 0, 0, cudaChannelFormatKindUnsigned);
-	_CUDA_N("cudaCreateChannelDesc");
-
-	_CUDA(cudaMallocArray(&arrayDK,&channelDescDK,4*(ks->rounds+1),1));
-
-	_CUDA(cudaMemcpyToArray(arrayDK,0,0, ks,4*(ks->rounds+1)*sizeof(unsigned int), cudaMemcpyHostToDevice));
-
-	_CUDA(cudaBindTextureToArray(texref_dk, arrayDK, channelDescDK));
+	size_t ks_size = sizeof(AES_KEY);
+	_CUDA(cudaMemcpyToSymbolAsync(aes_key,ks,ks_size,0,cudaMemcpyHostToDevice));
 }
 
 extern "C" void AES_cuda_transfer_iv(const unsigned char *iv) {
