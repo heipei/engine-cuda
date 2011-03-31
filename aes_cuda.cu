@@ -778,14 +778,16 @@ texture <unsigned int,1,cudaReadModeElementType> texref_dk;
 #define ROW (__umul24(4,threadIdx.y))
 #define SX (ROW + threadIdx.x)
 
-#define AES_ENC_ROUND(n,D,S)	D[SX] = TE(0)[S[SX] & 0xff] ^ TE(1)[(S[(1+threadIdx.x)%4+ROW] >> 8) & 0xff] ^ \
-				TE(2)[(S[(2+threadIdx.x)%4+ROW] >>  16) & 0xff] ^ TE(3)[S[(3+threadIdx.x)%4+ROW] >> 24] ^ \
-				tex1Dfetch(texref_dk,n+threadIdx.x);
-#define AES_FINAL_ENC_ROUND(N)	register uint32_t p_state = (TE(2)[(t[SX]) & 0xff] & 0x000000ff)^ \
-				(TE(3)[(t[(1+threadIdx.x)%4+ROW] >>  8) & 0xff] & 0x0000ff00)^ \
-				(TE(0)[(t[(2+threadIdx.x)%4+ROW] >> 16) & 0xff] & 0x00ff0000)^ \
-				(TE(1)[(t[(3+threadIdx.x)%4+ROW] >> 24)       ] & 0xff000000)^ \
-				tex1Dfetch(texref_dk,threadIdx.x+N); \
+#define AES_ENC_ROUND(n,D,S)	D[SX] = TE(0)[S[SX] & 0xff]; \
+				D[SX] ^= TE(1)[(S[(1+threadIdx.x)%4+ROW] >> 8) & 0xff]; \
+				D[SX] ^= TE(2)[(S[(2+threadIdx.x)%4+ROW] >>  16) & 0xff]; \
+				D[SX] ^= TE(3)[S[(3+threadIdx.x)%4+ROW] >> 24]; \
+				D[SX] ^= tex1Dfetch(texref_dk,n+threadIdx.x);
+#define AES_FINAL_ENC_ROUND(N)	register uint32_t p_state = (TE(0)[(t[(2+threadIdx.x)%4+ROW] >> 16) & 0xff] & 0x00ff0000); \
+				p_state ^= (TE(2)[(t[SX]) & 0xff] & 0x000000ff); \
+				p_state ^= (TE(1)[(t[(3+threadIdx.x)%4+ROW] >> 24)       ] & 0xff000000); \
+				p_state ^= (TE(3)[(t[(1+threadIdx.x)%4+ROW] >>  8) & 0xff] & 0x0000ff00); \
+				p_state ^= tex1Dfetch(texref_dk,threadIdx.x+N); \
 				data[blockIdx.x*MAX_THREAD+SX] = p_state; 
 
 #ifdef T_TABLE_CONSTANT

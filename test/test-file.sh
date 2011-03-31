@@ -1,12 +1,18 @@
 #!/usr/bin/env zsh
 
 KEY="FFFF"
+CIPHERS=(aes-128-ecb aes-192-ecb aes-256-ecb bf-ecb camellia-128-ecb cast5-ecb des-ecb idea-ecb)
+
+if [[ -n $1 ]]; then
+	KEY=$1
+fi
+
 if [[ -n $2 ]]; then
-	KEY=$2
+	CIPHERS=$2
 fi
 
 echo "Cipher\tBlocksize\tKernel-CUDA\tKernel-OCL\tBW-CUDA\tBW-OCL"
-for cipher in {aes-128-ecb,aes-192-ecb,aes-256-ecb,bf-ecb,camellia-128-ecb,cast5-ecb,des-ecb,idea-ecb}; do 
+for cipher in $CIPHERS; do 
 	for file in sample.in.*; do 
 		BUFSIZE=`ls -l $file|awk {'print $5'}`
 		openssl enc -engine cudamrg -e -$cipher -nosalt -nopad -v -in $file -out /dev/null -bufsize $BUFSIZE -K $KEY 2>/dev/null|grep secs|grep "CUDA"

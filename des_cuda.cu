@@ -159,8 +159,7 @@ __device__ uint32_t des_d_sp_c[8][64]={
 
 __shared__ uint32_t des_d_sp[8][64];
 
-__device__ uint64_t cs[16];
-__shared__ uint64_t s[16];
+__constant__ uint64_t cs[16];
 
 //__device__ uint32_t *des_d_iv;
 
@@ -194,9 +193,8 @@ cudaEvent_t des_start,des_stop;
 	(a)^=((t)<<(n)))
 
 #define D_ENCRYPT(LL,R,S) { \
-	register uint64_t ss = s[S]; \
-	u=R^ss; \
-	t=R^ss>>32; \
+	u=R^cs[S]; \
+	t=R^cs[S]>>32; \
 	t=ROTATE(t,4); \
 	LL^= \
 	*(uint32_t *)(des_SP      +((u     )&0xfc))^ \
@@ -210,20 +208,18 @@ cudaEvent_t des_start,des_stop;
 
 __global__ void DESencKernel(uint64_t *data) {
 	
-	if(threadIdx.x < 16)
-		s[threadIdx.x%16] = cs[threadIdx.x%16];
-
 	((uint64_t *)des_d_sp)[threadIdx.x] = ((uint64_t *)des_d_sp_c)[threadIdx.x];
 	#if MAX_THREAD == 128
 		((uint64_t *)des_d_sp)[threadIdx.x+128] = ((uint64_t *)des_d_sp_c)[threadIdx.x+128];
 	#endif
+
 	__syncthreads();
 
 	register uint64_t load = data[TX];
 	register uint32_t right = load;
 	register uint32_t left = load >> 32;
 	
-	unsigned int t,u;
+	register uint32_t t,u;
 	unsigned char *des_SP = (unsigned char *) (&des_d_sp);
 
 	IP(right,left);
@@ -258,20 +254,16 @@ __global__ void DESencKernel(uint64_t *data) {
 
 __global__ void DESdecKernel(uint64_t *data) {
 	
-	if(threadIdx.x < 16)
-		s[threadIdx.x] = cs[threadIdx.x];
-
 	((uint64_t *)des_d_sp)[threadIdx.x] = ((uint64_t *)des_d_sp_c)[threadIdx.x];
 	#if MAX_THREAD == 128
 		((uint64_t *)des_d_sp)[threadIdx.x+128] = ((uint64_t *)des_d_sp_c)[threadIdx.x+128];
 	#endif
 
-
 	register uint64_t load = data[TX];
 	register uint32_t right = load;
 	register uint32_t left = load >> 32;
 	
-	unsigned int t,u;
+	register uint32_t t,u;
 	unsigned char *des_SP = (unsigned char *) (&des_d_sp);
 
 	IP(right,left);
@@ -279,22 +271,22 @@ __global__ void DESdecKernel(uint64_t *data) {
 	left=ROTATE(left,29);
 	right=ROTATE(right,29);
 
-	D_ENCRYPT(left,right,15); /*  16 */
-	D_ENCRYPT(right,left,14); /*  15 */
-	D_ENCRYPT(left,right,13); /*  14 */
-	D_ENCRYPT(right,left,12); /*  13 */
-	D_ENCRYPT(left,right,11); /*  12 */
-	D_ENCRYPT(right,left,10); /*  11 */
-	D_ENCRYPT(left,right, 9); /*  10 */
-	D_ENCRYPT(right,left, 8); /*  9 */
-	D_ENCRYPT(left,right, 7); /*  8 */
-	D_ENCRYPT(right,left, 6); /*  7 */
-	D_ENCRYPT(left,right, 5); /*  6 */
-	D_ENCRYPT(right,left, 4); /*  5 */
-	D_ENCRYPT(left,right, 3); /*  4 */
-	D_ENCRYPT(right,left, 2); /*  3 */
-	D_ENCRYPT(left,right, 1); /*  2 */
-	D_ENCRYPT(right,left, 0); /*  1 */
+	D_ENCRYPT(left,right,15);
+	D_ENCRYPT(right,left,14);
+	D_ENCRYPT(left,right,13);
+	D_ENCRYPT(right,left,12);
+	D_ENCRYPT(left,right,11);
+	D_ENCRYPT(right,left,10);
+	D_ENCRYPT(left,right, 9);
+	D_ENCRYPT(right,left, 8);
+	D_ENCRYPT(left,right, 7);
+	D_ENCRYPT(right,left, 6);
+	D_ENCRYPT(left,right, 5);
+	D_ENCRYPT(right,left, 4);
+	D_ENCRYPT(left,right, 3);
+	D_ENCRYPT(right,left, 2);
+	D_ENCRYPT(left,right, 1);
+	D_ENCRYPT(right,left, 0);
 
 	left=ROTATE(left,3);
 	right=ROTATE(right,3);

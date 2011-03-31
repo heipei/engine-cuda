@@ -192,26 +192,25 @@ __device__ uint32_t Camellia_global_SBOX[1024] = {
     0xbb00bbbb, 0xe300e3e3, 0x40004040, 0x4f004f4f
 };
 
-#define RightRotate(x, s) ( ((x) >> (s)) + ((x) << (32 - s)) )
-#define LeftRotate(x, s)  ( ((x) << (s)) + ((x) >> (32 - s)) )
+#define RightRotate(x, s) ( ((x) >> (s)) | ((x) << (32 - s)) )
+#define LeftRotate(x, s)  ( ((x) << (s)) | ((x) >> (32 - s)) )
 
 #define Camellia_Feistel(_s0,_s1,_s2,_s3,_key) {\
 	register uint32_t _t0,_t1,_t2,_t3;\
 \
-	_t0  = _s0 ^ (_key)[1];\
-	_t3  = SBOX4_4404[_t0&0xff];\
 	_t1  = _s1 ^ (_key)[0];\
-	_t3 ^= SBOX3_3033[(_t0 >> 8)&0xff];\
+	_t0  = _s0 ^ (_key)[1];\
 	_t2  = SBOX1_1110[_t1&0xff];\
-	_t3 ^= SBOX2_0222[(_t0 >> 16)&0xff];\
 	_t2 ^= SBOX4_4404[(_t1 >> 8)&0xff];\
+	_t3  = SBOX4_4404[_t0&0xff];\
+	_t3 ^= SBOX3_3033[(_t0 >> 8)&0xff];\
+	_t3 ^= SBOX2_0222[(_t0 >> 16)&0xff];\
 	_t3 ^= SBOX1_1110[(_t0 >> 24)];\
 	_t2 ^= _t3;\
-	_t3  = RightRotate(_t3,8);\
 	_t2 ^= SBOX3_3033[(_t1 >> 16)&0xff];\
-	_s3 ^= _t3;\
 	_t2 ^= SBOX2_0222[(_t1 >> 24)];\
 	_s2 ^= _t2; \
+	_s3 ^= RightRotate(_t3,8);\
 	_s3 ^= _t2;\
 }
 

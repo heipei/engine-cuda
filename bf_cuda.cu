@@ -10,8 +10,8 @@
 #include "cuda_common.h"
 #include "common.h"
 
-__device__ BF_KEY bf_global_schedule;
-__shared__ BF_KEY bf_schedule;
+__device__ uint32_t bf_global_schedule[1042];
+__shared__ uint32_t bf_schedule[1042];
 
 __device__ uint64_t *bf_device_data;
 uint8_t  *bf_host_data;
@@ -36,25 +36,27 @@ __global__ void BFencKernel(uint64_t *data) {
 	register uint32_t l, r;
 	register uint64_t block = data[TX];
 
-	if(threadIdx.x < 18)
-		bf_schedule.P[threadIdx.x] = bf_global_schedule.P[threadIdx.x];
+	bf_schedule[threadIdx.x] = bf_global_schedule[threadIdx.x];
+	bf_schedule[threadIdx.x+256] = bf_global_schedule[threadIdx.x+256];
+	bf_schedule[threadIdx.x+512] = bf_global_schedule[threadIdx.x+512];
+	bf_schedule[threadIdx.x+768] = bf_global_schedule[threadIdx.x+768];
 
-	bf_schedule.S[threadIdx.x] = bf_global_schedule.S[threadIdx.x];
-	bf_schedule.S[threadIdx.x+256] = bf_global_schedule.S[threadIdx.x+256];
-	bf_schedule.S[threadIdx.x+512] = bf_global_schedule.S[threadIdx.x+512];
-	bf_schedule.S[threadIdx.x+768] = bf_global_schedule.S[threadIdx.x+768];
 	#if MAX_THREAD == 128
-		bf_schedule.S[threadIdx.x+128] = bf_global_schedule.S[threadIdx.x+128];
-		bf_schedule.S[threadIdx.x+384] = bf_global_schedule.S[threadIdx.x+384];
-		bf_schedule.S[threadIdx.x+640] = bf_global_schedule.S[threadIdx.x+640];
-		bf_schedule.S[threadIdx.x+896] = bf_global_schedule.S[threadIdx.x+896];
+		bf_schedule[threadIdx.x+128] = bf_global_schedule[threadIdx.x+128];
+		bf_schedule[threadIdx.x+384] = bf_global_schedule[threadIdx.x+384];
+		bf_schedule[threadIdx.x+640] = bf_global_schedule[threadIdx.x+640];
+		bf_schedule[threadIdx.x+896] = bf_global_schedule[threadIdx.x+896];
 	#endif
+
+	if(threadIdx.x < 18)
+		bf_schedule[threadIdx.x+1024] = bf_global_schedule[threadIdx.x+1024];
+
 	__syncthreads();
 
-	register const uint32_t *p,*s;
+	register uint32_t *p,*s;
 
-	p=&(bf_schedule.P[0]);
-	s=&(bf_schedule.S[0]);
+	p=bf_schedule;
+	s=bf_schedule+18;
 
 	nl2i(block, l, r);
 
