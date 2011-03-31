@@ -4,7 +4,9 @@
 	#include <sys/time.h>
 #endif
 
-#define TX (blockIdx.x * blockDim.x * blockDim.y + blockDim.y * threadIdx.x + threadIdx.y)
+#ifndef TX
+	#define TX (__umul24(blockIdx.x,blockDim.x) + threadIdx.x)
+#endif
 
 #define _CUDA(call) {																	\
 	call;				                                												\

@@ -388,6 +388,8 @@ __kernel void CMLLencKernel(__global unsigned long *data, __constant unsigned in
 		((__local uint *)Camellia_SBOX[3])[get_local_id(0)] = ((__global uint *)Camellia_global_SBOX)[get_local_id(0)+768];
 	#endif
 
+	barrier(CLK_LOCAL_MEM_FENCE);
+
 	__private unsigned int s0,s1,s2,s3; 
 
 	__private unsigned long block = data[get_global_id(0)*2];
@@ -401,8 +403,6 @@ __kernel void CMLLencKernel(__global unsigned long *data, __constant unsigned in
 	s2 ^= k[3];
 
 	k += 4;
-
-	barrier(CLK_LOCAL_MEM_FENCE);
 
 	Camellia_Feistel(s0,s1,s2,s3,k+0);
 	Camellia_Feistel(s2,s3,s0,s1,k+2);

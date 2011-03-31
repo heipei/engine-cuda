@@ -6,8 +6,11 @@
 #include <openssl/aes.h>
 #include <openssl/evp.h>
 #include <cuda_runtime_api.h>
+
+#define TX (blockIdx.x * blockDim.x * blockDim.y + blockDim.y * threadIdx.x + threadIdx.y)
 #include "cuda_common.h"
 #include "common.h"
+
 
 #define Td0(space,suffix) space uint32_t suffix[256] = { \
 	0x50a7f451U,0x5365417eU,0xc3a4171aU,0x965e273aU,\

@@ -150,7 +150,7 @@ __device__ CAST_LONG CAST_S_table_constant[1024]={
 	0x8644213e,0xb7dc59d0,0x7965291f,0xccd6fd43,0x41823979,0x932bcdf6,0xb657c34d,0x4edfd282,
 	0x7ae5290c,0x3cb9536b,0x851e20fe,0x9833557e,0x13ecf0b0,0xd3ffb372,0x3f85c5c1,0x0aef7ed2,
 	};
-#define ROTL(a,n)     ((((a)<<(n))&0xffffffffL)|((a)>>(32-(n))))
+#define ROTL(a,n)     ((((a)<<(n)))|((a)>>(32-(n))))
 
 #define C_M    0x3fc
 #define C_0    22L
@@ -161,13 +161,13 @@ __device__ CAST_LONG CAST_S_table_constant[1024]={
 #define E_CAST(n,key,L,R,OP1,OP2,OP3) \
 	{ \
 	uint32_t a,b,c,d; \
-	t=(key[n*2] OP1 R)&0xffffffff; \
-	t=ROTL(t,(key[n*2+1])); \
+	t=(key[n] OP1 R); \
+	t=ROTL(t,(key[n+1])); \
 	a=CAST_S_table0[(t>> 8)&0xff]; \
 	b=CAST_S_table1[(t    )&0xff]; \
 	c=CAST_S_table2[(t>>24)&0xff]; \
 	d=CAST_S_table3[(t>>16)&0xff]; \
-	L^=(((((a OP2 b)&0xffffffffL) OP3 c)&0xffffffffL) OP1 d)&0xffffffffL; \
+	L^=(((((a OP2 b)) OP3 c)) OP1 d); \
 	}
 
 __global__ void CASTencKernel(uint64_t *data) {
@@ -191,21 +191,21 @@ __global__ void CASTencKernel(uint64_t *data) {
 	__syncthreads();
 
 	E_CAST( 0,cast_constant_schedule,l,r,+,^,-);
-	E_CAST( 1,cast_constant_schedule,r,l,^,-,+);
-	E_CAST( 2,cast_constant_schedule,l,r,-,+,^);
-	E_CAST( 3,cast_constant_schedule,r,l,+,^,-);
-	E_CAST( 4,cast_constant_schedule,l,r,^,-,+);
-	E_CAST( 5,cast_constant_schedule,r,l,-,+,^);
-	E_CAST( 6,cast_constant_schedule,l,r,+,^,-);
-	E_CAST( 7,cast_constant_schedule,r,l,^,-,+);
-	E_CAST( 8,cast_constant_schedule,l,r,-,+,^);
-	E_CAST( 9,cast_constant_schedule,r,l,+,^,-);
-	E_CAST(10,cast_constant_schedule,l,r,^,-,+);
-	E_CAST(11,cast_constant_schedule,r,l,-,+,^);
-	E_CAST(12,cast_constant_schedule,l,r,+,^,-);
-	E_CAST(13,cast_constant_schedule,r,l,^,-,+);
-	E_CAST(14,cast_constant_schedule,l,r,-,+,^);
-	E_CAST(15,cast_constant_schedule,r,l,+,^,-);
+	E_CAST( 2,cast_constant_schedule,r,l,^,-,+);
+	E_CAST( 4,cast_constant_schedule,l,r,-,+,^);
+	E_CAST( 6,cast_constant_schedule,r,l,+,^,-);
+	E_CAST( 8,cast_constant_schedule,l,r,^,-,+);
+	E_CAST( 10,cast_constant_schedule,r,l,-,+,^);
+	E_CAST( 12,cast_constant_schedule,l,r,+,^,-);
+	E_CAST( 14,cast_constant_schedule,r,l,^,-,+);
+	E_CAST( 16,cast_constant_schedule,l,r,-,+,^);
+	E_CAST( 18,cast_constant_schedule,r,l,+,^,-);
+	E_CAST(20,cast_constant_schedule,l,r,^,-,+);
+	E_CAST(22,cast_constant_schedule,r,l,-,+,^);
+	E_CAST(24,cast_constant_schedule,l,r,+,^,-);
+	E_CAST(26,cast_constant_schedule,r,l,^,-,+);
+	E_CAST(28,cast_constant_schedule,l,r,-,+,^);
+	E_CAST(30,cast_constant_schedule,r,l,+,^,-);
 
 	block = ((uint64_t)r) << 32 | l;
 
