@@ -14,7 +14,7 @@ __shared__ uint64_t idea_schedule[27];
 
 #define idea_mul(r,a,b,ul) \
 	ul=__umul24(a,b); \
-	if (ul != 0) { \
+	if (ul) { \
 		r=(ul&0xffff)-(ul>>16); \
 		r-=((r)>>16); \
 	} \
@@ -74,8 +74,10 @@ __global__ void IDEAencKernel(uint64_t *data) {
 	x4&=0xffff;
 	idea_mul(x4,x4,*p,ul);
 
-	l0=(t0&0xffff)|((x1&0xffff)<<16);
-	l1=(x4&0xffff)|((t1&0xffff)<<16);
+	l0=(t0&0xffff);
+	l0|=((x1&0xffff)<<16);
+	l1=(x4&0xffff);
+	l1|=((t1&0xffff)<<16);
 
 	block = ((uint64_t)l0) << 32 | l1;
 	flip64(block);

@@ -157,34 +157,29 @@ __device__ uint32_t des_d_sp_c[8][64]={
 0x20000000L, 0x20800080L, 0x00020000L, 0x00820080L,
 }};
 
-__shared__ uint32_t des_d_sp[8][64];
+__shared__ unsigned char des_SP[2048];
 
 __constant__ uint64_t cs[16];
 
 //__device__ uint32_t *des_d_iv;
 
-float des_elapsed;
-cudaEvent_t des_start,des_stop;
-
-#define IP(left,right) \
-	{ \
+#define IP(left,right) { \
 	register uint32_t tt; \
 	PERM_OP(right,left,tt, 4,0x0f0f0f0fL); \
 	PERM_OP(left,right,tt,16,0x0000ffffL); \
 	PERM_OP(right,left,tt, 2,0x33333333L); \
 	PERM_OP(left,right,tt, 8,0x00ff00ffL); \
 	PERM_OP(right,left,tt, 1,0x55555555L); \
-	}
+}
 
-#define FP(left,right) \
-	{ \
+#define FP(left,right) { \
 	register uint32_t tt; \
 	PERM_OP(left,right,tt, 1,0x55555555L); \
 	PERM_OP(right,left,tt, 8,0x00ff00ffL); \
 	PERM_OP(left,right,tt, 2,0x33333333L); \
 	PERM_OP(right,left,tt,16,0x0000ffffL); \
 	PERM_OP(left,right,tt, 4,0x0f0f0f0fL); \
-	}
+}
 
 #define	ROTATE(a,n)	(((a)>>(n))|((a)<<(32-(n))))
 
@@ -193,22 +188,23 @@ cudaEvent_t des_start,des_stop;
 	(a)^=((t)<<(n)))
 
 #define D_ENCRYPT(LL,R,S) { \
+	register uint32_t t,u; \
 	u=R^cs[S]; \
 	t=R^cs[S]>>32; \
 	t=ROTATE(t,4); \
-	LL^= \
-	*(uint32_t *)(des_SP      +((u     )&0xfc))^ \
-	*(uint32_t *)(des_SP+0x200+((u>> 8L)&0xfc))^ \
-	*(uint32_t *)(des_SP+0x400+((u>>16L)&0xfc))^ \
-	*(uint32_t *)(des_SP+0x600+((u>>24L)&0xfc))^ \
-	*(uint32_t *)(des_SP+0x100+((t     )&0xfc))^ \
-	*(uint32_t *)(des_SP+0x300+((t>> 8L)&0xfc))^ \
-	*(uint32_t *)(des_SP+0x500+((t>>16L)&0xfc))^ \
-	*(uint32_t *)(des_SP+0x700+((t>>24L)&0xfc)); }
+	LL ^= *(uint32_t *)(des_SP      +((u     )&0xfc)); \
+	LL ^= *(uint32_t *)(des_SP+0x100+((t     )&0xfc)); \
+	LL ^= *(uint32_t *)(des_SP+0x200+((u>> 8L)&0xfc)); \
+	LL ^= *(uint32_t *)(des_SP+0x300+((t>> 8L)&0xfc)); \
+	LL ^= *(uint32_t *)(des_SP+0x400+((u>>16L)&0xfc)); \
+	LL ^= *(uint32_t *)(des_SP+0x500+((t>>16L)&0xfc)); \
+	LL ^= *(uint32_t *)(des_SP+0x600+((u>>24L)&0xfc)); \
+	LL ^= *(uint32_t *)(des_SP+0x700+((t>>24L)&0xfc)); \
+}
 
 __global__ void DESencKernel(uint64_t *data) {
 	
-	((uint64_t *)des_d_sp)[threadIdx.x] = ((uint64_t *)des_d_sp_c)[threadIdx.x];
+	((uint64_t *)des_SP)[threadIdx.x] = ((uint64_t *)des_d_sp_c)[threadIdx.x];
 	#if MAX_THREAD == 128
 		((uint64_t *)des_d_sp)[threadIdx.x+128] = ((uint64_t *)des_d_sp_c)[threadIdx.x+128];
 	#endif
@@ -219,9 +215,6 @@ __global__ void DESencKernel(uint64_t *data) {
 	register uint32_t right = load;
 	register uint32_t left = load >> 32;
 	
-	register uint32_t t,u;
-	unsigned char *des_SP = (unsigned char *) (&des_d_sp);
-
 	IP(right,left);
 
 	left=ROTATE(left,29);
@@ -254,18 +247,17 @@ __global__ void DESencKernel(uint64_t *data) {
 
 __global__ void DESdecKernel(uint64_t *data) {
 	
-	((uint64_t *)des_d_sp)[threadIdx.x] = ((uint64_t *)des_d_sp_c)[threadIdx.x];
+	((uint64_t *)des_SP)[threadIdx.x] = ((uint64_t *)des_d_sp_c)[threadIdx.x];
 	#if MAX_THREAD == 128
 		((uint64_t *)des_d_sp)[threadIdx.x+128] = ((uint64_t *)des_d_sp_c)[threadIdx.x+128];
 	#endif
+
+	__syncthreads();
 
 	register uint64_t load = data[TX];
 	register uint32_t right = load;
 	register uint32_t left = load >> 32;
 	
-	register uint32_t t,u;
-	unsigned char *des_SP = (unsigned char *) (&des_d_sp);
-
 	IP(right,left);
 
 	left=ROTATE(left,29);

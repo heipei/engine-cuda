@@ -2,7 +2,7 @@
 #ifndef MAX_THREAD
 	#define MAX_THREAD	256
 #endif
-#pragma OPENCL EXTENSION cl_khr_byte_addressable_store : enable
+//#pragma OPENCL EXTENSION cl_khr_byte_addressable_store : enable
 
 // Split uint64_t into two uint32_t and convert each from BE to LE
 #define nl2i(s,a,b)      a = ((s >> 24L) & 0x000000ff) | \
@@ -83,15 +83,17 @@ __kernel void BFencKernel(__global unsigned long *data, __global unsigned int *p
 #define SX (ROW + get_local_id(0))
 #define GID (get_global_id(0) + mul24((int)get_global_id(1),(int)get_global_size(0)))
 
-#define AES_ENC_ROUND(n,D,S)	D[SX] = Te0[S[SX] & 0xff] ^ Te1[(S[(1+get_local_id(0))%4+ROW] >> 8) & 0xff] ^ \
-				Te2[(S[(2+get_local_id(0))%4+ROW] >>  16) & 0xff] ^ Te3[S[(3+get_local_id(0))%4+ROW] >> 24] ^ \
-				aes_dk[get_local_id(0)+n]; 
+#define AES_ENC_ROUND(n,D,S)	D[SX]  = Te0[S[SX] & 0xff]; \
+				D[SX] ^= Te1[(S[(1+get_local_id(0))%4+ROW] >> 8) & 0xff]; \
+				D[SX] ^= Te2[(S[(2+get_local_id(0))%4+ROW] >>  16) & 0xff]; \
+				D[SX] ^= Te3[S[(3+get_local_id(0))%4+ROW] >> 24]; \
+				D[SX] ^= aes_dk[get_local_id(0)+n]; 
 
-#define AES_FINAL_ENC_ROUND(N)	__private unsigned int p_state = (Te2[(t[SX]) & 0xff] & 0x000000ff)^ \
-				(Te3[(t[(1+get_local_id(0))%4+ROW] >>  8) & 0xff] & 0x0000ff00)^ \
-				(Te0[(t[(2+get_local_id(0))%4+ROW] >> 16) & 0xff] & 0x00ff0000)^ \
-				(Te1[(t[(3+get_local_id(0))%4+ROW] >> 24)       ] & 0xff000000)^ \
-				aes_dk[get_local_id(0)+N]; \
+#define AES_FINAL_ENC_ROUND(N)	__private unsigned int p_state = (Te2[(t[SX]) & 0xff] & 0x000000ff); \
+				p_state ^= (Te3[(t[(1+get_local_id(0))%4+ROW] >>  8) & 0xff] & 0x0000ff00); \
+				p_state ^= (Te0[(t[(2+get_local_id(0))%4+ROW] >> 16) & 0xff] & 0x00ff0000); \
+				p_state ^= (Te1[(t[(3+get_local_id(0))%4+ROW] >> 24)       ] & 0xff000000); \
+				p_state ^= aes_dk[get_local_id(0)+N]; \
 				data[GID] = p_state; 
 
 __kernel void AES128encKernel(__global unsigned int *data, __global unsigned int *Teg, __constant unsigned int *aes_dk) {
@@ -107,9 +109,9 @@ __kernel void AES128encKernel(__global unsigned int *data, __global unsigned int
 	Te2[SX] = Teg[SX+512];
 	Te3[SX] = Teg[SX+768];
 
-	s[SX] = data[GID] ^ aes_dk[get_local_id(0)];
-
 	barrier(CLK_LOCAL_MEM_FENCE);
+
+	s[SX] = data[GID] ^ aes_dk[get_local_id(0)];
 	
 	AES_ENC_ROUND( 4,t,s);
 	AES_ENC_ROUND( 8,s,t);
@@ -220,17 +222,19 @@ __kernel void AES256encKernel(__global unsigned int *data, __global unsigned int
 	u=R^ss; \
 	t=R^ss>>32; \
 	t=ROTATE(t,4); \
-	LL^= \
-	*(__local unsigned int *)(des_SP      +((u     )&0xfc))^ \
-	*(__local unsigned int *)(des_SP+0x200+((u>> 8L)&0xfc))^ \
-	*(__local unsigned int *)(des_SP+0x400+((u>>16L)&0xfc))^ \
-	*(__local unsigned int *)(des_SP+0x600+((u>>24L)&0xfc))^ \
-	*(__local unsigned int *)(des_SP+0x100+((t     )&0xfc))^ \
-	*(__local unsigned int *)(des_SP+0x300+((t>> 8L)&0xfc))^ \
-	*(__local unsigned int *)(des_SP+0x500+((t>>16L)&0xfc))^ \
-	*(__local unsigned int *)(des_SP+0x700+((t>>24L)&0xfc)); }
+	LL ^= *(__local unsigned int *)(des_SP      +((u     )&0xfc)); \
+	LL ^= *(__local unsigned int *)(des_SP+0x200+((u>> 8L)&0xfc)); \
+	LL ^= *(__local unsigned int *)(des_SP+0x400+((u>>16L)&0xfc)); \
+	LL ^= *(__local unsigned int *)(des_SP+0x600+((u>>24L)&0xfc)); \
+	LL ^= *(__local unsigned int *)(des_SP+0x100+((t     )&0xfc)); \
+	LL ^= *(__local unsigned int *)(des_SP+0x300+((t>> 8L)&0xfc)); \
+	LL ^= *(__local unsigned int *)(des_SP+0x500+((t>>16L)&0xfc)); \
+	LL ^= *(__local unsigned int *)(des_SP+0x700+((t>>24L)&0xfc)); \
+}
 
-__kernel void DESencKernel(__global unsigned long *data, __local unsigned char *des_SP, __local unsigned long *s, __global unsigned int *des_d_sp_c, __global unsigned long *cs) {
+__kernel void DESencKernel(__global unsigned long *data, __global unsigned int *des_d_sp_c, __global unsigned long *cs) {
+	__local unsigned char des_SP[2048];
+	__local unsigned long s[16];
 	
 	if(get_local_id(0) < 16)
 		s[get_local_id(0)] = cs[get_local_id(0)];
@@ -239,6 +243,8 @@ __kernel void DESencKernel(__global unsigned long *data, __local unsigned char *
 	#if MAX_THREAD == 128
 		((__local ulong *)des_SP)[get_local_id(0)+128] = ((__global ulong *)des_d_sp_c)[get_local_id(0)+128];
 	#endif
+
+	barrier(CLK_LOCAL_MEM_FENCE);
 
 	__private unsigned long load = data[get_global_id(0)];
 	__private unsigned int right = load;
@@ -250,8 +256,6 @@ __kernel void DESencKernel(__global unsigned long *data, __local unsigned char *
 
 	left=ROTATE(left,29);
 	right=ROTATE(right,29);
-
-	barrier(CLK_LOCAL_MEM_FENCE);
 
 	D_ENCRYPT(left,right, 0);
 	D_ENCRYPT(right,left, 1);
