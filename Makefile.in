@@ -39,8 +39,8 @@ NVCFLAGS_TEST = @NVCFLAGS@ --compiler-options '@CFLAGS_TEST@'
 LIBS_OPENCL = -lcrypto -lOpenCL
 LIBS = @LIBS@
 
-LIBNAME = libcudamrg.so
-LIBNAME_OPENCL = libopencl.so
+LIBNAME = @LIBNAME@
+LIBNAME_OPENCL = @LIBNAME_OPENCL@
 TESTNAME= teststate
 
 COMMONSRC_CUDA = common.h cuda_common.h cuda_common.cu Makefile
@@ -67,7 +67,7 @@ TESTOBJ= aes_cuda.o teststate.o
 all: $(LIBNAME) $(LIBNAME_OPENCL)
 
 $(LIBNAME): $(LIBOBJ) $(LIBOBJ_CUDA)
-	$(CC) -fPIC -shared -Wl,-soname,$(LIBNAME) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) $(LIBS) -o $(LIBNAME) $(LIBOBJ) $(LIBOBJ_CUDA)
+	$(CC) -fPIC -shared -Wl $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) $(LIBS) -o $(LIBNAME) $(LIBOBJ) $(LIBOBJ_CUDA)
 
 $(LIBOBJ): %.o: %.c $(COMMONSRC_CUDA)
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -c -o $@ $<
@@ -76,7 +76,7 @@ $(LIBOBJ_CUDA): %.o: %.cu $(COMMONSRC_CUDA)
 	$(NVCC) $(NVCPPFLAGS) $(NVCFLAGS_LIBS) -c -o $@ $<
 
 $(LIBNAME_OPENCL): $(LIBOBJ_OPENCL)
-	$(CC) -fPIC -shared -Wl,-soname,$(LIBNAME_OPENCL) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) $(LIBS_OPENCL) -o $(LIBNAME_OPENCL) $(LIBOBJ_OPENCL)
+	$(CC) -fPIC -shared -Wl $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) $(LIBS_OPENCL) -o $(LIBNAME_OPENCL) $(LIBOBJ_OPENCL)
 
 $(LIBOBJ_OPENCL): %.o: %.c $(COMMONSRC_OPENCL)
 	$(CC) $(CFLAGS) -Wno-comments $(CPPFLAGS) $(LDFLAGS) -c -o $@ $<
