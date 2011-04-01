@@ -1,16 +1,9 @@
 == General ==
 
-- Test-Framework for single-file encryption with averaging
-
 - Try out write-combining with page locked memory and two different staging areas?
  
-- Why does speed decrease after 1MB / 256KB
- - Try OpenSSL compiled with 1MB encrypt block size
-- Non-blocking kernel calls?
 - Many calls to CudaMemcpy, where from?
 - Adjust buffersize to device memory
-
-- Sboxes use large data types
 
 == OpenCL ==
 - Use constant memory for BF
@@ -28,7 +21,6 @@
 == IDEA ==
 
 == Camellia ==
-- Try shared instead of constant memory, as usual
 
 == CAST ==
 - Occupancy limited by huge S-Tables

@@ -31,7 +31,7 @@ AC_LANG_C
         
 AC_PROG_MAKE_SET
 
-CFLAGS="$CFLAGS -O3 -Wall"
+CFLAGS="-O3 -Wall"
 
 AC_ARG_WITH([cudatoolkitpath],AS_HELP_STRING([--with-cudatoolkitpath],[prefix where cuda is installed (default=/usr/local/cuda)]),
 [
@@ -65,14 +65,23 @@ AS_HELP_STRING([--with-opensslenginedir],[specify the directory where openssl en
 AC_ARG_WITH([buffersize],AS_HELP_STRING([--with-buffersize],[specify the size of the buffer (default 8MB) ]),
 [NVCPPFLAGS="$NVCPPFLAGS -DMAX_CHUNK_SIZE=$with_buffersize"],[NVCPPFLAGS="$NVCPPFLAGS -DMAX_CHUNK_SIZE=8*1024*1024"])
 
-AC_ARG_WITH([maxrregcount],AS_HELP_STRING([--with-rregcount],[specify the max number of reg that a thread must use (default no restriction) ]),
+AC_ARG_WITH([maxrregcount],AS_HELP_STRING([--with-rregcount],[specify the max number of regs that a thread can use (default no restriction) ]),
 [NVCPPFLAGS="$NVCPPFLAGS -maxrregcount=$with_maxrregcount"],[NVCPPFLAGS="$NVCPPFLAGS"])
+
+AC_ARG_WITH([maxthreads],AS_HELP_STRING([--with-maxthreads],[specify the number of threads per block (default: 256 threads) ]),
+[CFLAGS="$CFLAGS -DMAX_THREAD=$with_maxthreads"],[CFLAGS="$CFLAGS -DMAX_THREAD=256"])
+
+AC_ARG_WITH([gpuarch],AS_HELP_STRING([--with-gpuarch],[supply the lowest compute capability the build product should run on (default: sm_10) ]),
+[NVCLFAGS="$NVCFLAGS -arch $with_gpuarch"],[NVCLFAGS="$NVCFLAGS -arch sm_10"])
 
 AC_ARG_WITH([ccbin],[AS_HELP_STRING([--with-ccbin],[specify a compiler different from the default (default=gcc)])],
 [NVCFLAGS="$NVCFLAGS -ccbin=$with_ccbin"],[NVCFLAGS="$NVCFLAGS"])
 
 AC_ARG_ENABLE([debug],[AS_HELP_STRING([--enable-debug],[enable debug support (default=disabled)])],
-[CFLAGS="$(echo $CFLAGS|sed s/-O./-g/)";NVCFLAGS="$NVCFLAGS -g -G"],[CFLAGS="$CFLAGS";NVCFLAGS="$NVCFLAGS"])
+[CFLAGS="$(echo $CFLAGS|sed s/-O./-g/) -DDEBUG";NVCFLAGS="$NVCFLAGS -g -G"],[CFLAGS="$CFLAGS";NVCFLAGS="$NVCFLAGS"])
+
+AC_ARG_ENABLE([timing],[AS_HELP_STRING([--enable-timing],[enable timing support (default=disabled)])],
+[CFLAGS="$CFLAGS -DDEBUG"],[CFLAGS="$CFLAGS"])
 
 AC_ARG_ENABLE([gprof],[AS_HELP_STRING([--enable-gprof],[enable gprof support (default=disabled)])],
 [CFLAGS="$(echo $CFLAGS|sed s/-O./-pg/)";NVCFLAGS="$NVCFLAGS -pg"],[CFLAGS="$CFLAGS";NVCFLAGS="$NVCFLAGS"])
@@ -83,14 +92,11 @@ AC_ARG_ENABLE([quiet],[AS_HELP_STRING([--enable-quiet],[no output except warning
 AC_ARG_ENABLE([cpuonly],[AS_HELP_STRING([--enable-cpuonly],[AES calculation is done through libcrypto (default=disabled)])],
 [CPPFLAGS="$CPPFLAGS -DCPU"],[CPPFLAGS="$CPPFLAGS"])
 
-AC_ARG_ENABLE([cbcencgpu],[AS_HELP_STRING([--enable-cbcencgpu],[AES CBC encrypt is done through CUDA code (default=disabled)])],
-[CPPFLAGS="$CPPFLAGS";NVCPPFLAGS="$NVCPPFLAGS"],[CPPFLAGS="$CPPFLAGS -DCBC_ENC_CPU";NVCPPFLAGS="$NVCPPFLAGS -DCBC_ENC_CPU"])
-
 AC_ARG_ENABLE([pageable],[AS_HELP_STRING([--enable-pageable],[specify memory transfer type as pageable (default=disabled)])],
 [NVCPPFLAGS="$NVCPPFLAGS -DPAGEABLE"],[NVCPPFLAGS="$NVCPPFLAGS"])
 
-AC_ARG_ENABLE([ttableconstant],[AS_HELP_STRING([--disable-ttableconstant],[choose if store T-table in constant or shared memory (default=enabled)])],
-[NVCPPFLAGS="$NVCPPFLAGS"],[NVCPPFLAGS="$NVCPPFLAGS -DT_TABLE_CONSTANT"])
+AC_ARG_ENABLE([ttableconstant],[AS_HELP_STRING([--enable-ttableconstant],[choose where T-tables are stored (constant or shared memory) (default=disabled)])],
+[NVCPPFLAGS="$NVCPPFLAGS -DT_TABLE_CONSTANT"],[NVCPPFLAGS="$NVCPPFLAGS"])
 
 AC_HEADER_STDC
 AC_CHECK_HEADERS([stdio.h] ,,AC_MSG_ERROR(stdio.h required))
@@ -99,11 +105,18 @@ AC_CHECK_HEADERS([stdint.h],,AC_MSG_ERROR(stdint.h required))
 AC_CHECK_HEADERS([assert.h],,AC_MSG_ERROR(assert.h required))
 AC_CHECK_HEADERS([memory.h],,AC_MSG_ERROR(memory.h required))
 AC_CHECK_HEADERS([openssl/aes.h],,AC_MSG_ERROR(openssl/aes.h required))
+AC_CHECK_HEADERS([openssl/blowfish.h],,AC_MSG_ERROR(openssl/blowfish.h required))
+AC_CHECK_HEADERS([openssl/camellia.h],,AC_MSG_ERROR(openssl/camellia.h required))
+AC_CHECK_HEADERS([openssl/cast.h],,AC_MSG_ERROR(openssl/cast.h required))
+AC_CHECK_HEADERS([openssl/des.h],,AC_MSG_ERROR(openssl/des.h required))
+AC_CHECK_HEADERS([openssl/idea.h],,AC_MSG_ERROR(openssl/idea.h required))
 AC_CHECK_HEADERS([openssl/engine.h],,AC_MSG_ERROR(openssl/engine.h required))
 AC_CHECK_HEADERS([cuda_runtime_api.h],,AC_MSG_ERROR(cuda_runtime_api.h required))
+AC_CHECK_HEADERS([CL/opencl.h],,AC_MSG_ERROR(CL/opencl.h required))
 
 AC_CHECK_LIB([crypto],AES_set_encrypt_key,[LIBS="-lcrypto"],[AC_MSG_ERROR([Cannot find crypto library])])
 AC_CHECK_LIB([cudart],cudaGetDeviceCount,[LIBS="$LIBS -lcudart"],[AC_MSG_ERROR([Cannot find cuda runtime library])])
+AC_CHECK_LIB([OpenCL],clGetDeviceIDs,[LIBS_OPENCL="$LIBS_OPENCL -lOpenCL"],[AC_MSG_ERROR([Cannot find cuda runtime library])])
 
 CFLAGS_TEST="$CFLAGS"
 CFLAGS="$CFLAGS -fPIC"

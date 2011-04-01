@@ -660,12 +660,14 @@ with_cudatoolkitpath
 with_opensslenginedir
 with_buffersize
 with_maxrregcount
+with_maxthreads
+with_gpuarch
 with_ccbin
 enable_debug
+enable_timing
 enable_gprof
 enable_quiet
 enable_cpuonly
-enable_cbcencgpu
 enable_pageable
 enable_ttableconstant
 '
@@ -1290,18 +1292,16 @@ Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --enable-debug          enable debug support (default=disabled)
+  --enable-timing         enable timing support (default=disabled)
   --enable-gprof          enable gprof support (default=disabled)
   --enable-quiet          no output except warning and error
                           (default=disabled)
   --enable-cpuonly        AES calculation is done through libcrypto
                           (default=disabled)
-  --enable-cbcencgpu      AES CBC encrypt is done through CUDA code
-                          (default=disabled)
   --enable-pageable       specify memory transfer type as pageable
                           (default=disabled)
-  --disable-ttableconstant
-                          choose if store T-table in constant or shared memory
-                          (default=enabled)
+  --enable-ttableconstant choose where T-tables are stored (constant or shared
+                          memory) (default=disabled)
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -1311,8 +1311,12 @@ Optional Packages:
   --with-opensslenginedir specify the directory where openssl engine are
                           located (default $PREFIX/lib/engines)
   --with-buffersize       specify the size of the buffer (default 8MB)
-  --with-rregcount        specify the max number of reg that a thread must use
+  --with-rregcount        specify the max number of regs that a thread can use
                           (default no restriction)
+  --with-maxthreads       specify the number of threads per block (default:
+                          256 threads)
+  --with-gpuarch          supply the lowest compute capability the build
+                          product should run on (default: sm_10)
   --with-ccbin            specify a compiler different from the default
                           (default=gcc)
 
@@ -2875,7 +2879,7 @@ $as_echo "no" >&6; }
 fi
 
 
-CFLAGS="$CFLAGS -O3 -Wall"
+CFLAGS="-O3 -Wall"
 
 
 # Check whether --with-cudatoolkitpath was given.
@@ -2935,6 +2939,24 @@ fi
 
 
 
+# Check whether --with-maxthreads was given.
+if test "${with_maxthreads+set}" = set; then :
+  withval=$with_maxthreads; CFLAGS="$CFLAGS -DMAX_THREAD=$with_maxthreads"
+else
+  CFLAGS="$CFLAGS -DMAX_THREAD=256"
+fi
+
+
+
+# Check whether --with-gpuarch was given.
+if test "${with_gpuarch+set}" = set; then :
+  withval=$with_gpuarch; NVCLFAGS="$NVCFLAGS -arch $with_gpuarch"
+else
+  NVCLFAGS="$NVCFLAGS -arch sm_10"
+fi
+
+
+
 # Check whether --with-ccbin was given.
 if test "${with_ccbin+set}" = set; then :
   withval=$with_ccbin; NVCFLAGS="$NVCFLAGS -ccbin=$with_ccbin"
@@ -2945,9 +2967,17 @@ fi
 
 # Check whether --enable-debug was given.
 if test "${enable_debug+set}" = set; then :
-  enableval=$enable_debug; CFLAGS="$(echo $CFLAGS|sed s/-O./-g/)";NVCFLAGS="$NVCFLAGS -g -G"
+  enableval=$enable_debug; CFLAGS="$(echo $CFLAGS|sed s/-O./-g/) -DDEBUG";NVCFLAGS="$NVCFLAGS -g -G"
 else
   CFLAGS="$CFLAGS";NVCFLAGS="$NVCFLAGS"
+fi
+
+
+# Check whether --enable-timing was given.
+if test "${enable_timing+set}" = set; then :
+  enableval=$enable_timing; CFLAGS="$CFLAGS -DDEBUG"
+else
+  CFLAGS="$CFLAGS"
 fi
 
 
@@ -2975,14 +3005,6 @@ else
 fi
 
 
-# Check whether --enable-cbcencgpu was given.
-if test "${enable_cbcencgpu+set}" = set; then :
-  enableval=$enable_cbcencgpu; CPPFLAGS="$CPPFLAGS";NVCPPFLAGS="$NVCPPFLAGS"
-else
-  CPPFLAGS="$CPPFLAGS -DCBC_ENC_CPU";NVCPPFLAGS="$NVCPPFLAGS -DCBC_ENC_CPU"
-fi
-
-
 # Check whether --enable-pageable was given.
 if test "${enable_pageable+set}" = set; then :
   enableval=$enable_pageable; NVCPPFLAGS="$NVCPPFLAGS -DPAGEABLE"
@@ -2993,9 +3015,9 @@ fi
 
 # Check whether --enable-ttableconstant was given.
 if test "${enable_ttableconstant+set}" = set; then :
-  enableval=$enable_ttableconstant; NVCPPFLAGS="$NVCPPFLAGS"
+  enableval=$enable_ttableconstant; NVCPPFLAGS="$NVCPPFLAGS -DT_TABLE_CONSTANT"
 else
-  NVCPPFLAGS="$NVCPPFLAGS -DT_TABLE_CONSTANT"
+  NVCPPFLAGS="$NVCPPFLAGS"
 fi
 
 
@@ -3484,6 +3506,76 @@ fi
 
 done
 
+for ac_header in openssl/blowfish.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "openssl/blowfish.h" "ac_cv_header_openssl_blowfish_h" "$ac_includes_default"
+if test "x$ac_cv_header_openssl_blowfish_h" = x""yes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_OPENSSL_BLOWFISH_H 1
+_ACEOF
+
+else
+  as_fn_error "openssl/blowfish.h required" "$LINENO" 5
+fi
+
+done
+
+for ac_header in openssl/camellia.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "openssl/camellia.h" "ac_cv_header_openssl_camellia_h" "$ac_includes_default"
+if test "x$ac_cv_header_openssl_camellia_h" = x""yes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_OPENSSL_CAMELLIA_H 1
+_ACEOF
+
+else
+  as_fn_error "openssl/camellia.h required" "$LINENO" 5
+fi
+
+done
+
+for ac_header in openssl/cast.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "openssl/cast.h" "ac_cv_header_openssl_cast_h" "$ac_includes_default"
+if test "x$ac_cv_header_openssl_cast_h" = x""yes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_OPENSSL_CAST_H 1
+_ACEOF
+
+else
+  as_fn_error "openssl/cast.h required" "$LINENO" 5
+fi
+
+done
+
+for ac_header in openssl/des.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "openssl/des.h" "ac_cv_header_openssl_des_h" "$ac_includes_default"
+if test "x$ac_cv_header_openssl_des_h" = x""yes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_OPENSSL_DES_H 1
+_ACEOF
+
+else
+  as_fn_error "openssl/des.h required" "$LINENO" 5
+fi
+
+done
+
+for ac_header in openssl/idea.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "openssl/idea.h" "ac_cv_header_openssl_idea_h" "$ac_includes_default"
+if test "x$ac_cv_header_openssl_idea_h" = x""yes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_OPENSSL_IDEA_H 1
+_ACEOF
+
+else
+  as_fn_error "openssl/idea.h required" "$LINENO" 5
+fi
+
+done
+
 for ac_header in openssl/engine.h
 do :
   ac_fn_c_check_header_mongrel "$LINENO" "openssl/engine.h" "ac_cv_header_openssl_engine_h" "$ac_includes_default"
@@ -3508,6 +3600,20 @@ _ACEOF
 
 else
   as_fn_error "cuda_runtime_api.h required" "$LINENO" 5
+fi
+
+done
+
+for ac_header in CL/opencl.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "CL/opencl.h" "ac_cv_header_CL_opencl_h" "$ac_includes_default"
+if test "x$ac_cv_header_CL_opencl_h" = x""yes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_CL_OPENCL_H 1
+_ACEOF
+
+else
+  as_fn_error "CL/opencl.h required" "$LINENO" 5
 fi
 
 done
@@ -3593,6 +3699,48 @@ fi
 $as_echo "$ac_cv_lib_cudart_cudaGetDeviceCount" >&6; }
 if test "x$ac_cv_lib_cudart_cudaGetDeviceCount" = x""yes; then :
   LIBS="$LIBS -lcudart"
+else
+  as_fn_error "Cannot find cuda runtime library" "$LINENO" 5
+fi
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for clGetDeviceIDs in -lOpenCL" >&5
+$as_echo_n "checking for clGetDeviceIDs in -lOpenCL... " >&6; }
+if test "${ac_cv_lib_OpenCL_clGetDeviceIDs+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lOpenCL  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char clGetDeviceIDs ();
+int
+main ()
+{
+return clGetDeviceIDs ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_OpenCL_clGetDeviceIDs=yes
+else
+  ac_cv_lib_OpenCL_clGetDeviceIDs=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_OpenCL_clGetDeviceIDs" >&5
+$as_echo "$ac_cv_lib_OpenCL_clGetDeviceIDs" >&6; }
+if test "x$ac_cv_lib_OpenCL_clGetDeviceIDs" = x""yes; then :
+  LIBS_OPENCL="$LIBS_OPENCL -lOpenCL"
 else
   as_fn_error "Cannot find cuda runtime library" "$LINENO" 5
 fi

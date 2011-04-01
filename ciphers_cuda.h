@@ -15,11 +15,6 @@ int AES_cuda_set_decrypt_key(const unsigned char *userKey, const int bits, AES_K
 void AES_cuda_transfer_iv(const unsigned char *iv);
 
 /*
-#ifndef CBC_ENC_CPU
-void AES_cuda_encrypt_cbc(const unsigned char *in, unsigned char *out,size_t nbytes);
-#endif
-void AES_cuda_decrypt_cbc(const unsigned char *in, unsigned char *out,size_t nbytes);
-
 void AES_cuda_init(int* nm,int buffer_size_engine,int verbosity);
 void AES_cuda_finish();
 */
