@@ -13,6 +13,8 @@ if [[ -n $3 ]]; then
 	CIPHERS=$3
 fi
 
+mkdir -p plot-data
+cd plot-data
 
 for cipher in $CIPHERS; do
 	if [[ -n $2 ]]; then
@@ -56,4 +58,5 @@ for cipher in $CIPHERS; do
 	fi
 done
 
+cd ..
 ./plots.plt
