@@ -195,7 +195,7 @@ void CMLL_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbyte
 	}
 
 	if(gridSize[0] < MAX_THREAD) {
-		blockSize[0] = gridSize[0] = 128;
+		blockSize[0] = gridSize[0] = MAX_THREAD;
 	}
 
 	if(!cmll_stable) {

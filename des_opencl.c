@@ -169,7 +169,7 @@ void DES_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes
 	}
 
 	if(gridSize[0] < MAX_THREAD) {
-		blockSize[0] = gridSize[0] = 128;
+		blockSize[0] = gridSize[0] = MAX_THREAD;
 	}
 
 	if(!des_sbox) {
