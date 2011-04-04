@@ -206,7 +206,7 @@ __global__ void DESencKernel(uint64_t *data) {
 	
 	((uint64_t *)des_SP)[threadIdx.x] = ((uint64_t *)des_d_sp_c)[threadIdx.x];
 	#if MAX_THREAD == 128
-		((uint64_t *)des_d_sp)[threadIdx.x+128] = ((uint64_t *)des_d_sp_c)[threadIdx.x+128];
+		((uint64_t *)des_SP)[threadIdx.x+128] = ((uint64_t *)des_d_sp_c)[threadIdx.x+128];
 	#endif
 
 	__syncthreads();
