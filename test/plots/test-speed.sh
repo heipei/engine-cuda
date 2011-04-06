@@ -8,7 +8,7 @@ ENGINE=cudamrg
 if [[ -n $4 ]]; then
 	ENGINE=$4
 fi
-if [[ -n $3 ]]; then
+if [[ -n $3 && $3 != "all" ]]; then
 	echo "Ciphers: $3\n==========="
 	CIPHERS=$3
 fi

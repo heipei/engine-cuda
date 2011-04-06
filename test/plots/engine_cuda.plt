@@ -63,7 +63,7 @@ set mztics default
 set mx2tics default
 set my2tics default
 set mcbtics default
-set xtics border in scale 1,0.5 mirror norotate  offset character 0, 0, 0
+set xtics border in scale 1,0.5 mirror rotate by -45 offset character 0, -0.2, 0
 set xtics
 set xtics   ("16B" 0.00000, "64B" 1.00000, "256B" 2.00000, "1KB" 3.00000, "2KB" 4.00000, "4KB" 5.00000, "8KB" 6.00000, "16KB" 7.00000, "32KB" 8.00000, "64KB" 9.00000, "128KB" 10.0000, "256KB" 11.0000, "512KB" 12.0000, "1MB" 13.0000, "2MB" 14.0000, "4MB" 15.0000, "8MB" 16.0000)
 set ytics border in scale 1,0.5 mirror norotate  offset character 0, 0, 0
@@ -120,5 +120,4 @@ set key title ""
 #set key inside left top vertical Right noreverse enhanced autotitles box linetype 1 linewidth 1.000
 set key inside left top vertical Right autotitles width 2 box linetype 1 linewidth 1.000
 #set key noinvert samplen 4 spacing 1 width 0 height 0 
-set terminal pdf size 15cm,9cm font "Palatino"
-GNUTERM = "wxt"
+set terminal pdf size 15cm,9cm font "Palatino"#C71585GNUTERM = "wxt"

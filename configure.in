@@ -77,14 +77,14 @@ AS_HELP_STRING([--with-opensslenginedir],[specify the directory where openssl en
 AC_ARG_WITH([buffersize],AS_HELP_STRING([--with-buffersize],[specify the size of the buffer (default 8MB) ]),
 [NVCPPFLAGS="$NVCPPFLAGS -DMAX_CHUNK_SIZE=$with_buffersize"],[NVCPPFLAGS="$NVCPPFLAGS -DMAX_CHUNK_SIZE=8*1024*1024"])
 
-AC_ARG_WITH([maxrregcount],AS_HELP_STRING([--with-rregcount],[specify the max number of regs that a thread can use (default no restriction) ]),
+AC_ARG_WITH([maxrregcount],AS_HELP_STRING([--with-maxrregcount],[specify the max number of regs that a thread can use (default no restriction) ]),
 [NVCPPFLAGS="$NVCPPFLAGS -maxrregcount=$with_maxrregcount"],[NVCPPFLAGS="$NVCPPFLAGS"])
 
 AC_ARG_WITH([maxthreads],AS_HELP_STRING([--with-maxthreads],[specify the number of threads per block (default: 256 threads) ]),
 [CFLAGS="$CFLAGS -DMAX_THREAD=$with_maxthreads"],[CFLAGS="$CFLAGS -DMAX_THREAD=256"])
 
 AC_ARG_WITH([gpuarch],AS_HELP_STRING([--with-gpuarch],[supply the lowest compute capability the build product should run on (default: sm_10) ]),
-[NVCLFAGS="$NVCFLAGS -arch $with_gpuarch"],[NVCLFAGS="$NVCFLAGS -arch sm_10"])
+[NVCFLAGS="$NVCFLAGS -arch $with_gpuarch"],[NVCFLAGS="$NVCFLAGS -arch sm_10"])
 
 AC_ARG_WITH([ccbin],[AS_HELP_STRING([--with-ccbin],[specify a compiler different from the default (default=gcc)])],
 [NVCFLAGS="$NVCFLAGS -ccbin=$with_ccbin"],[NVCFLAGS="$NVCFLAGS"])

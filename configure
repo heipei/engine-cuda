@@ -1315,7 +1315,7 @@ Optional Packages:
   --with-opensslenginedir specify the directory where openssl engine are
                           located (default $PREFIX/lib/engines)
   --with-buffersize       specify the size of the buffer (default 8MB)
-  --with-rregcount        specify the max number of regs that a thread can use
+  --with-maxrregcount     specify the max number of regs that a thread can use
                           (default no restriction)
   --with-maxthreads       specify the number of threads per block (default:
                           256 threads)
@@ -2966,9 +2966,9 @@ fi
 
 # Check whether --with-gpuarch was given.
 if test "${with_gpuarch+set}" = set; then :
-  withval=$with_gpuarch; NVCLFAGS="$NVCFLAGS -arch $with_gpuarch"
+  withval=$with_gpuarch; NVCFLAGS="$NVCFLAGS -arch $with_gpuarch"
 else
-  NVCLFAGS="$NVCFLAGS -arch sm_10"
+  NVCFLAGS="$NVCFLAGS -arch sm_10"
 fi
 
 

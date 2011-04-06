@@ -5,7 +5,11 @@
 #endif
 
 #ifndef TX
-	#define TX (__umul24(blockIdx.x,blockDim.x) + threadIdx.x)
+	#if (__CUDA_ARCH__ < 200)
+		#define TX (__umul24(blockIdx.x,blockDim.x) + threadIdx.x)
+	#else
+		#define TX (blockIdx.x * blockDim.x + threadIdx.x)
+	#endif
 #endif
 
 #define _CUDA(call) {																	\
