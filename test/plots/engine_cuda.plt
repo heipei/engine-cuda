@@ -88,7 +88,7 @@ set x2label ""
 set x2label  offset character 0, 0, 0 font "" textcolor lt -1 norotate
 set xrange [ * : * ] noreverse nowriteback  # (currently [-10.0000:10.0000] )
 set x2range [ * : * ] noreverse nowriteback  # (currently [-10.0000:10.0000] )
-set ylabel "Encryption speed [megabytes/seconds]" 
+set ylabel "Encryption speed [megabytes/second]" 
 set ylabel  offset character 0, 0, 0 font "" textcolor lt -1 rotate by 90
 set y2label "" 
 set y2label  offset character 0, 0, 0 font "" textcolor lt -1 rotate by 90

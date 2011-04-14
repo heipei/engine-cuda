@@ -10,8 +10,12 @@
 #ifndef PAGEABLE
 extern "C" void transferHostToDevice_PINNED   (const unsigned char **input, uint32_t **deviceMem, uint8_t **hostMem, size_t *size) {
 	cudaError_t cudaerrno;
-	memcpy(*hostMem,*input,*size);
-        _CUDA(cudaMemcpyAsync(*deviceMem, *hostMem, *size, cudaMemcpyHostToDevice, 0));
+	if(*size <= 1048576) {
+		memcpy(*hostMem,*input,*size);
+        	_CUDA(cudaMemcpyAsync(*deviceMem, *hostMem, *size, cudaMemcpyHostToDevice, 0));
+	} else {
+		_CUDA(cudaMemcpy(*deviceMem, *input, *size, cudaMemcpyHostToDevice));
+	}
 }
 #if CUDART_VERSION >= 2020
 extern "C" void transferHostToDevice_ZEROCOPY (const unsigned char **input, uint32_t **deviceMem, uint8_t **hostMem, size_t *size) {

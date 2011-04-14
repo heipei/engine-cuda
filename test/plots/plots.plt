@@ -73,20 +73,32 @@ plot 'plot-data/aes-128-ecb_gpu_opencl.dat' using ($2/1048576) title 'AES-128 GP
 set terminal pdf size 15cm,8cm font "Palatino"
 set output "idea_mul_umul.pdf"
 plot 'plot-data/idea-ecb_32bit_mul.dat' using ($2/1048576) title 'IDEA: a*b' with linespoints lw 2, \
-     'plot-data/idea-ecb_32bit_umul.dat' using ($2/1048576) title 'IDEA: __umul24(a,b)' with linespoints lw 2
-
-set output "idea_multi_block.pdf"
-set key inside right bottom vertical Right noreverse enhanced autotitles box linetype 1 linewidth 1.000
-plot 'plot-data/idea-ecb_single_block.dat' using ($2/1048576) title 'IDEA (regular)' with linespoints lw 2, \
-     'plot-data/idea-ecb_two_blocks.dat' using ($2/1048576) title 'IDEA (two blocks)' with linespoints lw 2, \
-     'plot-data/idea-ecb_two_blocks_maxreg.dat' using ($2/1048576) title 'IDEA (two blocks, maxreg=10)' with linespoints lw 2, \
-     'plot-data/idea-ecb_four_blocks.dat' using ($2/1048576) title 'IDEA (four blocks)' with linespoints lw 2,\
-     'plot-data/idea-ecb_four_blocks_maxreg.dat' using ($2/1048576) title 'IDEA (four blocks, maxreg=10)' with linespoints lw 2
+     'plot-data/idea-ecb_32bit_umul.dat' using ($2/1048576) title 'IDEA: __umul24(a,b)' with linespoints lw 2, \
+     'plot-data/idea-ecb_cpu.dat' using ($2/1048576) title 'IDEA CPU' with linespoints lw 2 
 
 set output "idea_schedule.pdf"
 set terminal pdf size 15cm,8cm font "Palatino"
 plot 'plot-data/idea-ecb_yield.dat' using ($2/1048576) title 'IDEA: yield' with linespoints lw 2, \
-     'plot-data/idea-ecb_spin.dat' using ($2/1048576) title 'IDEA: spin' with linespoints lw 2
+     'plot-data/idea-ecb_spin.dat' using ($2/1048576) title 'IDEA: spin' with linespoints lw 2, \
+     'plot-data/idea-ecb_cpu.dat' using ($2/1048576) title 'IDEA CPU' with linespoints lw 2 pt 11 lc rgb "orange" 
+
+set output "idea_multi_block.pdf"
+set key inside right center vertical Right noreverse enhanced autotitles box linetype 1 linewidth 1.000
+plot 'plot-data/idea-ecb_single_block.dat' using ($2/1048576) title 'IDEA (regular)' with linespoints lw 2, \
+     'plot-data/idea-ecb_two_blocks.dat' using ($2/1048576) title 'IDEA (two blocks)' with linespoints lw 2, \
+     'plot-data/idea-ecb_two_blocks_maxreg.dat' using ($2/1048576) title 'IDEA (two blocks, maxreg=10)' with linespoints lw 2, \
+     'plot-data/idea-ecb_four_blocks.dat' using ($2/1048576) title 'IDEA (four blocks)' with linespoints lw 2,\
+     'plot-data/idea-ecb_four_blocks_maxreg.dat' using ($2/1048576) title 'IDEA (four blocks, maxreg=10)' with linespoints lw 2 pt 9 lc rgb "gray", \
+     'plot-data/idea-ecb_cpu.dat' using ($2/1048576) title 'IDEA CPU' with linespoints lw 2 pt 11 lc rgb "orange" 
+
+set output "idea_multi_block.pdf"
+set key inside right center vertical Right noreverse enhanced autotitles box linetype 1 linewidth 1.000
+plot 'plot-data/idea-ecb_single_block.dat' using ($2/1048576) title 'IDEA (regular)' with linespoints lw 2, \
+     'plot-data/idea-ecb_two_blocks.dat' using ($2/1048576) title 'IDEA (two blocks)' with linespoints lw 2, \
+     'plot-data/idea-ecb_two_blocks_maxreg.dat' using ($2/1048576) title 'IDEA (two blocks, maxreg=10)' with linespoints lw 2, \
+     'plot-data/idea-ecb_four_blocks.dat' using ($2/1048576) title 'IDEA (four blocks)' with linespoints lw 2,\
+     'plot-data/idea-ecb_four_blocks_maxreg.dat' using ($2/1048576) title 'IDEA (four blocks, maxreg=10)' with linespoints lw 2 pt 9 lc rgb "gray", \
+     'plot-data/idea-ecb_cpu.dat' using ($2/1048576) title 'IDEA CPU' with linespoints lw 2 pt 11 lc rgb "orange" 
 
 set output "cuda_blocks.pdf"
 set terminal pdf size 15cm,8cm font "Palatino"
@@ -100,4 +112,29 @@ set boxwidth 0.9
 set xtic rotate by -45 scale 0
 unset xlabel
 plot 'plot-data/speed_blocks.dat' using ($2/1048576):xtic(1) title '128 threads', '' using ($3/1048576):xtic(1) title '256 threads'
+
+set output "fast_mem_limits.pdf"
+set terminal pdf size 15cm,8cm font "Palatino"
+set key inside right bottom horizontal Right noreverse enhanced autotitles box linetype 1 linewidth 1.000
+set yrange[0:60000]
+set xrange[0:192]
+set xlabel "Independent keys per symmetric multiprocessor (SM)"
+set ylabel "Fast memory consumption per SM (KB)" 
+set xtics 32
+#set ytics 4096
+set ytics   ("0KB" 0, "8KB" 8192, "16KB" 16384, "24KB" 24576, "32KB" 32768, "40KB" 40960, "48KB" 49152)
+set style data points
+set style function lines
+set samples 16
+set label 1 "Shared Memory\n(CC 2.0)" at 24, 55000 font "Palatino,7" front nopoint tc def
+set label 2 "Shared Memory\n(CC 1.x)" at 18, 22500 font "Palatino,7" front nopoint tc def
+plot 16384 notitle lw 5 lc rgb "black", \
+	49152 notitle lw 5 lc rgb "black", \
+	4096*x title "Blowfish" with linespoints lw 2 lc rgb "#800000", \
+	4096 + 280*x title "Camellia" with linespoints lw 2 lc rgb "#696969" pt 9, \
+	240*x+1024 title "AES" with linespoints lw 2 lc rgb "#00008B", \
+	2048+128*x title "DES" with linespoints lw 2 lc rgb "#C71585", \
+	216*x title "IDEA" with linespoints lw 2 lc rgb "#FF8C00" pointsize 0.7 pt 5, \
+	4096 + 132*x title "CAST 5" with linespoints lw 2 lc rgb "#006400" pt 11
+
 
