@@ -667,6 +667,7 @@ with_gpuarch
 with_ccbin
 enable_debug
 enable_timing
+enable_aes_coarse
 enable_gprof
 enable_quiet
 enable_cpuonly
@@ -1296,6 +1297,7 @@ Optional Features:
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --enable-debug          enable debug support (default=disabled)
   --enable-timing         enable timing support (default=disabled)
+  --disable-aes-coarse    disable coarse AES implementation (default=enabled)
   --enable-gprof          enable gprof support (default=disabled)
   --enable-quiet          no output except warning and error
                           (default=disabled)
@@ -2994,6 +2996,14 @@ if test "${enable_timing+set}" = set; then :
   enableval=$enable_timing; CFLAGS="$CFLAGS -DDEBUG"
 else
   CFLAGS="$CFLAGS"
+fi
+
+
+# Check whether --enable-aes_coarse was given.
+if test "${enable_aes_coarse+set}" = set; then :
+  enableval=$enable_aes_coarse; CFLAGS="$CFLAGS"
+else
+  CFLAGS="$CFLAGS -DAES_COARSE"
 fi
 
 

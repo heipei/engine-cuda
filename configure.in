@@ -95,6 +95,9 @@ AC_ARG_ENABLE([debug],[AS_HELP_STRING([--enable-debug],[enable debug support (de
 AC_ARG_ENABLE([timing],[AS_HELP_STRING([--enable-timing],[enable timing support (default=disabled)])],
 [CFLAGS="$CFLAGS -DDEBUG"],[CFLAGS="$CFLAGS"])
 
+AC_ARG_ENABLE([aes_coarse],[AS_HELP_STRING([--disable-aes-coarse],[disable coarse AES implementation (default=enabled)])],
+[CFLAGS="$CFLAGS"],[CFLAGS="$CFLAGS -DAES_COARSE"])
+
 AC_ARG_ENABLE([gprof],[AS_HELP_STRING([--enable-gprof],[enable gprof support (default=disabled)])],
 [CFLAGS="$(echo $CFLAGS|sed s/-O./-pg/)";NVCFLAGS="$NVCFLAGS -pg"],[CFLAGS="$CFLAGS";NVCFLAGS="$NVCFLAGS"])
 
