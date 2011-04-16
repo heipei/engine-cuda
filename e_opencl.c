@@ -146,11 +146,15 @@ int opencl_init(ENGINE * engine) {
 	gettimeofday(&starttime, NULL);
 	
 	cl_int error;
-	error = clBuildProgram(device_program, 1, &device, "-w -cl-nv-verbose", NULL, NULL);
+	#ifdef AES_COARSE
+		error = clBuildProgram(device_program, 1, &device, "-w -cl-nv-verbose -D AES_COARSE", NULL, NULL);
+	#else
+		error = clBuildProgram(device_program, 1, &device, "-w -cl-nv-verbose", NULL, NULL);
+	#endif
 
 	if(verbose && !quiet) {
 		char build_info[600001];
-		CL_WRAPPER(clGetProgramBuildInfo(device_program,device,CL_PROGRAM_BUILD_LOG,60000,build_info,NULL));
+		CL_WRAPPER(clGetProgramBuildInfo(device_program,device,CL_PROGRAM_BUILD_LOG,600000,build_info,NULL));
 		fprintf(stdout, "Build log: %s\n", build_info);
 	}
 

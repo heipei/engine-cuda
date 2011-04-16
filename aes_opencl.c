@@ -274,20 +274,35 @@ static cl_mem aes_sbox = NULL;
 
 void AES_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, cl_mem *device_buffer, cl_mem *device_schedule, cl_command_queue queue, cl_kernel device_kernel, cl_context context) {
 
-	size_t gridSize[3] = {1, 0, 0};
-	size_t blockSize[3] = {STATE_THREAD_AES,MAX_THREAD/STATE_THREAD_AES, 0};
-	
-	if ((nbytes%(MAX_THREAD*STATE_THREAD_DES))==0) {
-		gridSize[0] = nbytes/STATE_THREAD_AES/64;
-		gridSize[1] = MAX_THREAD/STATE_THREAD_AES;
-	} else {
-		gridSize[0] = nbytes/STATE_THREAD_AES/64+1;
-		gridSize[1] = MAX_THREAD/STATE_THREAD_AES;
-	}
+	#ifdef AES_COARSE
+		size_t gridSize[3] = {nbytes/AES_BLOCK_SIZE, 0, 0};
+		size_t blockSize[3] = {MAX_THREAD, 0, 0};
 
-	if(gridSize[0] < STATE_THREAD_AES) {
-		gridSize[0] = STATE_THREAD_AES;
-	}
+		if(nbytes%(MAX_THREAD*AES_BLOCK_SIZE)==0) {
+			gridSize[0] = nbytes/AES_BLOCK_SIZE;
+		} else {
+			gridSize[0] = ((nbytes/AES_BLOCK_SIZE)+MAX_THREAD)%MAX_THREAD;
+		}
+
+		if(gridSize[0] < MAX_THREAD) {
+			gridSize[0] = MAX_THREAD;
+		}
+	#else 		
+		size_t gridSize[3] = {1, 0, 0};
+		size_t blockSize[3] = {STATE_THREAD_AES,MAX_THREAD/STATE_THREAD_AES, 0};
+		
+		if ((nbytes%(MAX_THREAD*STATE_THREAD_DES))==0) {
+			gridSize[0] = nbytes/STATE_THREAD_AES/64;
+			gridSize[1] = MAX_THREAD/STATE_THREAD_AES;
+		} else {
+			gridSize[0] = nbytes/STATE_THREAD_AES/64+1;
+			gridSize[1] = MAX_THREAD/STATE_THREAD_AES;
+		}
+
+		if(gridSize[0] < STATE_THREAD_AES) {
+			gridSize[0] = STATE_THREAD_AES;
+		}
+	#endif
 
 	if(!aes_sbox) {
 		cl_int error;
@@ -301,7 +316,11 @@ void AES_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes
 
 	clEnqueueWriteBuffer(queue,*device_buffer,CL_TRUE,0,nbytes,in,0,NULL,NULL);
 	
-	OPENCL_TIME_KERNEL("AES     ",2)
+	#ifdef AES_COARSE
+		OPENCL_TIME_KERNEL("AES     ",1)
+	#else
+		OPENCL_TIME_KERNEL("AES     ",2)
+	#endif
 
 	clEnqueueReadBuffer(queue,*device_buffer,CL_TRUE,0,nbytes,out,0,NULL,NULL);
 }

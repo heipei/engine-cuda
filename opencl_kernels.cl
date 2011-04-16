@@ -78,41 +78,95 @@ __kernel void BFencKernel(__global unsigned long *data, __global unsigned int *p
 // ###########
 // # AES ECB #
 // ###########
+#ifdef AES_COARSE
+	#define AES_DATA_TYPE unsigned long
+	#define TX get_global_id(0)
+	#define SX get_local_id(0)
 
-#define ROW (mul24(4,(int)get_local_id(1)))
-#define SX (ROW + get_local_id(0))
-#define GID (get_global_id(0) + mul24((int)get_global_id(1),(int)get_global_size(0)))
+	#define GLOBAL_LOAD_SHARED_SETUP \
+		register unsigned int t0, t1, t2, t3, s0, s1, s2, s3; \
+		register unsigned long load; \
+		load = data[2*TX]; \
+		load ^= aes_key[0] << 32 | aes_key[1]; \
+		s0 = load; \
+		s1 = load >> 32; \
+		load = data[2*TX+1]; \
+		load ^= aes_key[2] << 32 | aes_key[3]; \
+		s2 = load; \
+		s3 = load >> 32; 
 
-#define AES_ENC_ROUND(n,D,S)	D[SX]  = Te0[S[SX] & 0xff]; \
-				D[SX] ^= Te1[(S[(1+get_local_id(0))%4+ROW] >> 8) & 0xff]; \
-				D[SX] ^= Te2[(S[(2+get_local_id(0))%4+ROW] >>  16) & 0xff]; \
-				D[SX] ^= Te3[S[(3+get_local_id(0))%4+ROW] >> 24]; \
-				D[SX] ^= aes_dk[get_local_id(0)+n]; 
+	#define AES_ENC_ROUND(n,D,S) \
+		AES_ENC_STEP(n,D,S,0,1,2,3); \
+		AES_ENC_STEP(n,D,S,1,2,3,0); \
+		AES_ENC_STEP(n,D,S,2,3,0,1); \
+		AES_ENC_STEP(n,D,S,3,0,1,2);
 
-#define AES_FINAL_ENC_ROUND(N)	__private unsigned int p_state = (Te2[(t[SX]) & 0xff] & 0x000000ff); \
-				p_state ^= (Te3[(t[(1+get_local_id(0))%4+ROW] >>  8) & 0xff] & 0x0000ff00); \
-				p_state ^= (Te0[(t[(2+get_local_id(0))%4+ROW] >> 16) & 0xff] & 0x00ff0000); \
-				p_state ^= (Te1[(t[(3+get_local_id(0))%4+ROW] >> 24)       ] & 0xff000000); \
-				p_state ^= aes_dk[get_local_id(0)+N]; \
-				data[GID] = p_state; 
+	#define AES_ENC_STEP(n,D,S,W,X,Y,Z) \
+		D##W  = Te0[ S##W        & 0xff]; \
+		D##W ^= Te1[(S##X >>  8) & 0xff]; \
+		D##W ^= Te2[(S##Y >> 16) & 0xff]; \
+		D##W ^= Te3[ S##Z >> 24        ]; \
+		D##W ^= aes_key[n+W];
 
-__kernel void AES128encKernel(__global unsigned int *data, __global unsigned int *Teg, __constant unsigned int *aes_dk) {
-	__local unsigned int t[MAX_THREAD];
-	__local unsigned int s[MAX_THREAD];
-	__local unsigned int Te0[256];
-	__local unsigned int Te1[256];
-	__local unsigned int Te2[256];
-	__local unsigned int Te3[256];
+	#define AES_FINAL_ENC_STEP(N,W,X,Y,Z) \
+		s##W  = Te2[ t##W        & 0xff] & 0x000000ff; \
+		s##W ^= Te3[(t##X >>  8) & 0xff] & 0x0000ff00; \
+		s##W ^= Te0[(t##Y >> 16) & 0xff] & 0x00ff0000; \
+		s##W ^= Te1[(t##Z >> 24)       ] & 0xff000000; \
+		s##W ^= aes_key[N+W]; 
 
-	Te0[SX] = Teg[SX];
-	Te1[SX] = Teg[SX+256];
-	Te2[SX] = Teg[SX+512];
-	Te3[SX] = Teg[SX+768];
+	#define AES_FINAL_ENC_ROUND(N) \
+		AES_FINAL_ENC_STEP(N,0,1,2,3); \
+		AES_FINAL_ENC_STEP(N,1,2,3,0); \
+		load = s0 | ((unsigned long)s1) << 32; \
+		data[2*TX] = load; \
+		AES_FINAL_ENC_STEP(N,2,3,0,1); \
+		AES_FINAL_ENC_STEP(N,3,0,1,2); \
+		load = s2 | ((unsigned long)s3) << 32; \
+		data[2*TX+1] = load; 
 
+#else
+	#define AES_DATA_TYPE unsigned int
+	#define GLOBAL_LOAD_SHARED_SETUP \
+		__local unsigned int t[MAX_THREAD]; \
+		__local unsigned int s[MAX_THREAD]; \
+		s[SX] = data[GID] ^ aes_key[get_local_id(0)];
+
+	#define ROW (mul24(4,(int)get_local_id(1)))
+	#define SX (ROW + get_local_id(0))
+	#define GID (get_global_id(0) + mul24((int)get_global_id(1),(int)get_global_size(0)))
+
+	#define AES_ENC_ROUND(n,D,S)	D[SX]  = Te0[S[SX] & 0xff]; \
+					D[SX] ^= Te1[(S[(1+get_local_id(0))%4+ROW] >> 8) & 0xff]; \
+					D[SX] ^= Te2[(S[(2+get_local_id(0))%4+ROW] >>  16) & 0xff]; \
+					D[SX] ^= Te3[S[(3+get_local_id(0))%4+ROW] >> 24]; \
+					D[SX] ^= aes_key[get_local_id(0)+n]; 
+
+	#define AES_FINAL_ENC_ROUND(N)	__private unsigned int p_state = (Te2[(t[SX]) & 0xff] & 0x000000ff); \
+					p_state ^= (Te3[(t[(1+get_local_id(0))%4+ROW] >>  8) & 0xff] & 0x0000ff00); \
+					p_state ^= (Te0[(t[(2+get_local_id(0))%4+ROW] >> 16) & 0xff] & 0x00ff0000); \
+					p_state ^= (Te1[(t[(3+get_local_id(0))%4+ROW] >> 24)       ] & 0xff000000); \
+					p_state ^= aes_key[get_local_id(0)+N]; \
+					data[GID] = p_state; 
+#endif	
+
+#define AES_COPY_GLOBAL_SHARED_ENC \
+	__local unsigned int Te0[256]; \
+	__local unsigned int Te1[256]; \
+	__local unsigned int Te2[256]; \
+	__local unsigned int Te3[256]; \
+	Te0[SX] = Teg[SX]; \
+	Te1[SX] = Teg[SX+256]; \
+	Te2[SX] = Teg[SX+512]; \
+	Te3[SX] = Teg[SX+768]; \
 	barrier(CLK_LOCAL_MEM_FENCE);
 
-	s[SX] = data[GID] ^ aes_dk[get_local_id(0)];
-	
+
+__kernel void AES128encKernel(__global AES_DATA_TYPE *data, __global unsigned int *Teg, __constant unsigned int *aes_key) {
+
+	GLOBAL_LOAD_SHARED_SETUP
+	AES_COPY_GLOBAL_SHARED_ENC
+
 	AES_ENC_ROUND( 4,t,s);
 	AES_ENC_ROUND( 8,s,t);
 	AES_ENC_ROUND(12,t,s);
@@ -125,23 +179,11 @@ __kernel void AES128encKernel(__global unsigned int *data, __global unsigned int
 	AES_FINAL_ENC_ROUND(0x28);
 }
 
-__kernel void AES192encKernel(__global unsigned int *data, __global unsigned int *Teg, __constant unsigned int *aes_dk) {
-	__local unsigned int t[MAX_THREAD];
-	__local unsigned int s[MAX_THREAD];
-	__local unsigned int Te0[256];
-	__local unsigned int Te1[256];
-	__local unsigned int Te2[256];
-	__local unsigned int Te3[256];
+__kernel void AES192encKernel(__global AES_DATA_TYPE *data, __global unsigned int *Teg, __constant unsigned int *aes_key) {
 
-	Te0[SX] = Teg[SX];
-	Te1[SX] = Teg[SX+256];
-	Te2[SX] = Teg[SX+512];
-	Te3[SX] = Teg[SX+768];
+	GLOBAL_LOAD_SHARED_SETUP
+	AES_COPY_GLOBAL_SHARED_ENC
 
-	s[SX] = data[GID] ^ aes_dk[get_local_id(0)];
-
-	barrier(CLK_LOCAL_MEM_FENCE);
-	
 	AES_ENC_ROUND( 4,t,s);
 	AES_ENC_ROUND( 8,s,t);
 	AES_ENC_ROUND(12,t,s);
@@ -156,23 +198,11 @@ __kernel void AES192encKernel(__global unsigned int *data, __global unsigned int
 	AES_FINAL_ENC_ROUND(0x30);
 }
 
-__kernel void AES256encKernel(__global unsigned int *data, __global unsigned int *Teg, __constant unsigned int *aes_dk) {
-	__local unsigned int t[MAX_THREAD];
-	__local unsigned int s[MAX_THREAD];
-	__local unsigned int Te0[256];
-	__local unsigned int Te1[256];
-	__local unsigned int Te2[256];
-	__local unsigned int Te3[256];
+__kernel void AES256encKernel(__global AES_DATA_TYPE *data, __global unsigned int *Teg, __constant unsigned int *aes_key) {
 
-	Te0[SX] = Teg[SX];
-	Te1[SX] = Teg[SX+256];
-	Te2[SX] = Teg[SX+512];
-	Te3[SX] = Teg[SX+768];
+	GLOBAL_LOAD_SHARED_SETUP
+	AES_COPY_GLOBAL_SHARED_ENC
 
-	s[SX] = data[GID] ^ aes_dk[get_local_id(0)];
-
-	barrier(CLK_LOCAL_MEM_FENCE);
-	
 	AES_ENC_ROUND( 4,t,s);
 	AES_ENC_ROUND( 8,s,t);
 	AES_ENC_ROUND(12,t,s);
