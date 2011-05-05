@@ -1,3 +1,26 @@
+// vim:ft=opencl:
+/**
+ * @version 0.1.3 (2011)
+ * @author Johannes Gilger <heipei@hackvalue.de>
+ * 
+ * Copyright 2011 Johannes Gilger
+ *
+ * This file is part of engine_cuda
+ *
+ * engine_cuda is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License or
+ * any later version.
+ * 
+ * engine_cuda is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with engine_cuda. If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -6,10 +29,6 @@
 #include <CL/opencl.h>
 #include "common.h"
 #include "opencl_common.h"
-
-//__kernel void CASTencKernel(__global unsigned long *data, __constant unsigned int *cast_constant_schedule, __global unsigned int *CAST_S_table) {
-
-//uint8_t  *host_data;
 
 CAST_LONG CAST_S_table[1024]={
 	0x30fb40d4,0x9fa0ff0b,0x6beccd2f,0x3f258c7a,0x1e213f2f,0x9c004dd3,0x6003e540,0xcf9fc949,

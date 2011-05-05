@@ -2,6 +2,7 @@ Makefile
 config.log
 config.status
 cscope.out
+autom4te.cache
 
 tags
 teststate

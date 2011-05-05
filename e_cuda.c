@@ -1,23 +1,23 @@
 /**
- * @version 0.1.2 (2010)
+ * @version 0.1.3 (2011)
  * @author Paolo Margara <paolo.margara@gmail.com>
  * 
- * Copyright 2010 Paolo Margara
+ * Copyright 2011 Paolo Margara
  *
- * This file is part of Engine_cudamrg.
+ * This file is part of engine_cuda.
  *
- * Engine_cudamrg is free software: you can redistribute it and/or modify
+ * engine_cuda is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License or
  * any later version.
  * 
- * Engine_cudamrg is distributed in the hope that it will be useful,
+ * engine_cuda is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Engine_cudamrg.  If not, see <http://www.gnu.org/licenses/>.
+ * along with engine_cuda.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 

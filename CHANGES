@@ -1,54 +1,73 @@
-﻿
-Engine_cudamrg CHANGES
- _______________
+﻿engine-cuda Release Notes
+=========================
 
- Changes between 0.1.1 and 0.1.2  [?? ??? 2011]
+Updates since 0.1.2 [09 May 2011]
+---------------------------------
 
-  *) Fixed issue n°1, some endian releted issue and removed dependency
-     from libcrypto.
-     [Paolo Margara <paolo.margara@gmail.com>]
+  * CUDA support for DES, Blowfish, Camellia-128, CAST-5, IDEA
+    All algorithms supported in ECB mode, key-scheduling done on the CPU 
 
- Changes between 0.1.0 and 0.1.1  [10 Jan 2011]
+  * Improved (coarse-grained) version of AES
 
-  *) Optimized support for integrated GPU.
-     [Paolo Margara <paolo.margara@gmail.com>]
+  * engine-opencl with AES, DES, BF, CMLL, CAST5, IDEA
 
-  *) Build process simplified.
-     [Paolo Margara <paolo.margara@gmail.com>]
+  * Test-scripts, autoconf adjustments
+    Preprocessor macros to time the kernel execution time
 
-  *) Generic code cleanup, bug fixes and many optimizations.
-     [Paolo Margara <paolo.margara@gmail.com>]
+  * Lots of restructuring, heavy macro use
 
-  *) Now encryption for AES CBC mode are computed by the cpu.
-     Since the CBC mode needs the cipher texts of each previous step to
-     process the next step, and so it isn't possible to begin the encryption
-     of a block until its previous block has been encrypted, we can't hope
-     to do parallel processing during the encryption stage of this mode.
-     If you want you can re-enable it on the configure command line.
-     [Paolo Margara <paolo.margara@gmail.com>]
+All changes to this release were contributed by Johannes Gilger
+<heipei@hackvalue.de>
 
-  *) Performance improvement from 6% to 12% depending from your hardware
-     configuration.
-     [Paolo Margara <paolo.margara@gmail.com>]
+Update sinces 0.1.1
+-------------------
 
- First public release, 0.1.0  [26 Jul 2010]
+  * Fixed issue n°1, some endian releted issue and removed dependency
+    from libcrypto.
+    [Paolo Margara <paolo.margara@gmail.com>]
 
-  *) Optimized support for AES encryption and decryption for 128 bit, 
-     192 bit and 256 bit key length with a fine-grained approach,
-     the code is optimized for 32 bit operation.
-     [Paolo Margara <paolo.margara@gmail.com>]
+Update since 0.1.0 [10 Jan 2011]
+--------------------------------
 
-  *) Support for the ECB and CBC block cipher types.
-     [Paolo Margara <paolo.margara@gmail.com>]
+  * Optimized support for integrated GPU.
+    [Paolo Margara <paolo.margara@gmail.com>]
 
-  *) Ability to keep T-table in constant memory or shared memory,
-     the key and the rounds are kept in texture memory.
-     All access in global memory are coalesced.
-     [Paolo Margara <paolo.margara@gmail.com>]
+  * Build process simplified.
+    [Paolo Margara <paolo.margara@gmail.com>]
 
-  *) Support for the GNU/Linux operating system.
-     [Paolo Margara <paolo.margara@gmail.com>]
+  * Generic code cleanup, bug fixes and many optimizations.
+    [Paolo Margara <paolo.margara@gmail.com>]
 
-  *) Many other things (simply all the rest).
-     [Paolo Margara <paolo.margara@gmail.com>]
+  * Now encryption for AES CBC mode are computed by the cpu.
+    Since the CBC mode needs the cipher texts of each previous step to
+    process the next step, and so it isn't possible to begin the encryption
+    of a block until its previous block has been encrypted, we can't hope
+    to do parallel processing during the encryption stage of this mode.
+    If you want you can re-enable it on the configure command line.
+    [Paolo Margara <paolo.margara@gmail.com>]
 
+  * Performance improvement from 6% to 12% depending from your hardware
+    configuration.
+    [Paolo Margara <paolo.margara@gmail.com>]
+
+First release, 0.1.0  [26 Jul 2010]
+-----------------------------------
+
+  * Optimized support for AES encryption and decryption for 128 bit, 
+    192 bit and 256 bit key length with a fine-grained approach,
+    the code is optimized for 32 bit operation.
+    [Paolo Margara <paolo.margara@gmail.com>]
+
+  * Support for the ECB and CBC block cipher types.
+    [Paolo Margara <paolo.margara@gmail.com>]
+
+  * Ability to keep T-table in constant memory or shared memory,
+    the key and the rounds are kept in texture memory.
+    All access in global memory are coalesced.
+    [Paolo Margara <paolo.margara@gmail.com>]
+
+  * Support for the GNU/Linux operating system.
+    [Paolo Margara <paolo.margara@gmail.com>]
+
+  * Many other things (simply all the rest).
+    [Paolo Margara <paolo.margara@gmail.com>]

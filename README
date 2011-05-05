@@ -1,15 +1,18 @@
-Engine_cudamrg Quickstart
--------------------
+engine-cuda quickstart
+======================
 
-In order to generate a makefile you have to call configure first. 
+In order to generate a Makefile you have to call configure first. 
 ./configure
 
 You might have to supply configure with the path to your CUDA toolkit:
 ./configure --with-cudatoolkitpath=/opt/cuda
 
-If you know what NVIDIA device engine-cuda will run on, you can use the -arch
-flag to tailor nvcc-compilation:
-NVCFLAGS="-arch sm_11" ./configure
+Some helpful autoconf flags:
+
+  --with-gpuarch=sm_xx (to make nvcc compile for a certain compute capability)
+  --with-buffersize=<bytes> (to set the size of the staging buffer between CPU and GPU)
+  --with-maxrregcount=<regs> (to set the maximum registers per kernel thread)
+  --disable-libopencl (to disable building engine-opencl)
 
 After that simply do
 
@@ -18,8 +21,40 @@ make install
 
 For any further information please refer to http://code.google.com/p/engine-cuda/
 
+Development
+===========
+Further helpful autoconf switches for debugging and developing engine_cuda:
+
+  --enable-debug (enables some verbose output)
+  --enable-timing (necessary to get kernel execution timing output)
+  --disable-aes-coarse (use fine-grained implementation of AES)
+
+Benchmarks of engine-cuda, engine-opencl and the individual kernels can be
+performed using the files in the test/ subdirectory. For testing the whole
+engine, call
+
+  ./test-speed.sh <avg_runs> <GPUONLY/CPUONLY> <ciphers/"all"> <engine>
+
+in test/plots subdir. Plots using gnuplot will automatically generated. Tests
+with 5 iterations and for all block ciphers will take some time.
+
+To test the raw kernel execution time, have a look at the 
+
+ ./generate-files.sh <device> (/dev/zero or /dev/urandom)
+ ./test-kernels.sh <key> <ciphers>
+
+scripts in test/. This will generate files using the device and run them
+through the kernels.
+
+During development, use 
+
+  ./test-correctness.sh <cipher/"all"> <file> <key> <bufsize>
+  
+to compare the output of engine_cuda / engine_opencl with the CPU output in
+order to ensure functionality of the algorithm.
+
 Credits
--------------------
+=======
 
 This is a full credits-file of people that have contributed to this project.
 It is sorted by name and the fields are: name (N), email (E), web-address
