@@ -1,0 +1,28 @@
+Publication of engine-cuda
+==========================
+
+* More blockmodes (CBC, CTR if possible)
+* Verify correctness for random payload and key!
+* Decryption for all ciphers
+* CUDA 4.0
+
+* Try multiblock kernels again
+* Streams and multi-GPU using CUDA 4
+* Have a look at parallel execution again
+
+* Setup a project page (github or google code or asciidoc)
+* Contact kgpu author
+
+Interesting Projects
+====================
+
+* kgpu (GPU framework for Linux kernel)
+  http://code.google.com/p/kgpu/
+
+* SSLShader (reverse SSL proxy with GPU support)
+  http://shader.kaist.edu/sslshader/
+
+* NVIDIA Graduate Fellowships
+  http://research.nvidia.com/content/nvidia-graduate-fellowship-results-2011
+ * Projects like SSLShader, kgpu
+  
