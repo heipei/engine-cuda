@@ -23,6 +23,7 @@ teststate
 *.hash
 *.ptx
 *.sm_*.cubin
+*.html
 
 *.swp
 *.o
