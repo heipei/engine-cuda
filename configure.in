@@ -4,27 +4,27 @@
 # 
 # Copyright 2011 Paolo Margara
 #
-# This file is part of engine_cuda.
+# This file is part of engine-cuda.
 #
-# engine_cuda is free software: you can redistribute it and/or modify
+# engine-cuda is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License or
 # any later version.
 # 
-# engine_cuda is distributed in the hope that it will be useful,
+# engine-cuda is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with engine_cuda.  If not, see <http://www.gnu.org/licenses/>.
+# along with engine-cuda.  If not, see <http://www.gnu.org/licenses/>.
 #
 
 define([PACKAGE_VERSION_MAJOR], [0])
 define([PACKAGE_VERSION_MINOR], [1])
 define([PACKAGE_VERSION_FIX],   [3])
 
-AC_INIT([engine_cudamrg],[PACKAGE_VERSION_MAJOR.PACKAGE_VERSION_MINOR.PACKAGE_VERSION_FIX],[paolo.margara@gmail.com],[engine_cudamrg-v_''AC_PACKAGE_VERSION.tar.gz],[http://code.google.com/p/engine-cuda/])
+AC_INIT([engine-cudamrg],[PACKAGE_VERSION_MAJOR.PACKAGE_VERSION_MINOR.PACKAGE_VERSION_FIX],[paolo.margara@gmail.com],[engine-cudamrg-v_''AC_PACKAGE_VERSION.tar.gz],[http://code.google.com/p/engine-cuda/])
 
 AC_PROG_CC
 AC_LANG_C
@@ -101,8 +101,8 @@ AC_ARG_ENABLE([aes_coarse],[AS_HELP_STRING([--disable-aes-coarse],[disable coars
 AC_ARG_ENABLE([gprof],[AS_HELP_STRING([--enable-gprof],[enable gprof support (default=disabled)])],
 [CFLAGS="$(echo $CFLAGS|sed s/-O./-pg/)";NVCFLAGS="$NVCFLAGS -pg"],[CFLAGS="$CFLAGS";NVCFLAGS="$NVCFLAGS"])
 
-AC_ARG_ENABLE([quiet],[AS_HELP_STRING([--enable-quiet],[no output except warning and error (default=disabled)])],
-[NVCFLAGS="$NVCFLAGS"],[NVCFLAGS="$NVCFLAGS --ptxas-options=-v"])
+AC_ARG_ENABLE([verbose],[AS_HELP_STRING([--enable-verbose],[echo verbose compilation (default=disabled)])],
+[NVCFLAGS="$NVCFLAGS --ptxas-options=-v";VERBOSE="1"],[NVCFLAGS="$NVCFLAGS";VERBOSE=""])
 
 AC_ARG_ENABLE([cpuonly],[AS_HELP_STRING([--enable-cpuonly],[AES calculation is done through libcrypto (default=disabled)])],
 [CPPFLAGS="$CPPFLAGS -DCPU"],[CPPFLAGS="$CPPFLAGS"])
@@ -153,6 +153,8 @@ AC_SUBST(NVLDFLAGS)
 AC_SUBST(CFLAGS)
 AC_SUBST(NVCFLAGS)
 AC_SUBST(CFLAGS_TEST)
+
+AC_SUBST(VERBOSE)
 
 AC_SUBST(LIBS)
 

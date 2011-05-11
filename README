@@ -1,11 +1,33 @@
-engine-cuda quickstart
-======================
+engine-cuda / engine-opencl
+===========================
+
+engine-cuda is an engine for the popular OpenSSL cryptography framework. It
+enables the execution of different block ciphers on a GPU using CUDA and
+OpenCL. Currently, the following block ciphers are supported:
+
+* AES-128, AES-192, AES-256 (ECB, CBC)
+* Blowfish (ECB)
+* Camellia-128 (ECB)
+* CAST5 (ECB)
+* DES (ECB)
+* IDEA
+
+Building engine-cuda
+--------------------
+
+In order to build and use engine-cuda you will need
+
+* CUDA toolkit installed
+* patched OpenSSL (see +openssl-patch+ directory)
+* gcc etc.
 
 In order to generate a Makefile you have to call configure first. 
-./configure
+
+  ./configure
 
 You might have to supply configure with the path to your CUDA toolkit:
-./configure --with-cudatoolkitpath=/opt/cuda
+ 
+  ./configure --with-cudatoolkitpath=/opt/cuda
 
 Some helpful autoconf flags:
 
@@ -16,17 +38,18 @@ Some helpful autoconf flags:
 
 After that simply do
 
-make
-make install
+  make
+  make install
 
 For any further information please refer to http://code.google.com/p/engine-cuda/
 
 Development
-===========
-Further helpful autoconf switches for debugging and developing engine_cuda:
+-----------
+Further helpful autoconf switches for debugging and developing engine-cuda:
 
   --enable-debug (enables some verbose output)
   --enable-timing (necessary to get kernel execution timing output)
+  --enable-verbose (enables verbose compilation output including register use)
   --disable-aes-coarse (use fine-grained implementation of AES)
 
 Benchmarks of engine-cuda, engine-opencl and the individual kernels can be
@@ -50,22 +73,19 @@ During development, use
 
   ./test-correctness.sh <cipher/"all"> <file> <key> <bufsize>
   
-to compare the output of engine_cuda / engine_opencl with the CPU output in
+to compare the output of engine-cuda / engine_opencl with the CPU output in
 order to ensure functionality of the algorithm.
 
 Credits
-=======
+-------
 
 This is a full credits-file of people that have contributed to this project.
-It is sorted by name and the fields are: name (N), email (E), web-address
-(W), description (D).
 
-N: Paolo Margara
-E: paolo.margara@gmail.com
-W: http://www.mrgcorner.it
-D: Developer, tester and maintainer
+* Johannes Gilger <heipei@hackvalue.de>
+** Contributor
+** http://www.heipei.net
 
-N: Johannes Gilger
-E: heipei@hackvalue.de
-W: http://www.heipei.net
-D: Contributor
+* Paolo Margara <paolo.margara@gmail.com>
+** Developer, tester and maintainer
+** http://www.mrgcorner.it
+

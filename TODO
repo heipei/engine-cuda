@@ -1,8 +1,3 @@
-Publication of engine-cuda
-==========================
-Johannes Gilger <heipei@hackvalue.de>
-v1.1.1, May 2011:
-
 Still TODO
 ----------
 Most importantly, figure out an interesting direction of research.
@@ -47,6 +42,22 @@ A good list of crypto-conferences to be found at http://www.iacr.org/events/
 ** Submission: June 4
 * WISA 2011, Korea (http://www.wisa.or.kr/)
 ** Submission: June 6
+* IMACC11, Oxford (http://www.hpl.hp.com/personal/Liqun_Chen/IMACC11-home.htm)
+** Submission: June 10
+* CANS 2011, China (http://www.infosec.sdu.edu.cn/cans2011/)
+** Submission: June 20
+
+.Submission deadline in July
+* ICICS'11, Beijing (http://www.icics2011.org/)
+** Submission: July 5
+
+.Submission deadline in August
+* Inscrypt'2011, Beijing (http://www.inscrypt.cn/2011/cfp-inscrypt2011.html)
+** Submission: August 20
+
+.Submission deadline in October
+* Eurocrypt 2012, Cambridge (UK) (http://www.cs.bris.ac.uk/eurocrypt2012/)
+** Submission: October 15
 
 .Assorted
 * AfricaCrypt

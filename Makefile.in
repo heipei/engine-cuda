@@ -4,24 +4,31 @@
 # 
 # Copyright 2011 Paolo Margara
 #
-# This file is part of engine_cuda.
+# This file is part of engine-cuda.
 #
-# engine_cuda is free software: you can redistribute it and/or modify
+# engine-cuda is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License or
 # any later version.
 # 
-# engine_cuda is distributed in the hope that it will be useful,
+# engine-cuda is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with engine_cuda.  If not, see <http://www.gnu.org/licenses/>.
-#
+# along with engine-cuda. If not, see <http://www.gnu.org/licenses/>.
 
 CC = @CC@
 NVCC = @NVCC@
+DOC = asciidoc
+VERBOSE = @VERBOSE@
+
+ifndef VERBOSE
+	QUIET_CC = @echo '       CC' $@;
+	QUIET_NVCC = @echo '     NVCC' $@;
+	QUIET_DOC = @echo ' ASCIIDOC' $@;
+endif
 
 VERSION = @VERSION@
 
@@ -43,8 +50,8 @@ LIBNAME = @LIBNAME@
 LIBNAME_OPENCL = @LIBNAME_OPENCL@
 TESTNAME= teststate
 
-COMMONSRC_CUDA = common.h cuda_common.h cuda_common.cu Makefile
-COMMONSRC_OPENCL = common.h opencl_common.c opencl_common.h Makefile
+COMMONSRC_CUDA = common.h cuda_common.h cuda_common.cu 
+COMMONSRC_OPENCL = common.h opencl_common.c opencl_common.h
 TESTSRC= teststate.c aes_cuda.cu
 
 LIBOBJ = e_cuda.o
@@ -67,24 +74,23 @@ TESTOBJ= aes_cuda.o teststate.o
 all: $(LIBNAME) $(LIBNAME_OPENCL) doc
 
 $(LIBNAME): $(LIBOBJ) $(LIBOBJ_CUDA)
-	$(CC) -fPIC -shared -Wl $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) $(LIBS) -o $(LIBNAME) $(LIBOBJ) $(LIBOBJ_CUDA)
+	$(QUIET_CC) $(CC) -fPIC -shared -Wl $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) $(LIBS) -o $(LIBNAME) $(LIBOBJ) $(LIBOBJ_CUDA)
 
 $(LIBOBJ): %.o: %.c $(COMMONSRC_CUDA)
-	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -c -o $@ $<
+	$(QUIET_CC) $(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -c -o $@ $<
 
 $(LIBOBJ_CUDA): %.o: %.cu $(COMMONSRC_CUDA)
-	$(NVCC) $(NVCPPFLAGS) $(NVCFLAGS_LIBS) -c -o $@ $<
+	$(QUIET_NVCC) $(NVCC) $(NVCPPFLAGS) $(NVCFLAGS_LIBS) -c -o $@ $<
 
 $(LIBNAME_OPENCL): $(LIBOBJ_OPENCL)
-	$(CC) -fPIC -shared -Wl $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) $(LIBS_OPENCL) -o $(LIBNAME_OPENCL) $(LIBOBJ_OPENCL)
+	$(QUIET_CC) $(CC) -fPIC -shared -Wl $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) $(LIBS_OPENCL) -o $(LIBNAME_OPENCL) $(LIBOBJ_OPENCL)
 
 $(LIBOBJ_OPENCL): %.o: %.c $(COMMONSRC_OPENCL)
-	$(CC) $(CFLAGS) -Wno-comments $(CPPFLAGS) $(LDFLAGS) -c -o $@ $<
+	$(QUIET_CC) $(CC) $(CFLAGS) -Wno-comments $(CPPFLAGS) $(LDFLAGS) -c -o $@ $<
 
 test: $(TESTSRC)
-	$(NVCC) $(NVCPPFLAGS) $(NVCFLAGS_TEST) $(NVLDFLAGS) $(LIBS) -o $(TESTNAME) $(TESTSRC)
+	$(QUIET_NVCC) $(NVCC) $(NVCPPFLAGS) $(NVCFLAGS_TEST) $(NVLDFLAGS) $(LIBS) -o $(TESTNAME) $(TESTSRC)
 
-ptx:
 kernels.ptx: opencl_kernels.cl
 	clcc "-cl-nv-arch sm_11" opencl_kernels.cl $@
 	
@@ -95,22 +101,24 @@ install: $(LIBNAME)
 
 uninstall:
 	-rm -f @prefix@/@ENGINEDIR@/$(LIBNAME)
-	
 
 clean:
-	rm -f *.o *.obj tags core .pure *.out .nfs* *.old *.bak fluff *.linkinfo *.so *.a teststate config.log config.status
-	rm -f *.cpp1.ii *.cpp2.i *.cpp3.i *.cpp4.ii *.cu.cpp *.cudafe1.c *.cudafe1.cpp *.cudafe1.gpu 
-	rm -f *.cudafe1.stub.c *.cudafe2.c *.cudafe2.gpu *.cudafe2.stub.c *.fatbin.c *.hash *.ptx *.sm_*.cubin
+	rm -f *.o *.obj tags core .pure *.out .nfs* *.old *.bak fluff \
+	*.linkinfo *.so *.a teststate config.log config.status *.cpp1.ii \
+	*.cpp2.i *.cpp3.i *.cpp4.ii *.cu.cpp *.cudafe1.c *.cudafe1.cpp \
+	*.cudafe1.gpu autom4te.cache *.cudafe1.stub.c *.cudafe2.c *.cudafe2.gpu \
+	*.cudafe2.stub.c *.fatbin.c *.hash *.ptx *.sm_*.cubin doc/*
 
 distclean: clean FORCE
 	rm -f config.* Makefile
 
 dist: $(tarname)
 
-doc: TODO.html README.html CHANGES.html
+doc: doc/TODO.html doc/README.html doc/CHANGES.html
 
-%.html: %
-	asciidoc -d book $<
+doc/%.html: %
+	@mkdir -p doc
+	$(QUIET_DOC) $(DOC) -d book -o $@ $<
 
 $(tarname): $(distdir)
 	tar cvzf $(tarname) $(distdir)
