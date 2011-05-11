@@ -1,6 +1,6 @@
 #!/usr/bin/gnuplot -persist
 
-load "engine_cuda.plt"
+load "engine-cuda.plt"
 
 unset title
 
