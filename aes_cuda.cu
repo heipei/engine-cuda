@@ -1076,7 +1076,7 @@ __global__ void AES192decKernel(DATA_TYPE *data) {
 	AES_FINAL_DEC_ROUND(0x30);
 }
 
-__global__ void AES256decKernel(DATA_TYPE data[]) {
+__global__ void AES256decKernel(DATA_TYPE *data) {
 
 	GLOBAL_LOAD_SHARED_SETUP
 	COPY_CONSTANT_SHARED_DEC
@@ -1092,8 +1092,8 @@ __global__ void AES256decKernel(DATA_TYPE data[]) {
 	AES_DEC_ROUND(36,t,s);
 	AES_DEC_ROUND(40,s,t);
 	AES_DEC_ROUND(44,t,s);
-	AES_DEC_ROUND(48,t,s);
-	AES_DEC_ROUND(52,s,t);
+	AES_DEC_ROUND(48,s,t);
+	AES_DEC_ROUND(52,t,s);
 	AES_FINAL_DEC_ROUND(0x38);
 }
 
@@ -1149,8 +1149,8 @@ __global__ void AES256decKernel_cbc(DATA_TYPE data[]) {
 	AES_DEC_ROUND(36,t,s);
 	AES_DEC_ROUND(40,s,t);
 	AES_DEC_ROUND(44,t,s);
-	AES_DEC_ROUND(48,t,s);
-	AES_DEC_ROUND(52,s,t);
+	AES_DEC_ROUND(48,s,t);
+	AES_DEC_ROUND(52,t,s);
 	AES_FINAL_DEC_ROUND_CBC(0x38);
 }
 

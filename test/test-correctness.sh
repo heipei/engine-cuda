@@ -8,9 +8,9 @@ BUFSIZE=8388608
 # TODO: Use getopt or zparseopts
 
 if [[ $ARGC -le 1 ]]; then
-	echo " Usage: ./test.sh <algo> <file> <key> <bufsize>"
-	echo "        ./test.sh <algo> <file> <key>"
-	echo "        ./test.sh <algo> <file>"
+	echo " Usage: ./test.sh {enc,dec} <file> <key> <bufsize>"
+	echo "        ./test.sh {enc,dec} <file> <key>"
+	echo "        ./test.sh {enc,dec} <file>"
 	echo ""
 	echo "        <algo> in {aes-128-ecb,aes-192-ecb,aes-256-ecb,bf-ecb,camellia-128-ecb,cast-ecb,des-ecb,idea-ecb} or"
 	echo "        <algo> = all"
@@ -44,7 +44,7 @@ if [[ $2 == "sample.in" && ! -e sample.in ]]; then;
 fi
 
 for cipher in $ENC_CIPHERS; do
-	echo "==== $cipher ENCRYPTION tests ====" 1>> correctness.log 2>> correctness.log
+	echo "\n==== $cipher ENCRYPTION tests ===="
 	echo ">> CUDA encryption" 1>> correctness.log 2>> correctness.log
 	echo "---------------" 1>> correctness.log 2>> correctness.log
 	time openssl enc -engine cudamrg -e -$cipher -nosalt -nopad -v -in $2 -out $cipher.out.cuda -bufsize $BUFSIZE -K "$KEY" 1>> correctness.log 2>> correctness.log
@@ -78,8 +78,8 @@ for cipher in $ENC_CIPHERS; do
 done
 
 for cipher in $DEC_CIPHERS; do
-	echo "==== $cipher DECRYPTION tests ====" 1>> correctness.log 2>> correctness.log
-	echo -e "\n>> CPU decryption" 1>> correctness.log 2>> correctness.log
+	echo "\n==== $cipher DECRYPTION tests ===="
+	echo -e "\n>> CPU encryption" 1>> correctness.log 2>> correctness.log
 	echo "--------------" 1>> correctness.log 2>> correctness.log
 	time openssl enc -e -$cipher -nosalt -nopad -v -in $2 -out $cipher.enc -K "$KEY" -iv "$IV" 1>> correctness.log 2>> correctness.log
 	echo ">> CUDA decryption" 1>> correctness.log 2>> correctness.log
