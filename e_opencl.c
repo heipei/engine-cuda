@@ -199,14 +199,13 @@ int opencl_init(ENGINE * engine) {
 	CL_ASSIGN(des_enc_kernel = clCreateKernel(device_program, "DESencKernel", &error));
 	CL_ASSIGN(idea_enc_kernel = clCreateKernel(device_program, "IDEAencKernel", &error));
 
-	CL_ASSIGN(aes_128_dec_kernel = clCreateKernel(device_program, "AES128decKernel", &error));
-	CL_ASSIGN(aes_192_dec_kernel = clCreateKernel(device_program, "AES192decKernel", &error));
-	CL_ASSIGN(aes_256_dec_kernel = clCreateKernel(device_program, "AES256decKernel", &error));
+//	CL_ASSIGN(aes_128_dec_kernel = clCreateKernel(device_program, "AES128decKernel", &error));
+//	CL_ASSIGN(aes_192_dec_kernel = clCreateKernel(device_program, "AES192decKernel", &error));
+//	CL_ASSIGN(aes_256_dec_kernel = clCreateKernel(device_program, "AES256decKernel", &error));
 	CL_ASSIGN(bf_dec_kernel = clCreateKernel(device_program, "BFdecKernel", &error));
 	CL_ASSIGN(cast_dec_kernel = clCreateKernel(device_program, "CASTdecKernel", &error));
 	CL_ASSIGN(cmll_dec_kernel = clCreateKernel(device_program, "CMLLdecKernel", &error));
 	CL_ASSIGN(des_dec_kernel = clCreateKernel(device_program, "DESdecKernel", &error));
-	CL_ASSIGN(idea_dec_kernel = clCreateKernel(device_program, "IDEAdecKernel", &error));
 
 	gettimeofday(&curtime, NULL);
 	timeval_subtract(&difference,&curtime,&starttime);
@@ -359,8 +358,12 @@ static int opencl_init_key(EVP_CIPHER_CTX *ctx, const unsigned char *key, const 
 	  case NID_idea_ecb:
 	  case NID_idea_cbc:
 	    if (!quiet && verbose) fprintf(stdout,"Start calculating IDEA key schedule...\n");
-	    IDEA_KEY_SCHEDULE idea_key_schedule;
+	    IDEA_KEY_SCHEDULE idea_key_schedule,idea_enc_key_schedule;
 	    idea_set_encrypt_key(key,&idea_key_schedule);
+	    if(!(ctx->encrypt)) {
+	      memcpy(&idea_enc_key_schedule,&idea_key_schedule,sizeof(IDEA_KEY_SCHEDULE));
+	      idea_set_decrypt_key(&idea_enc_key_schedule,&idea_key_schedule);
+	    }
 	    device_schedule = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(IDEA_KEY_SCHEDULE), &idea_key_schedule, &error);
 	    IDEA_opencl_transfer_key_schedule(&idea_key_schedule,&device_schedule,queue);
 	    break;
@@ -393,19 +396,19 @@ static int opencl_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsig
 	    break;
 	  case NID_des_ecb:
 	    opencl_device_crypt = DES_opencl_crypt;
-	    device_kernel = &des_enc_kernel;
+	    device_kernel = ctx->encrypt ? &des_enc_kernel : &des_dec_kernel;
 	    break;
 	  case NID_bf_ecb:
 	    opencl_device_crypt = BF_opencl_crypt;
-	    device_kernel = &bf_enc_kernel;
+	    device_kernel = ctx->encrypt ? &bf_enc_kernel : &bf_dec_kernel;
 	    break;
 	  case NID_cast5_ecb:
 	    opencl_device_crypt = CAST_opencl_crypt;
-	    device_kernel = &cast_enc_kernel;
+	    device_kernel = ctx->encrypt ? &cast_enc_kernel : &cast_dec_kernel;
 	    break;
 	  case NID_camellia_128_ecb:
 	    opencl_device_crypt = CMLL_opencl_crypt;
-	    device_kernel = &cmll_enc_kernel;
+	    device_kernel = ctx->encrypt ? &cmll_enc_kernel : &cmll_dec_kernel;
 	    break;
 	  case NID_idea_ecb:
 	    opencl_device_crypt = IDEA_opencl_crypt;

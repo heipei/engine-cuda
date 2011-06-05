@@ -342,7 +342,6 @@ __global__ void CMLLdecKernel(uint64_t *data) {
 	s3 ^= k[2];
 	s2 ^= k[3];
 
-
 	__syncthreads();
 
 	k -= 12;

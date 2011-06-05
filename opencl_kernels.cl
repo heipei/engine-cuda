@@ -97,6 +97,38 @@ __kernel void BFencKernel(__global unsigned long *data, __global unsigned int *p
 	data[get_global_id(0)] = block;
 }
 
+__kernel void BFdecKernel(__global unsigned long *data, __global unsigned int *p) {
+	__private unsigned int l, r;
+	__private unsigned long block = data[get_global_id(0)];
+	
+	nl2i(block,l,r);
+
+	__global unsigned int *s=p+18;
+
+	l^=p[17];
+	BF_ENC(r,l,s,p[16]);
+	BF_ENC(l,r,s,p[15]);
+	BF_ENC(r,l,s,p[14]);
+	BF_ENC(l,r,s,p[13]);
+	BF_ENC(r,l,s,p[12]);
+	BF_ENC(l,r,s,p[11]);
+	BF_ENC(r,l,s,p[10]);
+	BF_ENC(l,r,s,p[ 9]);
+	BF_ENC(r,l,s,p[ 8]);
+	BF_ENC(l,r,s,p[ 7]);
+	BF_ENC(r,l,s,p[ 6]);
+	BF_ENC(l,r,s,p[ 5]);
+	BF_ENC(r,l,s,p[ 4]);
+	BF_ENC(l,r,s,p[ 3]);
+	BF_ENC(r,l,s,p[ 2]);
+	BF_ENC(l,r,s,p[ 1]);
+	r^=p[0];
+
+	block = ((unsigned long)r) << 32 | l;
+	flip64(block);
+	data[get_global_id(0)] = block;
+}
+
 // ###########
 // # AES ECB #
 // ###########
@@ -332,6 +364,54 @@ __kernel void DESencKernel(__global unsigned long *data, __global unsigned int *
 	data[get_global_id(0)]=left|((unsigned long)right)<<32;
 }
 
+__kernel void DESdecKernel(__global unsigned long *data, __global unsigned int *des_d_sp_c, __global unsigned long *cs) {
+	__local unsigned char des_SP[2048];
+	__local unsigned long s[16];
+	
+	if(get_local_id(0) < 16)
+		s[get_local_id(0)] = cs[get_local_id(0)];
+
+	((__local ulong *)des_SP)[get_local_id(0)] = ((__global ulong *)des_d_sp_c)[get_local_id(0)];
+	#if MAX_THREAD == 128
+		((__local ulong *)des_SP)[get_local_id(0)+128] = ((__global ulong *)des_d_sp_c)[get_local_id(0)+128];
+	#endif
+
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	__private unsigned long load = data[get_global_id(0)];
+	__private unsigned int right = load;
+	__private unsigned int left = load>>32;
+	
+	__private unsigned int t,u;
+
+	IP(right,left);
+
+	left=ROTATE(left,29);
+	right=ROTATE(right,29);
+
+	D_ENCRYPT(left,right,15);
+	D_ENCRYPT(right,left,14);
+	D_ENCRYPT(left,right,13);
+	D_ENCRYPT(right,left,12);
+	D_ENCRYPT(left,right,11);
+	D_ENCRYPT(right,left,10);
+	D_ENCRYPT(left,right, 9);
+	D_ENCRYPT(right,left, 8);
+	D_ENCRYPT(left,right, 7);
+	D_ENCRYPT(right,left, 6);
+	D_ENCRYPT(left,right, 5);
+	D_ENCRYPT(right,left, 4);
+	D_ENCRYPT(left,right, 3);
+	D_ENCRYPT(right,left, 2);
+	D_ENCRYPT(left,right, 1);
+	D_ENCRYPT(right,left, 0);
+
+	left=ROTATE(left,3);
+	right=ROTATE(right,3);
+	FP(right,left);
+	data[get_global_id(0)]=left|((unsigned long)right)<<32;
+}
+
 // #############
 // # CAST5 ECB #
 // #############
@@ -398,6 +478,52 @@ __kernel void CASTencKernel(__global unsigned long *data, __constant unsigned in
 	data[get_global_id(0)] = block;
 }
 
+__kernel void CASTdecKernel(__global unsigned long *data, __constant unsigned int *k, __global unsigned int *CAST_S_table) {
+	__local unsigned int CAST_S_table0[256], CAST_S_table1[256], CAST_S_table2[256], CAST_S_table3[256];
+	__private unsigned int l,r,t;
+
+	__private unsigned long block = data[get_global_id(0)];
+
+	nl2i(block,l,r);
+
+	#if MAX_THREAD == 128
+		((__local ulong *)CAST_S_table0)[get_local_id(0)] = ((__global ulong *)CAST_S_table)[get_local_id(0)];
+		((__local ulong *)CAST_S_table2)[get_local_id(0)] = ((__global ulong *)CAST_S_table)[get_local_id(0)+128];
+	#elif MAX_THREAD == 256
+		((__local uint *)CAST_S_table0)[get_local_id(0)] = ((__global uint *)CAST_S_table)[get_local_id(0)];
+		((__local uint *)CAST_S_table1)[get_local_id(0)] = ((__global uint *)CAST_S_table)[get_local_id(0)+256];
+		((__local uint *)CAST_S_table2)[get_local_id(0)] = ((__global uint *)CAST_S_table)[get_local_id(0)+512];
+		((__local uint *)CAST_S_table3)[get_local_id(0)] = ((__global uint *)CAST_S_table)[get_local_id(0)+768];
+	#endif
+
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	E_CAST(15,k,l,r,+,^,-);
+	E_CAST(14,k,r,l,-,+,^);
+	E_CAST(13,k,l,r,^,-,+);
+	E_CAST(12,k,r,l,+,^,-);
+	E_CAST(11,k,l,r,-,+,^);
+	E_CAST(10,k,r,l,^,-,+);
+	E_CAST( 9,k,l,r,+,^,-);
+	E_CAST( 8,k,r,l,-,+,^);
+	E_CAST( 7,k,l,r,^,-,+);
+	E_CAST( 6,k,r,l,+,^,-);
+	E_CAST( 5,k,l,r,-,+,^);
+	E_CAST( 4,k,r,l,^,-,+);
+	E_CAST( 3,k,l,r,+,^,-);
+	E_CAST( 2,k,r,l,-,+,^);
+	E_CAST( 1,k,l,r,^,-,+);
+	E_CAST( 0,k,r,l,+,^,-);
+
+	block = ((unsigned long)r) << 32 | l;
+
+	flip64(block);
+	data[get_global_id(0)] = block;
+}
+
+// ####################
+// # Camellia-128 ECB #
+// ####################
 #define SBOX1_1110 Camellia_SBOX[0]
 #define SBOX4_4404 Camellia_SBOX[1]
 #define SBOX2_0222 Camellia_SBOX[2]
@@ -507,6 +633,83 @@ __kernel void CMLLencKernel(__global unsigned long *data, __constant unsigned in
 	data[(get_global_id(0)*2)+1] = block;
 }
 
+__kernel void CMLLdecKernel(__global unsigned long *data, __constant unsigned int *k, __global unsigned int *Camellia_global_SBOX) {
+	__local unsigned int Camellia_SBOX[4][256];
+
+	#if MAX_THREAD == 128
+		((__local ulong *)Camellia_SBOX[0])[get_local_id(0)] = ((__global ulong *)Camellia_global_SBOX)[get_local_id(0)];
+		((__local ulong *)Camellia_SBOX[1])[get_local_id(0)] = ((__global ulong *)Camellia_global_SBOX)[get_local_id(0)+128];
+		((__local ulong *)Camellia_SBOX[2])[get_local_id(0)] = ((__global ulong *)Camellia_global_SBOX)[get_local_id(0)+256];
+		((__local ulong *)Camellia_SBOX[3])[get_local_id(0)] = ((__global ulong *)Camellia_global_SBOX)[get_local_id(0)+384];
+	#elif MAX_THREAD == 256
+		((__local uint *)Camellia_SBOX[0])[get_local_id(0)] = ((__global uint *)Camellia_global_SBOX)[get_local_id(0)];
+		((__local uint *)Camellia_SBOX[1])[get_local_id(0)] = ((__global uint *)Camellia_global_SBOX)[get_local_id(0)+256];
+		((__local uint *)Camellia_SBOX[2])[get_local_id(0)] = ((__global uint *)Camellia_global_SBOX)[get_local_id(0)+512];
+		((__local uint *)Camellia_SBOX[3])[get_local_id(0)] = ((__global uint *)Camellia_global_SBOX)[get_local_id(0)+768];
+	#endif
+
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	__private unsigned int s0,s1,s2,s3; 
+	k+=48;
+
+	__private unsigned long block = data[get_global_id(0)*2];
+	nl2i(block,s0,s1);
+	s1 ^= k[0];
+	s0 ^= k[1];
+
+	block = data[(get_global_id(0)*2)+1];
+	nl2i(block,s2,s3);
+	s3 ^= k[2];
+	s2 ^= k[3];
+
+	k -= 12;
+	Camellia_Feistel(s0,s1,s2,s3,k+10);
+	Camellia_Feistel(s2,s3,s0,s1,k+8);
+	Camellia_Feistel(s0,s1,s2,s3,k+6);
+	Camellia_Feistel(s2,s3,s0,s1,k+4);
+	Camellia_Feistel(s0,s1,s2,s3,k+2);
+	Camellia_Feistel(s2,s3,s0,s1,k+0);
+
+	k -= 4;
+	s1 ^= LeftRotate(s0 & k[3], 1);
+	s2 ^= s3 | k[0];
+	s0 ^= s1 | k[2];
+	s3 ^= LeftRotate(s2 & k[1], 1);
+
+	k -= 12;
+	Camellia_Feistel(s0,s1,s2,s3,k+10);
+	Camellia_Feistel(s2,s3,s0,s1,k+8);
+	Camellia_Feistel(s0,s1,s2,s3,k+6);
+	Camellia_Feistel(s2,s3,s0,s1,k+4);
+	Camellia_Feistel(s0,s1,s2,s3,k+2);
+	Camellia_Feistel(s2,s3,s0,s1,k+0);
+
+	k -= 4;
+	s1 ^= LeftRotate(s0 & k[3], 1);
+	s2 ^= s3 | k[0];
+	s0 ^= s1 | k[2];
+	s3 ^= LeftRotate(s2 & k[1], 1);
+
+	k -= 12;
+	Camellia_Feistel(s0,s1,s2,s3,k+10);
+	Camellia_Feistel(s2,s3,s0,s1,k+8);
+	Camellia_Feistel(s0,s1,s2,s3,k+6);
+	Camellia_Feistel(s2,s3,s0,s1,k+4);
+	Camellia_Feistel(s0,s1,s2,s3,k+2);
+	Camellia_Feistel(s2,s3,s0,s1,k+0);
+
+	k -= 4;
+	s2 ^= k[1], s3 ^= k[0], s0 ^= k[3], s1 ^= k[2];
+
+	block = ((unsigned long)s2) << 32 | s3;
+	flip64(block);
+	data[get_global_id(0)*2] = block;
+
+	block = ((unsigned long)s0) << 32 | s1;
+	flip64(block);
+	data[(get_global_id(0)*2)+1] = block;
+}
 #define idea_mul(r,a,b,ul) \
 	ul = mul24(a,b); \
 	if (ul != 0) { \

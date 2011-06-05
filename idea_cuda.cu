@@ -107,12 +107,6 @@ __global__ void IDEAencKernel(uint64_t *data) {
 	data[TX] = block;
 }
 
-/*
-__global__ void IDEAdecKernel(uint64_t *data) {
-	
-}
-*/
-
 extern "C" void IDEA_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, EVP_CIPHER_CTX *ctx, uint8_t **host_data, uint64_t **device_data) {
 	int gridSize;
 
