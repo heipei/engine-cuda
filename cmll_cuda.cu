@@ -315,11 +315,84 @@ __global__ void CMLLencKernel(uint64_t *data) {
 	data[(TX*2)+1] = block;
 }
 
-/*
 __global__ void CMLLdecKernel(uint64_t *data) {
+
+	#if MAX_THREAD == 128
+		((uint64_t *)Camellia_SBOX[0])[threadIdx.x] = ((uint64_t *)Camellia_global_SBOX)[threadIdx.x];
+		((uint64_t *)Camellia_SBOX[1])[threadIdx.x] = ((uint64_t *)Camellia_global_SBOX)[threadIdx.x+128];
+		((uint64_t *)Camellia_SBOX[2])[threadIdx.x] = ((uint64_t *)Camellia_global_SBOX)[threadIdx.x+256];
+		((uint64_t *)Camellia_SBOX[3])[threadIdx.x] = ((uint64_t *)Camellia_global_SBOX)[threadIdx.x+384];
+	#elif MAX_THREAD == 256
+		((uint32_t *)Camellia_SBOX[0])[threadIdx.x] = ((uint32_t *)Camellia_global_SBOX)[threadIdx.x];
+		((uint32_t *)Camellia_SBOX[1])[threadIdx.x] = ((uint32_t *)Camellia_global_SBOX)[threadIdx.x+256];
+		((uint32_t *)Camellia_SBOX[2])[threadIdx.x] = ((uint32_t *)Camellia_global_SBOX)[threadIdx.x+512];
+		((uint32_t *)Camellia_SBOX[3])[threadIdx.x] = ((uint32_t *)Camellia_global_SBOX)[threadIdx.x+768];
+	#endif
+
+	register uint32_t *k = (uint32_t *)&cmll_constant_schedule.u.rd_key+48;
+	register uint32_t s0,s1,s2,s3; 
+
+	register uint64_t block = data[TX*2];
+	nl2i(block,s0,s1);
+	s1 ^= k[0];
+	s0 ^= k[1];
+
+	block = data[(TX*2)+1];
+	nl2i(block,s2,s3);
+	s3 ^= k[2];
+	s2 ^= k[3];
+
+
+	__syncthreads();
+
+	k -= 12;
+	Camellia_Feistel(s0,s1,s2,s3,k+10);
+	Camellia_Feistel(s2,s3,s0,s1,k+8);
+	Camellia_Feistel(s0,s1,s2,s3,k+6);
+	Camellia_Feistel(s2,s3,s0,s1,k+4);
+	Camellia_Feistel(s0,s1,s2,s3,k+2);
+	Camellia_Feistel(s2,s3,s0,s1,k+0);
+
+	k -= 4;
+	s1 ^= LeftRotate(s0 & k[3], 1);
+	s2 ^= s3 | k[0];
+	s0 ^= s1 | k[2];
+	s3 ^= LeftRotate(s2 & k[1], 1);
+
+	k -= 12;
+	Camellia_Feistel(s0,s1,s2,s3,k+10);
+	Camellia_Feistel(s2,s3,s0,s1,k+8);
+	Camellia_Feistel(s0,s1,s2,s3,k+6);
+	Camellia_Feistel(s2,s3,s0,s1,k+4);
+	Camellia_Feistel(s0,s1,s2,s3,k+2);
+	Camellia_Feistel(s2,s3,s0,s1,k+0);
+
+	k -= 4;
+	s1 ^= LeftRotate(s0 & k[3], 1);
+	s2 ^= s3 | k[0];
+	s0 ^= s1 | k[2];
+	s3 ^= LeftRotate(s2 & k[1], 1);
+
+	k -= 12;
+	Camellia_Feistel(s0,s1,s2,s3,k+10);
+	Camellia_Feistel(s2,s3,s0,s1,k+8);
+	Camellia_Feistel(s0,s1,s2,s3,k+6);
+	Camellia_Feistel(s2,s3,s0,s1,k+4);
+	Camellia_Feistel(s0,s1,s2,s3,k+2);
+	Camellia_Feistel(s2,s3,s0,s1,k+0);
+
+	k -= 4;
+	s2 ^= k[1], s3 ^= k[0], s0 ^= k[3], s1 ^= k[2];
+
+	block = ((uint64_t)s2) << 32 | s3;
+	flip64(block);
+	data[TX*2] = block;
+
+	block = ((uint64_t)s0) << 32 | s1;
+	flip64(block);
+	data[(TX*2)+1] = block;
 	
 }
-*/
 
 extern "C" void CMLL_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, EVP_CIPHER_CTX *ctx, uint8_t **host_data, uint64_t **device_data) {
 	int gridSize;
@@ -340,7 +413,7 @@ extern "C" void CMLL_cuda_crypt(const unsigned char *in, unsigned char *out, siz
 	if(ctx->encrypt == CAMELLIA_ENCRYPT) {
 		CMLLencKernel<<<gridSize,MAX_THREAD>>>(*device_data);
 	} else {
-		//CMLLdecKernel<<<gridSize,MAX_THREAD>>>(*device_data);
+		CMLLdecKernel<<<gridSize,MAX_THREAD>>>(*device_data);
 	}
 
 	CUDA_STOP_TIME("CMLL-128   ")
