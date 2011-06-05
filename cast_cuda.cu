@@ -218,11 +218,11 @@ __global__ void CASTencKernel(uint64_t *data) {
 	E_CAST( 4,cast_constant_schedule,l,r,-,+,^);
 	E_CAST( 6,cast_constant_schedule,r,l,+,^,-);
 	E_CAST( 8,cast_constant_schedule,l,r,^,-,+);
-	E_CAST( 10,cast_constant_schedule,r,l,-,+,^);
-	E_CAST( 12,cast_constant_schedule,l,r,+,^,-);
-	E_CAST( 14,cast_constant_schedule,r,l,^,-,+);
-	E_CAST( 16,cast_constant_schedule,l,r,-,+,^);
-	E_CAST( 18,cast_constant_schedule,r,l,+,^,-);
+	E_CAST(10,cast_constant_schedule,r,l,-,+,^);
+	E_CAST(12,cast_constant_schedule,l,r,+,^,-);
+	E_CAST(14,cast_constant_schedule,r,l,^,-,+);
+	E_CAST(16,cast_constant_schedule,l,r,-,+,^);
+	E_CAST(18,cast_constant_schedule,r,l,+,^,-);
 	E_CAST(20,cast_constant_schedule,l,r,^,-,+);
 	E_CAST(22,cast_constant_schedule,r,l,-,+,^);
 	E_CAST(24,cast_constant_schedule,l,r,+,^,-);
@@ -236,11 +236,48 @@ __global__ void CASTencKernel(uint64_t *data) {
 	data[TX] = block;
 }
 
-/*
 __global__ void CASTdecKernel(uint64_t *data) {
-	
+	register uint32_t l,r,t;
+	register uint64_t block = data[TX];
+
+	nl2i(block,l,r);
+
+	#if MAX_THREAD == 128
+		((uint64_t *)CAST_S_table0)[threadIdx.x] = ((uint64_t *)CAST_S_table_constant)[threadIdx.x];
+		((uint64_t *)CAST_S_table1)[threadIdx.x] = ((uint64_t *)CAST_S_table_constant)[threadIdx.x+128];
+		((uint64_t *)CAST_S_table2)[threadIdx.x] = ((uint64_t *)CAST_S_table_constant)[threadIdx.x+256];
+		((uint64_t *)CAST_S_table3)[threadIdx.x] = ((uint64_t *)CAST_S_table_constant)[threadIdx.x+384];
+	#elif MAX_THREAD == 256
+		((uint32_t *)CAST_S_table0)[threadIdx.x] = ((uint32_t *)CAST_S_table_constant)[threadIdx.x];
+		((uint32_t *)CAST_S_table1)[threadIdx.x] = ((uint32_t *)CAST_S_table_constant)[threadIdx.x+256];
+		((uint32_t *)CAST_S_table2)[threadIdx.x] = ((uint32_t *)CAST_S_table_constant)[threadIdx.x+512];
+		((uint32_t *)CAST_S_table3)[threadIdx.x] = ((uint32_t *)CAST_S_table_constant)[threadIdx.x+768];
+	#endif
+
+	__syncthreads();
+
+	E_CAST(30,cast_constant_schedule,l,r,+,^,-);
+	E_CAST(28,cast_constant_schedule,r,l,-,+,^);
+	E_CAST(26,cast_constant_schedule,l,r,^,-,+);
+	E_CAST(24,cast_constant_schedule,r,l,+,^,-);
+	E_CAST(22,cast_constant_schedule,l,r,-,+,^);
+	E_CAST(20,cast_constant_schedule,r,l,^,-,+);
+	E_CAST(18,cast_constant_schedule,l,r,+,^,-);
+	E_CAST(16,cast_constant_schedule,r,l,-,+,^);
+	E_CAST(14,cast_constant_schedule,l,r,^,-,+);
+	E_CAST(12,cast_constant_schedule,r,l,+,^,-);
+	E_CAST(10,cast_constant_schedule,l,r,-,+,^);
+	E_CAST( 8,cast_constant_schedule,r,l,^,-,+);
+	E_CAST( 6,cast_constant_schedule,l,r,+,^,-);
+	E_CAST( 4,cast_constant_schedule,r,l,-,+,^);
+	E_CAST( 2,cast_constant_schedule,l,r,^,-,+);
+	E_CAST( 0,cast_constant_schedule,r,l,+,^,-);
+
+	block = ((uint64_t)r) << 32 | l;
+
+	flip64(block);
+	data[TX] = block;
 }
-*/
 
 extern "C" void CAST_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, EVP_CIPHER_CTX *ctx, uint8_t **host_data, uint64_t **device_data) {
 	assert(in && out && nbytes);
@@ -262,7 +299,7 @@ extern "C" void CAST_cuda_crypt(const unsigned char *in, unsigned char *out, siz
 	if(ctx->encrypt == CAST_ENCRYPT) {
 		CASTencKernel<<<gridSize,MAX_THREAD>>>(*device_data);
 	} else {
-		//CASTdecKernel<<<gridSize,MAX_THREAD>>>(*device_data);
+		CASTdecKernel<<<gridSize,MAX_THREAD>>>(*device_data);
 	}
 	
 	CUDA_STOP_TIME("CAST5      ")
