@@ -53,14 +53,24 @@ int initialized = 0;
 char *library_path=NULL;
 int maxbytes = 8388608;
 
-static cl_kernel des_kernel;
-static cl_kernel bf_kernel;
-static cl_kernel cast_kernel;
-static cl_kernel aes_128_kernel;
-static cl_kernel aes_192_kernel;
-static cl_kernel aes_256_kernel;
-static cl_kernel cmll_kernel;
-static cl_kernel idea_kernel;
+static cl_kernel aes_128_enc_kernel;
+static cl_kernel aes_192_enc_kernel;
+static cl_kernel aes_256_enc_kernel;
+static cl_kernel bf_enc_kernel;
+static cl_kernel cast_enc_kernel;
+static cl_kernel cmll_enc_kernel;
+static cl_kernel des_enc_kernel;
+static cl_kernel idea_enc_kernel;
+
+static cl_kernel aes_128_dec_kernel;
+static cl_kernel aes_192_dec_kernel;
+static cl_kernel aes_256_dec_kernel;
+static cl_kernel bf_dec_kernel;
+static cl_kernel cast_dec_kernel;
+static cl_kernel cmll_dec_kernel;
+static cl_kernel des_dec_kernel;
+static cl_kernel idea_dec_kernel;
+
 static cl_kernel *device_kernel;
 
 static cl_context context;
@@ -180,14 +190,23 @@ int opencl_init(ENGINE * engine) {
 		fprintf(stdout, "Build log: %s\n", build_info);
 	}
 
-	CL_ASSIGN(aes_128_kernel = clCreateKernel(device_program, "AES128encKernel", &error));
-	CL_ASSIGN(aes_192_kernel = clCreateKernel(device_program, "AES192encKernel", &error));
-	CL_ASSIGN(aes_256_kernel = clCreateKernel(device_program, "AES256encKernel", &error));
-	CL_ASSIGN(bf_kernel = clCreateKernel(device_program, "BFencKernel", &error));
-	CL_ASSIGN(cast_kernel = clCreateKernel(device_program, "CASTencKernel", &error));
-	CL_ASSIGN(cmll_kernel = clCreateKernel(device_program, "CMLLencKernel", &error));
-	CL_ASSIGN(des_kernel = clCreateKernel(device_program, "DESencKernel", &error));
-	CL_ASSIGN(idea_kernel = clCreateKernel(device_program, "IDEAencKernel", &error));
+	CL_ASSIGN(aes_128_enc_kernel = clCreateKernel(device_program, "AES128encKernel", &error));
+	CL_ASSIGN(aes_192_enc_kernel = clCreateKernel(device_program, "AES192encKernel", &error));
+	CL_ASSIGN(aes_256_enc_kernel = clCreateKernel(device_program, "AES256encKernel", &error));
+	CL_ASSIGN(bf_enc_kernel = clCreateKernel(device_program, "BFencKernel", &error));
+	CL_ASSIGN(cast_enc_kernel = clCreateKernel(device_program, "CASTencKernel", &error));
+	CL_ASSIGN(cmll_enc_kernel = clCreateKernel(device_program, "CMLLencKernel", &error));
+	CL_ASSIGN(des_enc_kernel = clCreateKernel(device_program, "DESencKernel", &error));
+	CL_ASSIGN(idea_enc_kernel = clCreateKernel(device_program, "IDEAencKernel", &error));
+
+	CL_ASSIGN(aes_128_dec_kernel = clCreateKernel(device_program, "AES128decKernel", &error));
+	CL_ASSIGN(aes_192_dec_kernel = clCreateKernel(device_program, "AES192decKernel", &error));
+	CL_ASSIGN(aes_256_dec_kernel = clCreateKernel(device_program, "AES256decKernel", &error));
+	CL_ASSIGN(bf_dec_kernel = clCreateKernel(device_program, "BFdecKernel", &error));
+	CL_ASSIGN(cast_dec_kernel = clCreateKernel(device_program, "CASTdecKernel", &error));
+	CL_ASSIGN(cmll_dec_kernel = clCreateKernel(device_program, "CMLLdecKernel", &error));
+	CL_ASSIGN(des_dec_kernel = clCreateKernel(device_program, "DESdecKernel", &error));
+	CL_ASSIGN(idea_dec_kernel = clCreateKernel(device_program, "IDEAdecKernel", &error));
 
 	gettimeofday(&curtime, NULL);
 	timeval_subtract(&difference,&curtime,&starttime);
@@ -362,35 +381,35 @@ static int opencl_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsig
 	switch(EVP_CIPHER_CTX_nid(ctx)) {
 	  case NID_aes_128_ecb:
 	    opencl_device_crypt = AES_opencl_crypt;
-	    device_kernel = &aes_128_kernel;
+	    device_kernel = ctx->encrypt ? &aes_128_enc_kernel : &aes_128_dec_kernel;
 	    break;
 	  case NID_aes_192_ecb:
 	    opencl_device_crypt = AES_opencl_crypt;
-	    device_kernel = &aes_192_kernel;
+	    device_kernel = &aes_192_enc_kernel;
 	    break;
 	  case NID_aes_256_ecb:
 	    opencl_device_crypt = AES_opencl_crypt;
-	    device_kernel = &aes_256_kernel;
+	    device_kernel = &aes_256_enc_kernel;
 	    break;
 	  case NID_des_ecb:
 	    opencl_device_crypt = DES_opencl_crypt;
-	    device_kernel = &des_kernel;
+	    device_kernel = &des_enc_kernel;
 	    break;
 	  case NID_bf_ecb:
 	    opencl_device_crypt = BF_opencl_crypt;
-	    device_kernel = &bf_kernel;
+	    device_kernel = &bf_enc_kernel;
 	    break;
 	  case NID_cast5_ecb:
 	    opencl_device_crypt = CAST_opencl_crypt;
-	    device_kernel = &cast_kernel;
+	    device_kernel = &cast_enc_kernel;
 	    break;
 	  case NID_camellia_128_ecb:
 	    opencl_device_crypt = CMLL_opencl_crypt;
-	    device_kernel = &cmll_kernel;
+	    device_kernel = &cmll_enc_kernel;
 	    break;
 	  case NID_idea_ecb:
 	    opencl_device_crypt = IDEA_opencl_crypt;
-	    device_kernel = &idea_kernel;
+	    device_kernel = &idea_enc_kernel;
 	    break;
 	  default:
 	    return 0;

@@ -545,9 +545,7 @@ __kernel void IDEAencKernel(__global unsigned long *data, __constant unsigned lo
 		idea_schedule[get_local_id(0)] = idea_constant_schedule[get_local_id(0)];
 
 	__local unsigned int *p = (__local unsigned int *)&idea_schedule;
-
 	__private unsigned int x1,x2,x3,x4,t0,t1,ul,l0,l1;
-
 	__private unsigned long block = data[get_global_id(0)];
 
 	nl2i(block,x2,x4);

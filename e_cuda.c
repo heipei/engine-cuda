@@ -200,9 +200,14 @@ static int cuda_init_key(EVP_CIPHER_CTX *ctx, const unsigned char *key, const un
 	  case NID_idea_cbc:
 	    if (!quiet && verbose) fprintf(stdout,"Start calculating IDEA key schedule...\n");
 	    {
-	    IDEA_KEY_SCHEDULE idea_key_schedule;
+	    IDEA_KEY_SCHEDULE idea_key_schedule, idea_dec_key_schedule;
 	    idea_set_encrypt_key(key,&idea_key_schedule);
-	    IDEA_cuda_transfer_key_schedule(&idea_key_schedule);
+	    if(!(ctx->encrypt)) {
+	      idea_set_decrypt_key(&idea_key_schedule,&idea_dec_key_schedule);
+	      IDEA_cuda_transfer_key_schedule(&idea_dec_key_schedule);
+	    } else {
+	      IDEA_cuda_transfer_key_schedule(&idea_key_schedule);
+	    }
 	    }
 	    break;
 	  case NID_aes_128_ecb:

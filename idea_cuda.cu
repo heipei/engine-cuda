@@ -129,11 +129,7 @@ extern "C" void IDEA_cuda_crypt(const unsigned char *in, unsigned char *out, siz
 
 	CUDA_START_TIME
 
-	if(ctx->encrypt == IDEA_ENCRYPT) {
-		IDEAencKernel<<<gridSize,MAX_THREAD>>>(*device_data);
-	} else {
-		//IDEAdecKernel<<<gridSize,MAX_THREAD>>>(*device_data);
-	}
+	IDEAencKernel<<<gridSize,MAX_THREAD>>>(*device_data);
 	
 	CUDA_STOP_TIME("IDEA       ")
 
