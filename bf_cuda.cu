@@ -108,11 +108,59 @@ __global__ void BFencKernel(uint64_t *data) {
 
 }
 
-/*
 __global__ void BFdecKernel(uint64_t *data) {
+	register uint32_t l, r;
+	register uint64_t block = data[TX];
+
+	bf_schedule[threadIdx.x] = bf_global_schedule[threadIdx.x];
+	bf_schedule[threadIdx.x+256] = bf_global_schedule[threadIdx.x+256];
+	bf_schedule[threadIdx.x+512] = bf_global_schedule[threadIdx.x+512];
+	bf_schedule[threadIdx.x+768] = bf_global_schedule[threadIdx.x+768];
+
+	#if MAX_THREAD == 128
+		bf_schedule[threadIdx.x+128] = bf_global_schedule[threadIdx.x+128];
+		bf_schedule[threadIdx.x+384] = bf_global_schedule[threadIdx.x+384];
+		bf_schedule[threadIdx.x+640] = bf_global_schedule[threadIdx.x+640];
+		bf_schedule[threadIdx.x+896] = bf_global_schedule[threadIdx.x+896];
+	#endif
+
+	if(threadIdx.x < 18)
+		bf_schedule[threadIdx.x+1024] = bf_global_schedule[threadIdx.x+1024];
+
+	__syncthreads();
+
+	register uint32_t *p,*s;
+
+	p=bf_schedule;
+	s=bf_schedule+18;
+
+	nl2i(block, l, r);
+
+	l^=p[BF_ROUNDS+1];
+	BF_ENC(r,l,s,p[16]);
+	BF_ENC(l,r,s,p[15]);
+	BF_ENC(r,l,s,p[14]);
+	BF_ENC(l,r,s,p[13]);
+	BF_ENC(r,l,s,p[12]);
+	BF_ENC(l,r,s,p[11]);
+	BF_ENC(r,l,s,p[10]);
+	BF_ENC(l,r,s,p[ 9]);
+	BF_ENC(r,l,s,p[ 8]);
+	BF_ENC(l,r,s,p[ 7]);
+	BF_ENC(r,l,s,p[ 6]);
+	BF_ENC(l,r,s,p[ 5]);
+	BF_ENC(r,l,s,p[ 4]);
+	BF_ENC(l,r,s,p[ 3]);
+	BF_ENC(r,l,s,p[ 2]);
+	BF_ENC(l,r,s,p[ 1]);
+	r^=p[0];
+
+	block = ((uint64_t)r) << 32 | l;
+	flip64(block);
+	data[TX] = block;
+
 	
 }
-*/
 
 extern "C" void BF_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, EVP_CIPHER_CTX *ctx, uint8_t **host_data, uint64_t **device_data) {
 	assert(in && out && nbytes);
@@ -134,7 +182,7 @@ extern "C" void BF_cuda_crypt(const unsigned char *in, unsigned char *out, size_
 	if(ctx->encrypt == BF_ENCRYPT) {
 		BFencKernel<<<gridSize,MAX_THREAD>>>(*device_data);
 	} else {
-		//BFdecKernel<<<gridSize,dimBlock>>>(*device_data);
+		BFdecKernel<<<gridSize,MAX_THREAD>>>(*device_data);
 	}
 
 	CUDA_STOP_TIME("BF         ")
