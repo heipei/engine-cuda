@@ -47,7 +47,11 @@ static int opencl_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsig
 void (*opencl_device_crypt) (const unsigned char *in, unsigned char *out, size_t nbytes, int enc, cl_mem *device_buffer, cl_mem *device_schedule, cl_command_queue queue, cl_kernel device_kernel, cl_context context);
 
 int buffer_size = 0;
-int verbose = 0;
+#ifdef DEBUG
+	static int verbose = 2;
+#else
+	static int verbose = 0;
+#endif
 int quiet = 0;
 int initialized = 0;
 char *library_path=NULL;
@@ -69,7 +73,6 @@ static cl_kernel bf_dec_kernel;
 static cl_kernel cast_dec_kernel;
 static cl_kernel cmll_dec_kernel;
 static cl_kernel des_dec_kernel;
-static cl_kernel idea_dec_kernel;
 
 static cl_kernel *device_kernel;
 
@@ -199,9 +202,9 @@ int opencl_init(ENGINE * engine) {
 	CL_ASSIGN(des_enc_kernel = clCreateKernel(device_program, "DESencKernel", &error));
 	CL_ASSIGN(idea_enc_kernel = clCreateKernel(device_program, "IDEAencKernel", &error));
 
-//	CL_ASSIGN(aes_128_dec_kernel = clCreateKernel(device_program, "AES128decKernel", &error));
-//	CL_ASSIGN(aes_192_dec_kernel = clCreateKernel(device_program, "AES192decKernel", &error));
-//	CL_ASSIGN(aes_256_dec_kernel = clCreateKernel(device_program, "AES256decKernel", &error));
+	CL_ASSIGN(aes_128_dec_kernel = clCreateKernel(device_program, "AES128decKernel", &error));
+	CL_ASSIGN(aes_192_dec_kernel = clCreateKernel(device_program, "AES192decKernel", &error));
+	CL_ASSIGN(aes_256_dec_kernel = clCreateKernel(device_program, "AES256decKernel", &error));
 	CL_ASSIGN(bf_dec_kernel = clCreateKernel(device_program, "BFdecKernel", &error));
 	CL_ASSIGN(cast_dec_kernel = clCreateKernel(device_program, "CASTdecKernel", &error));
 	CL_ASSIGN(cmll_dec_kernel = clCreateKernel(device_program, "CMLLdecKernel", &error));
@@ -282,13 +285,13 @@ IMPLEMENT_DYNAMIC_CHECK_FN()
 IMPLEMENT_DYNAMIC_BIND_FN(opencl_bind_fn)
 
 static int opencl_cipher_nids[] = {
+	NID_aes_128_ecb,
+	NID_aes_192_ecb,
+	NID_aes_256_ecb,
 	NID_bf_ecb,
 	NID_camellia_128_ecb,
 	NID_cast5_ecb,
 	NID_des_ecb,
-	NID_aes_128_ecb,
-	NID_aes_192_ecb,
-	NID_aes_256_ecb,
 	NID_idea_ecb
 };
 
@@ -300,7 +303,10 @@ static int opencl_init_key(EVP_CIPHER_CTX *ctx, const unsigned char *key, const 
 	    if (!quiet && verbose) fprintf(stdout,"Start calculating AES key schedule...\n");
 	    {
 	    AES_KEY aes_key_schedule;
-	    AES_opencl_set_encrypt_key(key,128,&aes_key_schedule);
+	    if(ctx->encrypt)
+	      AES_opencl_set_encrypt_key(key,128,&aes_key_schedule);
+	    else
+	      AES_opencl_set_decrypt_key(key,128,&aes_key_schedule);
 	    device_schedule = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(AES_KEY), &aes_key_schedule, &error);
 	    AES_opencl_transfer_key_schedule(&aes_key_schedule,&device_schedule,queue);
 	    }
@@ -309,7 +315,10 @@ static int opencl_init_key(EVP_CIPHER_CTX *ctx, const unsigned char *key, const 
 	    if (!quiet && verbose) fprintf(stdout,"Start calculating AES key schedule...\n");
 	    {
 	    AES_KEY aes_key_schedule;
-	    AES_opencl_set_encrypt_key(key,192,&aes_key_schedule);
+	    if(ctx->encrypt)
+	      AES_opencl_set_encrypt_key(key,192,&aes_key_schedule);
+	    else
+	      AES_opencl_set_decrypt_key(key,192,&aes_key_schedule);
 	    device_schedule = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(AES_KEY), &aes_key_schedule, &error);
 	    AES_opencl_transfer_key_schedule(&aes_key_schedule,&device_schedule,queue);
 	    }
@@ -318,7 +327,10 @@ static int opencl_init_key(EVP_CIPHER_CTX *ctx, const unsigned char *key, const 
 	    if (!quiet && verbose) fprintf(stdout,"Start calculating AES key schedule...\n");
 	    {
 	    AES_KEY aes_key_schedule;
-	    AES_opencl_set_encrypt_key(key,256,&aes_key_schedule);
+	    if(ctx->encrypt)
+	      AES_opencl_set_encrypt_key(key,256,&aes_key_schedule);
+	    else
+	      AES_opencl_set_decrypt_key(key,256,&aes_key_schedule);
 	    device_schedule = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(AES_KEY), &aes_key_schedule, &error);
 	    AES_opencl_transfer_key_schedule(&aes_key_schedule,&device_schedule,queue);
 	    }
@@ -388,11 +400,11 @@ static int opencl_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsig
 	    break;
 	  case NID_aes_192_ecb:
 	    opencl_device_crypt = AES_opencl_crypt;
-	    device_kernel = &aes_192_enc_kernel;
+	    device_kernel = ctx->encrypt ? &aes_192_enc_kernel : &aes_192_dec_kernel;
 	    break;
 	  case NID_aes_256_ecb:
 	    opencl_device_crypt = AES_opencl_crypt;
-	    device_kernel = &aes_256_enc_kernel;
+	    device_kernel = ctx->encrypt ? &aes_256_enc_kernel : &aes_256_dec_kernel;
 	    break;
 	  case NID_des_ecb:
 	    opencl_device_crypt = DES_opencl_crypt;

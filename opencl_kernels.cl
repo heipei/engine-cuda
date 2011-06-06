@@ -141,11 +141,11 @@ __kernel void BFdecKernel(__global unsigned long *data, __global unsigned int *p
 		register unsigned int t0, t1, t2, t3, s0, s1, s2, s3; \
 		register unsigned long load; \
 		load = data[2*TX]; \
-		load ^= aes_key[0] << 32 | aes_key[1]; \
+		load ^= (unsigned long)aes_key[0] | ((unsigned long)aes_key[1] << 32); \
 		s0 = load; \
 		s1 = load >> 32; \
 		load = data[2*TX+1]; \
-		load ^= aes_key[2] << 32 | aes_key[3]; \
+		load ^= (unsigned long)aes_key[2] | ((unsigned long)aes_key[3] << 32); \
 		s2 = load; \
 		s3 = load >> 32; 
 
@@ -179,6 +179,53 @@ __kernel void BFdecKernel(__global unsigned long *data, __global unsigned int *p
 		load = s2 | ((unsigned long)s3) << 32; \
 		data[2*TX+1] = load; 
 
+	#define AES_DEC_ROUND(n,D,S) \
+		AES_DEC_STEP(n,D,S,0,3,2,1); \
+		AES_DEC_STEP(n,D,S,1,0,3,2); \
+		AES_DEC_STEP(n,D,S,2,1,0,3); \
+		AES_DEC_STEP(n,D,S,3,2,1,0);
+
+	#define AES_DEC_STEP(n,D,S,W,X,Y,Z) \
+		D##W  = Td0[ S##W        & 0xff]; \
+		D##W ^= Td1[(S##X >>  8) & 0xff]; \
+		D##W ^= Td2[(S##Y >> 16) & 0xff]; \
+		D##W ^= Td3[ S##Z >> 24        ]; \
+		D##W ^= aes_key[n+W];
+	
+	#define AES_FINAL_DEC_STEP(N,W,X,Y,Z) \
+		s##W  =  Td4[ t##W        & 0xff]; \
+		s##W ^= (Td4[(t##X >>  8) & 0xff] << 8); \
+		s##W ^= (Td4[(t##Y >> 16) & 0xff] << 16); \
+		s##W ^= (Td4[(t##Z >> 24)       ] << 24); \
+		s##W ^= aes_key[N+W]; \
+
+	#define AES_FINAL_DEC_ROUND(N) \
+		AES_FINAL_DEC_STEP(N,0,3,2,1); \
+		AES_FINAL_DEC_STEP(N,1,0,3,2); \
+		load = s0 | ((unsigned long)s1) << 32; \
+		data[2*TX] = load; \
+		AES_FINAL_DEC_STEP(N,2,1,0,3); \
+		AES_FINAL_DEC_STEP(N,3,2,1,0); \
+		load = s2 | ((unsigned long)s3) << 32; \
+		data[2*TX+1] = load; 
+	
+	#define AES_FINAL_DEC_ROUND_CBC(N) \
+		AES_FINAL_DEC_STEP(N,0,1,2,3); \
+		AES_FINAL_DEC_STEP(N,1,2,3,0); \
+		AES_FINAL_DEC_STEP(N,2,3,0,1); \
+		AES_FINAL_DEC_STEP(N,3,0,1,2); \
+		if(TX == 0) { \
+			load = s0 | ((unsigned long)s1) << 32 ^ d_iv[0]; \
+			data[2*TX] = load; \
+			load = s2 | ((unsigned long)s3) << 32 ^ d_iv[1]; \
+			data[2*TX+1] = load; \
+		} else { \
+			load = s0 | ((unsigned long)s1) << 32 ^ data[2*(TX-1)]; \
+			data[2*TX] = load; \
+			load = s2 | ((unsigned long)s3) << 32 ^ data[2*(TX-1)+1]; \
+			data[2*TX+1] = load; \
+		}	
+
 #else
 	#define AES_DATA_TYPE unsigned int
 	#define GLOBAL_LOAD_SHARED_SETUP \
@@ -202,6 +249,12 @@ __kernel void BFdecKernel(__global unsigned long *data, __global unsigned int *p
 					p_state ^= (Te1[(t[(3+get_local_id(0))%4+ROW] >> 24)       ] & 0xff000000); \
 					p_state ^= aes_key[get_local_id(0)+N]; \
 					data[GID] = p_state; 
+
+	#define AES_DEC_ROUND(n,D,S)
+	#define AES_DEC_STEP(n,D,S,W,X,Y,Z)
+	#define AES_FINAL_DEC_STEP(N,W,X,Y,Z)
+	#define AES_FINAL_DEC_ROUND(N)
+	#define AES_FINAL_DEC_ROUND_CBC(N)
 #endif	
 
 #define AES_COPY_GLOBAL_SHARED_ENC \
@@ -215,6 +268,18 @@ __kernel void BFdecKernel(__global unsigned long *data, __global unsigned int *p
 	Te3[SX] = Teg[SX+768]; \
 	barrier(CLK_LOCAL_MEM_FENCE);
 
+#define AES_COPY_GLOBAL_SHARED_DEC \
+	__local unsigned int Td0[256];\
+	__local unsigned int Td1[256];\
+	__local unsigned int Td2[256];\
+	__local unsigned int Td3[256];\
+	__local unsigned char Td4[256];\
+	Td0[SX] = Tdg[SX+1024];\
+	Td1[SX] = Tdg[SX+1280];\
+	Td2[SX] = Tdg[SX+1536];\
+	Td3[SX] = Tdg[SX+1792];\
+	Td4[SX] = Tdg[SX+2048];\
+	barrier(CLK_LOCAL_MEM_FENCE);
 
 __kernel void AES128encKernel(__global AES_DATA_TYPE *data, __global unsigned int *Teg, __constant unsigned int *aes_key) {
 
@@ -271,6 +336,63 @@ __kernel void AES256encKernel(__global AES_DATA_TYPE *data, __global unsigned in
 	AES_ENC_ROUND(48,s,t);
 	AES_ENC_ROUND(52,t,s);
 	AES_FINAL_ENC_ROUND(0x38);
+}
+
+__kernel void AES128decKernel(__global AES_DATA_TYPE *data, __global unsigned int *Tdg, __constant unsigned int *aes_key) {
+
+	GLOBAL_LOAD_SHARED_SETUP
+	AES_COPY_GLOBAL_SHARED_DEC
+
+	AES_DEC_ROUND( 4,t,s);
+	AES_DEC_ROUND( 8,s,t);
+	AES_DEC_ROUND(12,t,s);
+	AES_DEC_ROUND(16,s,t);
+	AES_DEC_ROUND(20,t,s);
+	AES_DEC_ROUND(24,s,t);
+	AES_DEC_ROUND(28,t,s);
+	AES_DEC_ROUND(32,s,t);
+	AES_DEC_ROUND(36,t,s);
+	AES_FINAL_DEC_ROUND(0x28);
+}
+
+__kernel void AES192decKernel(__global AES_DATA_TYPE *data, __global unsigned int *Tdg, __constant unsigned int *aes_key) {
+
+	GLOBAL_LOAD_SHARED_SETUP
+	AES_COPY_GLOBAL_SHARED_DEC
+
+	AES_DEC_ROUND( 4,t,s);
+	AES_DEC_ROUND( 8,s,t);
+	AES_DEC_ROUND(12,t,s);
+	AES_DEC_ROUND(16,s,t);
+	AES_DEC_ROUND(20,t,s);
+	AES_DEC_ROUND(24,s,t);
+	AES_DEC_ROUND(28,t,s);
+	AES_DEC_ROUND(32,s,t);
+	AES_DEC_ROUND(36,t,s);
+	AES_DEC_ROUND(40,s,t);
+	AES_DEC_ROUND(44,t,s);
+	AES_FINAL_DEC_ROUND(0x30);
+}
+
+__kernel void AES256decKernel(__global AES_DATA_TYPE *data, __global unsigned int *Tdg, __constant unsigned int *aes_key) {
+
+	GLOBAL_LOAD_SHARED_SETUP
+	AES_COPY_GLOBAL_SHARED_DEC
+
+	AES_DEC_ROUND( 4,t,s);
+	AES_DEC_ROUND( 8,s,t);
+	AES_DEC_ROUND(12,t,s);
+	AES_DEC_ROUND(16,s,t);
+	AES_DEC_ROUND(20,t,s);
+	AES_DEC_ROUND(24,s,t);
+	AES_DEC_ROUND(28,t,s);
+	AES_DEC_ROUND(32,s,t);
+	AES_DEC_ROUND(36,t,s);
+	AES_DEC_ROUND(40,s,t);
+	AES_DEC_ROUND(44,t,s);
+	AES_DEC_ROUND(48,s,t);
+	AES_DEC_ROUND(52,t,s);
+	AES_FINAL_DEC_ROUND(0x38);
 }
 // ###########
 // # DES ECB #

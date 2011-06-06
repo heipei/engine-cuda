@@ -40,7 +40,11 @@ void (*transferDeviceToHost) (      unsigned char **output, uint32_t **deviceMem
 
 static int num_multiprocessors = 0;
 static int buffer_size = 0;
-static int verbose = 0;
+#ifdef DEBUG
+	static int verbose = 2;
+#else
+	static int verbose = 0;
+#endif
 static int quiet = 0;
 static int initialized = 0;
 static char *library_path=NULL;

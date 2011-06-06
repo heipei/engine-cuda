@@ -3,17 +3,14 @@ Still TODO
 Most importantly, figure out an interesting direction of research.
 
 .Implementation
-* More blockmodes (CBC, CTR if possible)
-* Verify correctness for random payload and key!
-* Decryption for all ciphers
+* More blockmodes (CBC, CTR if possible), RC5 (http://www.openssl.org/docs/apps/enc.html)
 * CUDA 4.0
-* Try multiblock kernels again
 * Streams and multi-GPU using CUDA 4
 * Have a look at parallel execution again
 
 .Organization
 * Setup a project page (github or google code or asciidoc)
-* Contact kgpu author
+* Contact kgpu author [DONE]
 * Look for conferences
 
 Interesting Projects
@@ -28,14 +25,16 @@ Interesting Projects
 * NVIDIA Graduate Fellowships
 ** http://research.nvidia.com/content/nvidia-graduate-fellowship-results-2011
 ** Projects like SSLShader, kgpu
+
+* Disk encryption software
+** eCryptfs (crypto-filesystem)
+** LUKS / dm-crypt / cryptoloop / Truecrypt (full-disk encryption)
+** Comparison here: http://ecryptfs.sourceforge.net/ecryptfs-faq.html#compare
+** Block modes
   
 Conferences
 -----------
 A good list of crypto-conferences to be found at http://www.iacr.org/events/
-
-.Submission deadline in May
-* ASIACRYPT, Seoul (http://cist.korea.ac.kr/~asiacrypt2011/)
-** Submission: May 26
 
 .Submission deadline in June
 * WEWoRC 2011, Weimar (http://www.uni-weimar.de/cms/medien/mediensicherheit/weworc-2011/home.html)
@@ -50,6 +49,8 @@ A good list of crypto-conferences to be found at http://www.iacr.org/events/
 .Submission deadline in July
 * ICICS'11, Beijing (http://www.icics2011.org/)
 ** Submission: July 5
+* IEEE PDP12, Garching (http://www.pdp2012.org/)
+** Submission: July 25
 
 .Submission deadline in August
 * Inscrypt'2011, Beijing (http://www.inscrypt.cn/2011/cfp-inscrypt2011.html)
@@ -75,9 +76,6 @@ A good list of crypto-conferences to be found at http://www.iacr.org/events/
 * IEEE International Conference on Multimedia and Uibquitous Engineering
 * IEEE International Conference on Parallel and Distributed Computing, Applications and Technologies
 * IEEE International Conference on Signal Processing and Communications
-* IEEE International Euromicro Conference on Parallel, Distributed and Network-Based Processing
-** 2012: 15-18. Februar (http://www.pdp2012.org/)
-** Submission Deadline: 25. Juli
 * IEEE International Symposium on Parallel and Distributed Processing
 * IEEE Second International Conference on Communication Software and Networks
 * IEEE Second International Conference on Computational Science and Its Applications

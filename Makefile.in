@@ -71,7 +71,7 @@ tarname= @TARNAME@
 
 TESTOBJ= aes_cuda.o teststate.o
 
-all: $(LIBNAME) $(LIBNAME_OPENCL) doc
+all: $(LIBNAME) $(LIBNAME_OPENCL)
 
 $(LIBNAME): $(LIBOBJ) $(LIBOBJ_CUDA)
 	$(QUIET_CC) $(CC) -fPIC -shared -Wl $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) $(LIBS) -o $(LIBNAME) $(LIBOBJ) $(LIBOBJ_CUDA)

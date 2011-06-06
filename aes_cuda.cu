@@ -2,8 +2,9 @@
 /**
  * @version 0.1.3 (2011)
  * @author Paolo Margara <paolo.margara@gmail.com>
+ * @author Johannes Gilger <heipei@hackvalue.de>
  * 
- * Copyright 2011 Paolo Margara
+ * Copyright 2011 Johannes Gilger
  *
  * This file is part of engine-cuda.
  *
@@ -32,6 +33,7 @@
 #include "cuda_common.h"
 #include "common.h"
 
+// [[
 #define Td0(space,suffix) space uint32_t suffix[256] = { \
 	0x50a7f451U,0x5365417eU,0xc3a4171aU,0x965e273aU,\
 	0xcb6bab3bU,0xf1459d1fU,0xab58faacU,0x9303e34bU,\
@@ -96,7 +98,7 @@
 	0x81f3afcaU,0x3ec468b9U,0x2c342438U,0x5f40a3c2U,\
 	0x72c31d16U,0x0c25e2bcU,0x8b493c28U,0x41950dffU,\
 	0x7101a839U,0xdeb30c08U,0x9ce4b4d8U,0x90c15664U,\
-	0x6184cb7bU,0x70b632d5U,0x745c6c48U,0x4257b8d0U,\
+	0x6184cb7bU,0x70b632d5U,0x745c6c48U,0x4257b8d0U \
 	};
 
 #define Td1(space,suffix) space uint32_t suffix[256] = { \
@@ -163,7 +165,7 @@
 	0xf3afca81U,0xc468b93eU,0x3424382cU,0x40a3c25fU,\
 	0xc31d1672U,0x25e2bc0cU,0x493c288bU,0x950dff41U,\
 	0x01a83971U,0xb30c08deU,0xe4b4d89cU,0xc1566490U,\
-	0x84cb7b61U,0xb632d570U,0x5c6c4874U,0x57b8d042U,\
+	0x84cb7b61U,0xb632d570U,0x5c6c4874U,0x57b8d042U \
 	};
 
 #define Td2(space,suffix) space uint32_t suffix[256] = { \
@@ -230,7 +232,7 @@
 	0xafca81f3U,0x68b93ec4U,0x24382c34U,0xa3c25f40U,\
 	0x1d1672c3U,0xe2bc0c25U,0x3c288b49U,0x0dff4195U,\
 	0xa8397101U,0x0c08deb3U,0xb4d89ce4U,0x566490c1U,\
-	0xcb7b6184U,0x32d570b6U,0x6c48745cU,0xb8d04257U,\
+	0xcb7b6184U,0x32d570b6U,0x6c48745cU,0xb8d04257U \
 	};
 
 #define Td3(space,suffix) space uint32_t suffix[256] = { \
@@ -297,7 +299,7 @@
 	0xca81f3afU,0xb93ec468U,0x382c3424U,0xc25f40a3U,\
 	0x1672c31dU,0xbc0c25e2U,0x288b493cU,0xff41950dU,\
 	0x397101a8U,0x08deb30cU,0xd89ce4b4U,0x6490c156U,\
-	0x7b6184cbU,0xd570b632U,0x48745c6cU,0xd04257b8U,\
+	0x7b6184cbU,0xd570b632U,0x48745c6cU,0xd04257b8U \
 	};
 
 #define Te0(space,suffix) space uint32_t suffix[256] = { \
@@ -364,7 +366,7 @@
 	0x8f8c8c03U, 0xf8a1a159U, 0x80898909U, 0x170d0d1aU,\
 	0xdabfbf65U, 0x31e6e6d7U, 0xc6424284U, 0xb86868d0U,\
 	0xc3414182U, 0xb0999929U, 0x772d2d5aU, 0x110f0f1eU,\
-	0xcbb0b07bU, 0xfc5454a8U, 0xd6bbbb6dU, 0x3a16162cU, \
+	0xcbb0b07bU, 0xfc5454a8U, 0xd6bbbb6dU, 0x3a16162cU \
 	};
 
 #define Te1(space,suffix) space uint32_t suffix[256] = { \
@@ -431,7 +433,7 @@
 	0x8c8c038fU, 0xa1a159f8U, 0x89890980U, 0x0d0d1a17U,\
 	0xbfbf65daU, 0xe6e6d731U, 0x424284c6U, 0x6868d0b8U,\
 	0x414182c3U, 0x999929b0U, 0x2d2d5a77U, 0x0f0f1e11U,\
-	0xb0b07bcbU, 0x5454a8fcU, 0xbbbb6dd6U, 0x16162c3aU, \
+	0xb0b07bcbU, 0x5454a8fcU, 0xbbbb6dd6U, 0x16162c3aU \
 	};
 
 #define Te2(space,suffix) space uint32_t suffix[256] = { \
@@ -498,7 +500,7 @@
 	0x8c038f8cU, 0xa159f8a1U, 0x89098089U, 0x0d1a170dU,\
 	0xbf65dabfU, 0xe6d731e6U, 0x4284c642U, 0x68d0b868U,\
 	0x4182c341U, 0x9929b099U, 0x2d5a772dU, 0x0f1e110fU,\
-	0xb07bcbb0U, 0x54a8fc54U, 0xbb6dd6bbU, 0x162c3a16U, \
+	0xb07bcbb0U, 0x54a8fc54U, 0xbb6dd6bbU, 0x162c3a16U \
 	};
 
 #define Te3(space,suffix) space uint32_t suffix[256] = { \
@@ -565,7 +567,7 @@
 	0x038f8c8cU, 0x59f8a1a1U, 0x09808989U, 0x1a170d0dU,\
 	0x65dabfbfU, 0xd731e6e6U, 0x84c64242U, 0xd0b86868U,\
 	0x82c34141U, 0x29b09999U, 0x5a772d2dU, 0x1e110f0fU,\
-	0x7bcbb0b0U, 0xa8fc5454U, 0x6dd6bbbbU, 0x2c3a1616U, \
+	0x7bcbb0b0U, 0xa8fc5454U, 0x6dd6bbbbU, 0x2c3a1616U \
 	};
 
 #ifdef T_TABLE_CONSTANT
@@ -625,7 +627,7 @@ __device__ uint8_t Td4[256] = {
     0xa0U, 0xe0U, 0x3bU, 0x4dU, 0xaeU, 0x2aU, 0xf5U, 0xb0U,
     0xc8U, 0xebU, 0xbbU, 0x3cU, 0x83U, 0x53U, 0x99U, 0x61U,
     0x17U, 0x2bU, 0x04U, 0x7eU, 0xbaU, 0x77U, 0xd6U, 0x26U,
-    0xe1U, 0x69U, 0x14U, 0x63U, 0x55U, 0x21U, 0x0cU, 0x7dU,
+    0xe1U, 0x69U, 0x14U, 0x63U, 0x55U, 0x21U, 0x0cU, 0x7dU
 };
 
 static uint8_t Te4[256] = {
@@ -666,14 +668,14 @@ static uint8_t Te4[256] = {
 const uint32_t rcon[] = {
     0x00000001U, 0x00000002U, 0x00000004U, 0x00000008U,
     0x00000010U, 0x00000020U, 0x00000040U, 0x00000080U,
-    0x0000001bU, 0x00000036U, /* for 128-bit blocks, Rijndael never uses more than 10 rcon values */
+    0x0000001bU, 0x00000036U /* for 128-bit blocks, Rijndael never uses more than 10 rcon values */
 };
 // ]]
 
 #define GETU32(p) (*((uint32_t*)(p)))
 
-extern "C" int AES_cuda_set_encrypt_key(const unsigned char *userKey, const int bits, AES_KEY *key) {
-uint32_t *rk;
+extern "C" int AES_cuda_set_encrypt_key(const unsigned char *userKey, const int bits, AES_KEY *key) {	//[[
+	uint32_t *rk;
    	int i = 0;
 	uint32_t temp;
 
@@ -741,9 +743,9 @@ uint32_t *rk;
         	}
 	}
 	return 0;
-}
+} //]]
 
-extern "C" int AES_cuda_set_decrypt_key(const unsigned char *userKey, const int bits, AES_KEY *key) {
+extern "C" int AES_cuda_set_decrypt_key(const unsigned char *userKey, const int bits, AES_KEY *key) { //[[
         uint32_t *rk;
 	int i, j, status;
 	uint32_t temp;
@@ -789,7 +791,7 @@ extern "C" int AES_cuda_set_decrypt_key(const unsigned char *userKey, const int 
 			Td3_cpu[Te2_cpu[(rk[3] >> 24)       ] & 0xff];
 	}
 	return 0;
-}
+} //]]
 
 
 #ifdef AES_COARSE
@@ -800,7 +802,7 @@ extern "C" int AES_cuda_set_decrypt_key(const unsigned char *userKey, const int 
 	__constant__ uint64_t d_iv[4];
 #endif
 
-__constant__ uint32_t aes_key[61];		// TODO: Probably broken
+__constant__ uint32_t aes_key[61];		// TODO: Careful with uint32_t
 
 uint8_t  *h_iv;
 
@@ -876,18 +878,20 @@ uint8_t  *h_iv;
 		register uint32_t t0, t1, t2, t3, s0, s1, s2, s3; \
 		register uint64_t load; \
 		load = data[2*TX]; \
-		load ^= (uint64_t)aes_key[0]; \
+		load ^= (uint64_t)aes_key[0] | ((uint64_t)aes_key[1] << 32); \
 		s0 = load; \
 		s1 = load >> 32; \
 		load = data[2*TX+1]; \
-		load ^= (uint64_t)aes_key[2]; \
+		load ^= (uint64_t)aes_key[2] | ((uint64_t)aes_key[3] << 32); \
 		s2 = load; \
 		s3 = load >> 32; 
+		//cuPrintf("s0: %x, s1: %x, s2: %x, s3: %x\n", s0, s1, s2, s3);
 #else
 	#define GLOBAL_LOAD_SHARED_SETUP \
 		__shared__ uint32_t t[MAX_THREAD]; \
 		__shared__ uint32_t s[MAX_THREAD]; \
 		s[SX] = data[__umul24(blockIdx.x,MAX_THREAD)+SX] ^ aes_key[threadIdx.x]; 
+		//cuPrintf("s0: %x, s1: %x, s2: %x, s3: %x\n", s[0], s[1], s[2], s[3]);
 #endif
 
 __global__ void AES128encKernel(DATA_TYPE data[]) {
@@ -904,7 +908,7 @@ __global__ void AES128encKernel(DATA_TYPE data[]) {
 	AES_ENC_ROUND(28,t,s);
 	AES_ENC_ROUND(32,s,t);
 	AES_ENC_ROUND(36,t,s);
-	AES_FINAL_ENC_ROUND(0x28);
+	AES_FINAL_ENC_ROUND(40);
 }
 
 __global__ void AES192encKernel(DATA_TYPE data[]) {
@@ -923,7 +927,7 @@ __global__ void AES192encKernel(DATA_TYPE data[]) {
 	AES_ENC_ROUND(36,t,s);
 	AES_ENC_ROUND(40,s,t);
 	AES_ENC_ROUND(44,t,s);
-	AES_FINAL_ENC_ROUND(0x30);
+	AES_FINAL_ENC_ROUND(48);
 }
 
 __global__ void AES256encKernel(DATA_TYPE data[]) {
@@ -944,7 +948,7 @@ __global__ void AES256encKernel(DATA_TYPE data[]) {
 	AES_ENC_ROUND(44,t,s);
 	AES_ENC_ROUND(48,s,t);
 	AES_ENC_ROUND(52,t,s);
-	AES_FINAL_ENC_ROUND(0x38);
+	AES_FINAL_ENC_ROUND(56);
 }
 
 #ifdef T_TABLE_CONSTANT
@@ -956,21 +960,22 @@ __global__ void AES256encKernel(DATA_TYPE data[]) {
 		__shared__ uint32_t Tds1[256];\
 		__shared__ uint32_t Tds2[256];\
 		__shared__ uint32_t Tds3[256];\
+		__shared__ uint8_t Tds4[256];\
 		Tds0[SX] = Td0[SX];\
 		Tds1[SX] = Td1[SX];\
 		Tds2[SX] = Td2[SX];\
 		Tds3[SX] = Td3[SX];\
-		Tds3[SX] = Td3[SX];\
+		Tds4[SX] = Td4[SX];\
 		__syncthreads();
 	#define TD(n)	Tds##n
 #endif
 
 #ifdef AES_COARSE
 	#define AES_DEC_ROUND(n,D,S) \
-		AES_DEC_STEP(n,D,S,0,1,2,3); \
-		AES_DEC_STEP(n,D,S,1,2,3,0); \
-		AES_DEC_STEP(n,D,S,2,3,0,1); \
-		AES_DEC_STEP(n,D,S,3,0,1,2);
+		AES_DEC_STEP(n,D,S,0,3,2,1); \
+		AES_DEC_STEP(n,D,S,1,0,3,2); \
+		AES_DEC_STEP(n,D,S,2,1,0,3); \
+		AES_DEC_STEP(n,D,S,3,2,1,0);
 
 	#define AES_DEC_STEP(n,D,S,W,X,Y,Z) \
 		D##W  = TD(0)[ S##W        & 0xff]; \
@@ -980,36 +985,39 @@ __global__ void AES256encKernel(DATA_TYPE data[]) {
 		D##W ^= aes_key[n+W];
 	
 	#define AES_FINAL_DEC_STEP(N,W,X,Y,Z) \
-		s##W  = TD(2)[ t##W        & 0xff] & 0x000000ff; \
-		s##W ^= TD(3)[(t##X >>  8) & 0xff] & 0x0000ff00; \
-		s##W ^= TD(0)[(t##Y >> 16) & 0xff] & 0x00ff0000; \
-		s##W ^= TD(1)[(t##Z >> 24)       ] & 0xff000000; \
+		s##W  =  Tds4[ t##W        & 0xff]; \
+		s##W ^= (Tds4[(t##X >>  8) & 0xff] << 8); \
+		s##W ^= (Tds4[(t##Y >> 16) & 0xff] << 16); \
+		s##W ^= (Tds4[(t##Z >> 24)       ] << 24); \
 		s##W ^= aes_key[N+W]; \
 
 	#define AES_FINAL_DEC_ROUND(N) \
-		AES_FINAL_DEC_STEP(N,0,1,2,3); \
-		AES_FINAL_DEC_STEP(N,1,2,3,0); \
+		AES_FINAL_DEC_STEP(N,0,3,2,1); \
+		AES_FINAL_DEC_STEP(N,1,0,3,2); \
 		load = s0 | ((uint64_t)s1) << 32; \
 		data[2*TX] = load; \
-		AES_FINAL_DEC_STEP(N,2,3,0,1); \
-		AES_FINAL_DEC_STEP(N,3,0,1,2); \
+		AES_FINAL_DEC_STEP(N,2,1,0,3); \
+		AES_FINAL_DEC_STEP(N,3,2,1,0); \
 		load = s2 | ((uint64_t)s3) << 32; \
 		data[2*TX+1] = load; 
 	
 	#define AES_FINAL_DEC_ROUND_CBC(N) \
-		AES_FINAL_DEC_STEP(N,0,1,2,3); \
-		AES_FINAL_DEC_STEP(N,1,2,3,0); \
-		AES_FINAL_DEC_STEP(N,2,3,0,1); \
-		AES_FINAL_DEC_STEP(N,3,0,1,2); \
+		AES_FINAL_DEC_STEP(N,0,3,2,1); \
+		AES_FINAL_DEC_STEP(N,1,0,3,2); \
+		AES_FINAL_DEC_STEP(N,2,1,0,3); \
+		AES_FINAL_DEC_STEP(N,3,2,1,0); \
+		__syncthreads(); \
 		if(blockIdx.x == 0 && threadIdx.x == 0) { \
-			load = s0 | ((uint64_t)s1) << 32 ^ d_iv[0]; \
-			data[2*TX] = load; \
-			load = s2 | ((uint64_t)s3) << 32 ^ d_iv[1]; \
-			data[2*TX+1] = load; \
+			load = ((uint64_t)s0) | ((uint64_t)s1) << 32; \
+			load ^= d_iv[0]; \
+			data[0] = load; \
+			load = ((uint64_t)s2) | ((uint64_t)s3) << 32; \
+			load ^= d_iv[1]; \
+			data[1] = load; \
 		} else { \
-			load = s0 | ((uint64_t)s1) << 32 ^ data[2*(TX-1)]; \
+			load = ((uint64_t)s0 | (((uint64_t)s1) << 32)) ^ data[2*(TX-1)]; \
 			data[2*TX] = load; \
-			load = s2 | ((uint64_t)s3) << 32 ^ data[2*(TX-1)+1]; \
+			load = ((uint64_t)s2 | (((uint64_t)s3) << 32)) ^ data[2*(TX-1)+1]; \
 			data[2*TX+1] = load; \
 		}	
 
@@ -1040,24 +1048,24 @@ __global__ void AES256encKernel(DATA_TYPE data[]) {
 						data[blockIdx.x*MAX_THREAD+SX] = p_state;
 #endif
 
-__global__ void AES128decKernel(DATA_TYPE *data) {
+__global__ void AES128decKernel(DATA_TYPE data[]) {
 
 	GLOBAL_LOAD_SHARED_SETUP
 	COPY_CONSTANT_SHARED_DEC
 
-	AES_DEC_ROUND( 4,t,s);
-	AES_DEC_ROUND( 8,s,t);
-	AES_DEC_ROUND(12,t,s);
-	AES_DEC_ROUND(16,s,t);
-	AES_DEC_ROUND(20,t,s);
-	AES_DEC_ROUND(24,s,t);
-	AES_DEC_ROUND(28,t,s);
-	AES_DEC_ROUND(32,s,t);
-	AES_DEC_ROUND(36,t,s);
-	AES_FINAL_DEC_ROUND(0x28);
+	AES_DEC_ROUND( 4,t,s)
+	AES_DEC_ROUND( 8,s,t)
+	AES_DEC_ROUND(12,t,s)
+	AES_DEC_ROUND(16,s,t)
+	AES_DEC_ROUND(20,t,s)
+	AES_DEC_ROUND(24,s,t)
+	AES_DEC_ROUND(28,t,s)
+	AES_DEC_ROUND(32,s,t)
+	AES_DEC_ROUND(36,t,s)
+	AES_FINAL_DEC_ROUND(40)
 }
 
-__global__ void AES192decKernel(DATA_TYPE *data) {
+__global__ void AES192decKernel(DATA_TYPE data[]) {
 
 	GLOBAL_LOAD_SHARED_SETUP
 	COPY_CONSTANT_SHARED_DEC
@@ -1073,10 +1081,10 @@ __global__ void AES192decKernel(DATA_TYPE *data) {
 	AES_DEC_ROUND(36,t,s);
 	AES_DEC_ROUND(40,s,t);
 	AES_DEC_ROUND(44,t,s);
-	AES_FINAL_DEC_ROUND(0x30);
+	AES_FINAL_DEC_ROUND(48);
 }
 
-__global__ void AES256decKernel(DATA_TYPE *data) {
+__global__ void AES256decKernel(DATA_TYPE data[]) {
 
 	GLOBAL_LOAD_SHARED_SETUP
 	COPY_CONSTANT_SHARED_DEC
@@ -1094,7 +1102,7 @@ __global__ void AES256decKernel(DATA_TYPE *data) {
 	AES_DEC_ROUND(44,t,s);
 	AES_DEC_ROUND(48,s,t);
 	AES_DEC_ROUND(52,t,s);
-	AES_FINAL_DEC_ROUND(0x38);
+	AES_FINAL_DEC_ROUND(56);
 }
 
 __global__ void AES128decKernel_cbc(DATA_TYPE data[]) {
@@ -1111,7 +1119,7 @@ __global__ void AES128decKernel_cbc(DATA_TYPE data[]) {
 	AES_DEC_ROUND(28,t,s);
 	AES_DEC_ROUND(32,s,t);
 	AES_DEC_ROUND(36,t,s);
-	AES_FINAL_DEC_ROUND_CBC(0x28);
+	AES_FINAL_DEC_ROUND_CBC(40);
 }
 
 __global__ void AES192decKernel_cbc(DATA_TYPE data[]) {
@@ -1130,7 +1138,7 @@ __global__ void AES192decKernel_cbc(DATA_TYPE data[]) {
 	AES_DEC_ROUND(36,t,s);
 	AES_DEC_ROUND(40,s,t);
 	AES_DEC_ROUND(44,t,s);
-	AES_FINAL_DEC_ROUND_CBC(0x30);
+	AES_FINAL_DEC_ROUND_CBC(48);
 }
 
 __global__ void AES256decKernel_cbc(DATA_TYPE data[]) {
@@ -1151,7 +1159,7 @@ __global__ void AES256decKernel_cbc(DATA_TYPE data[]) {
 	AES_DEC_ROUND(44,t,s);
 	AES_DEC_ROUND(48,s,t);
 	AES_DEC_ROUND(52,t,s);
-	AES_FINAL_DEC_ROUND_CBC(0x38);
+	AES_FINAL_DEC_ROUND_CBC(56);
 }
 
 

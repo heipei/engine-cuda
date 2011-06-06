@@ -2,8 +2,8 @@
 # vim:ft=sh
 
 ENC_CIPHERS=(aes-128-ecb aes-192-ecb aes-256-ecb bf-ecb camellia-128-ecb cast5-ecb des-ecb idea-ecb)
-#DEC_CIPHERS=(aes-128-ecb aes-192-ecb aes-256-ecb aes-128-cbc aes-192-cbc aes-256-cbc des-ecb idea-ecb cast5-ecb camellia-128-ecb)
-DEC_CIPHERS=(camellia-128-ecb cast5-ecb idea-ecb)
+DEC_CIPHERS=(aes-128-ecb aes-192-ecb aes-256-ecb aes-128-cbc aes-192-cbc aes-256-cbc bf-ecb des-ecb idea-ecb cast5-ecb camellia-128-ecb)
+#DEC_CIPHERS=(aes-128-ecb aes-192-ecb aes-256-ecb)
 
 IV="FFFF"
 BUFSIZE=8388608
@@ -103,6 +103,8 @@ for cipher in $DEC_CIPHERS; do
 		cat correctness.log
 		echo ">> CAUTION: cksum mismatch!"
 		echo ">> CPU: $CHKCPU; CUDA: $CHKCUDA; OpenCL: $CHKOPENCL"
+		echo ">> Encrypted file:"
+		xxd $cipher.enc|head -n 5
 		echo ">> XXD CPU:"
 		xxd $cipher.out.cpu|head -n 5
 		echo ">> XXD CUDA:"
