@@ -1128,6 +1128,7 @@ uint32_t Ted[9][256] = {{
 }};
 
 static cl_mem aes_sbox = NULL;
+static cl_mem aes_iv = NULL;
 
 void AES_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, cl_mem *device_buffer, cl_mem *device_schedule, cl_command_queue queue, cl_kernel device_kernel, cl_context context) {
 
@@ -1170,6 +1171,11 @@ void AES_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes
 		clSetKernelArg(device_kernel, 1, sizeof(cl_mem), &aes_sbox);
 		clSetKernelArg(device_kernel, 2, sizeof(cl_mem), device_schedule);
 	}
+	cl_uint args;
+	clGetKernelInfo(device_kernel,CL_KERNEL_NUM_ARGS,4,&args,NULL);
+	if(args > 3 && aes_iv) {
+		clSetKernelArg(device_kernel, 3, sizeof(cl_mem), &aes_iv);
+	}
 
 	clEnqueueWriteBuffer(queue,*device_buffer,CL_TRUE,0,nbytes,in,0,NULL,NULL);
 	
@@ -1184,6 +1190,12 @@ void AES_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes
 
 void AES_opencl_transfer_key_schedule(AES_KEY *ks, cl_mem *device_schedule,cl_command_queue queue) {
 	clEnqueueWriteBuffer(queue,*device_schedule,CL_TRUE,0,sizeof(AES_KEY),ks,0,NULL,NULL);
+}
+
+void AES_opencl_transfer_iv(cl_context context, const unsigned char *iv,cl_command_queue queue) {
+	cl_int error;
+	CL_ASSIGN(aes_iv = clCreateBuffer(context,CL_MEM_READ_ONLY,AES_BLOCK_SIZE,NULL,&error));
+	CL_WRAPPER(clEnqueueWriteBuffer(queue,aes_iv,CL_TRUE,0,AES_BLOCK_SIZE,iv,0,NULL,NULL));
 }
 
 static uint8_t Te4[256] = {

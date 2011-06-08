@@ -103,7 +103,7 @@ uninstall:
 	-rm -f @prefix@/@ENGINEDIR@/$(LIBNAME)
 
 clean:
-	rm -f *.o *.obj tags core .pure *.out .nfs* *.old *.bak fluff \
+	rm -rf *.o *.obj tags core .pure *.out .nfs* *.old *.bak fluff \
 	*.linkinfo *.so *.a teststate config.log config.status *.cpp1.ii \
 	*.cpp2.i *.cpp3.i *.cpp4.ii *.cu.cpp *.cudafe1.c *.cudafe1.cpp \
 	*.cudafe1.gpu autom4te.cache *.cudafe1.stub.c *.cudafe2.c *.cudafe2.gpu \

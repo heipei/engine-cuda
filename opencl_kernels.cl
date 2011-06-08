@@ -210,19 +210,24 @@ __kernel void BFdecKernel(__global unsigned long *data, __global unsigned int *p
 		data[2*TX+1] = load; 
 	
 	#define AES_FINAL_DEC_ROUND_CBC(N) \
-		AES_FINAL_DEC_STEP(N,0,1,2,3); \
-		AES_FINAL_DEC_STEP(N,1,2,3,0); \
-		AES_FINAL_DEC_STEP(N,2,3,0,1); \
-		AES_FINAL_DEC_STEP(N,3,0,1,2); \
-		if(TX == 0) { \
-			load = s0 | ((unsigned long)s1) << 32 ^ d_iv[0]; \
+		AES_FINAL_DEC_STEP(N,0,3,2,1); \
+		AES_FINAL_DEC_STEP(N,1,0,3,2); \
+		AES_FINAL_DEC_STEP(N,2,1,0,3); \
+		AES_FINAL_DEC_STEP(N,3,2,1,0); \
+		barrier(CLK_GLOBAL_MEM_FENCE); \
+		if(TX > 0) { \
+			load = (s0 | ((unsigned long)s1 << 32)) ^ data[2*(TX-1)]; \
 			data[2*TX] = load; \
-			load = s2 | ((unsigned long)s3) << 32 ^ d_iv[1]; \
+			load = (s2 | ((unsigned long)s3 << 32)) ^ data[2*(TX-1)+1]; \
 			data[2*TX+1] = load; \
-		} else { \
-			load = s0 | ((unsigned long)s1) << 32 ^ data[2*(TX-1)]; \
+		} \
+		barrier(CLK_GLOBAL_MEM_FENCE); \
+		if(TX == 0) { \
+			load = (unsigned long)s0 | ((unsigned long)s1) << 32; \
+			load ^= d_iv[0]; \
 			data[2*TX] = load; \
-			load = s2 | ((unsigned long)s3) << 32 ^ data[2*(TX-1)+1]; \
+			load = (unsigned long)s2 | (((unsigned long)s3) << 32); \
+			load ^= d_iv[1]; \
 			data[2*TX+1] = load; \
 		}	
 
@@ -295,7 +300,7 @@ __kernel void AES128encKernel(__global AES_DATA_TYPE *data, __global unsigned in
 	AES_ENC_ROUND(28,t,s);
 	AES_ENC_ROUND(32,s,t);
 	AES_ENC_ROUND(36,t,s);
-	AES_FINAL_ENC_ROUND(0x28);
+	AES_FINAL_ENC_ROUND(40);
 }
 
 __kernel void AES192encKernel(__global AES_DATA_TYPE *data, __global unsigned int *Teg, __constant unsigned int *aes_key) {
@@ -314,7 +319,7 @@ __kernel void AES192encKernel(__global AES_DATA_TYPE *data, __global unsigned in
 	AES_ENC_ROUND(36,t,s);
 	AES_ENC_ROUND(40,s,t);
 	AES_ENC_ROUND(44,t,s);
-	AES_FINAL_ENC_ROUND(0x30);
+	AES_FINAL_ENC_ROUND(48);
 }
 
 __kernel void AES256encKernel(__global AES_DATA_TYPE *data, __global unsigned int *Teg, __constant unsigned int *aes_key) {
@@ -335,7 +340,7 @@ __kernel void AES256encKernel(__global AES_DATA_TYPE *data, __global unsigned in
 	AES_ENC_ROUND(44,t,s);
 	AES_ENC_ROUND(48,s,t);
 	AES_ENC_ROUND(52,t,s);
-	AES_FINAL_ENC_ROUND(0x38);
+	AES_FINAL_ENC_ROUND(56);
 }
 
 __kernel void AES128decKernel(__global AES_DATA_TYPE *data, __global unsigned int *Tdg, __constant unsigned int *aes_key) {
@@ -352,7 +357,7 @@ __kernel void AES128decKernel(__global AES_DATA_TYPE *data, __global unsigned in
 	AES_DEC_ROUND(28,t,s);
 	AES_DEC_ROUND(32,s,t);
 	AES_DEC_ROUND(36,t,s);
-	AES_FINAL_DEC_ROUND(0x28);
+	AES_FINAL_DEC_ROUND(40);
 }
 
 __kernel void AES192decKernel(__global AES_DATA_TYPE *data, __global unsigned int *Tdg, __constant unsigned int *aes_key) {
@@ -371,7 +376,7 @@ __kernel void AES192decKernel(__global AES_DATA_TYPE *data, __global unsigned in
 	AES_DEC_ROUND(36,t,s);
 	AES_DEC_ROUND(40,s,t);
 	AES_DEC_ROUND(44,t,s);
-	AES_FINAL_DEC_ROUND(0x30);
+	AES_FINAL_DEC_ROUND(48);
 }
 
 __kernel void AES256decKernel(__global AES_DATA_TYPE *data, __global unsigned int *Tdg, __constant unsigned int *aes_key) {
@@ -392,7 +397,64 @@ __kernel void AES256decKernel(__global AES_DATA_TYPE *data, __global unsigned in
 	AES_DEC_ROUND(44,t,s);
 	AES_DEC_ROUND(48,s,t);
 	AES_DEC_ROUND(52,t,s);
-	AES_FINAL_DEC_ROUND(0x38);
+	AES_FINAL_DEC_ROUND(56);
+}
+
+__kernel void AES128decKernel_cbc(__global AES_DATA_TYPE *data, __global unsigned int *Tdg, __constant unsigned int *aes_key, __global unsigned long *d_iv) {
+
+	GLOBAL_LOAD_SHARED_SETUP
+	AES_COPY_GLOBAL_SHARED_DEC
+
+	AES_DEC_ROUND( 4,t,s);
+	AES_DEC_ROUND( 8,s,t);
+	AES_DEC_ROUND(12,t,s);
+	AES_DEC_ROUND(16,s,t);
+	AES_DEC_ROUND(20,t,s);
+	AES_DEC_ROUND(24,s,t);
+	AES_DEC_ROUND(28,t,s);
+	AES_DEC_ROUND(32,s,t);
+	AES_DEC_ROUND(36,t,s);
+	AES_FINAL_DEC_ROUND_CBC(40);
+}
+
+__kernel void AES192decKernel_cbc(__global AES_DATA_TYPE *data, __global unsigned int *Tdg, __constant unsigned int *aes_key, __global unsigned long *d_iv) {
+
+	GLOBAL_LOAD_SHARED_SETUP
+	AES_COPY_GLOBAL_SHARED_DEC
+
+	AES_DEC_ROUND( 4,t,s);
+	AES_DEC_ROUND( 8,s,t);
+	AES_DEC_ROUND(12,t,s);
+	AES_DEC_ROUND(16,s,t);
+	AES_DEC_ROUND(20,t,s);
+	AES_DEC_ROUND(24,s,t);
+	AES_DEC_ROUND(28,t,s);
+	AES_DEC_ROUND(32,s,t);
+	AES_DEC_ROUND(36,t,s);
+	AES_DEC_ROUND(40,s,t);
+	AES_DEC_ROUND(44,t,s);
+	AES_FINAL_DEC_ROUND_CBC(48);
+}
+
+__kernel void AES256decKernel_cbc(__global AES_DATA_TYPE *data, __global unsigned int *Tdg, __constant unsigned int *aes_key, __global unsigned long *d_iv) {
+
+	GLOBAL_LOAD_SHARED_SETUP
+	AES_COPY_GLOBAL_SHARED_DEC
+
+	AES_DEC_ROUND( 4,t,s);
+	AES_DEC_ROUND( 8,s,t);
+	AES_DEC_ROUND(12,t,s);
+	AES_DEC_ROUND(16,s,t);
+	AES_DEC_ROUND(20,t,s);
+	AES_DEC_ROUND(24,s,t);
+	AES_DEC_ROUND(28,t,s);
+	AES_DEC_ROUND(32,s,t);
+	AES_DEC_ROUND(36,t,s);
+	AES_DEC_ROUND(40,s,t);
+	AES_DEC_ROUND(44,t,s);
+	AES_DEC_ROUND(48,s,t);
+	AES_DEC_ROUND(52,t,s);
+	AES_FINAL_DEC_ROUND_CBC(56);
 }
 // ###########
 // # DES ECB #
