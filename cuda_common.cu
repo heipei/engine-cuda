@@ -31,14 +31,22 @@
 #include "common.h"
 
 #ifndef PAGEABLE
-extern "C" void transferHostToDevice_PINNED   (const unsigned char **input, uint32_t **deviceMem, uint8_t **hostMem, size_t *size) {
+extern "C" void transferHostToDevice_PINNED (const unsigned char **input, uint32_t **deviceMem, uint8_t **hostMem, size_t *size) {
 	cudaError_t cudaerrno;
-	if(*size <= 1048576) {
-		memcpy(*hostMem,*input,*size);
-        	_CUDA(cudaMemcpyAsync(*deviceMem, *hostMem, *size, cudaMemcpyHostToDevice, 0));
-	} else {
+	if(*size < 4096) {
 		_CUDA(cudaMemcpy(*deviceMem, *input, *size, cudaMemcpyHostToDevice));
+		return;
 	}
+		
+	uint64_t offset = ((uint64_t)*input) % 4096;
+	uint64_t first_chunk = 4096-offset;
+
+	if(offset) {
+		_CUDA(cudaMemcpy(*deviceMem, *input, first_chunk, cudaMemcpyHostToDevice));
+	}
+	_CUDA(cudaHostRegister((void *)(*input+first_chunk),(*size-first_chunk)+(4096-((*size-first_chunk)%4096)),0));
+	_CUDA(cudaMemcpy(*deviceMem+(first_chunk/4), *input+first_chunk, *size-first_chunk, cudaMemcpyHostToDevice));
+	_CUDA(cudaHostUnregister((void *)(*input+first_chunk)));
 }
 #if CUDART_VERSION >= 2020
 extern "C" void transferHostToDevice_ZEROCOPY (const unsigned char **input, uint32_t **deviceMem, uint8_t **hostMem, size_t *size) {
@@ -55,11 +63,25 @@ extern "C" void transferHostToDevice_PAGEABLE (const unsigned char **input, uint
 #endif
 
 #ifndef PAGEABLE
-extern "C" void transferDeviceToHost_PINNED   (unsigned char **output, uint32_t **deviceMem, uint8_t **hostMemS, uint8_t **hostMemOUT, size_t *size) {
+extern "C" void transferDeviceToHost_PINNED (unsigned char **output, uint32_t **deviceMem, uint8_t **hostMemS, uint8_t **hostMemOUT, size_t *size) {
 	cudaError_t cudaerrno;
-        _CUDA(cudaMemcpyAsync(*hostMemS, *deviceMem, *size, cudaMemcpyDeviceToHost, 0));
-	_CUDA(cudaThreadSynchronize());
-	memcpy(*output,*hostMemS,*size);
+	if(*size < 4096) {
+		_CUDA(cudaMemcpy(*output, *deviceMem, *size, cudaMemcpyDeviceToHost));
+		return;
+	}
+		
+	uint64_t offset = ((uint64_t)*output) % 4096;
+	uint64_t first_chunk = 4096-offset;
+
+	if(offset) {
+		_CUDA(cudaMemcpy(*output, *deviceMem, first_chunk, cudaMemcpyDeviceToHost));
+	}
+	
+	//fprintf(stdout, "Trying to cudaHostRegister %lu bytes starting with %p\n", *size-first_chunk+(4096-((*size-first_chunk)%4096)), *output+first_chunk);
+	
+	_CUDA(cudaHostRegister((void *)(*output+first_chunk),*size-first_chunk+(4096-((*size-first_chunk)%4096)),0));
+	_CUDA(cudaMemcpy(*output+first_chunk, *deviceMem+(first_chunk/4), *size-first_chunk, cudaMemcpyDeviceToHost));
+	_CUDA(cudaHostUnregister((void *)(*output+first_chunk)));
 }
 #if CUDART_VERSION >= 2020
 extern "C" void transferDeviceToHost_ZEROCOPY (unsigned char **output, uint32_t **deviceMem, uint8_t **hostMemS, uint8_t **hostMemOUT, size_t *size) {
@@ -163,7 +185,7 @@ extern "C" void cuda_device_init(int *nm, int buffer_size, int output_verbosity,
 		_CUDA(cudaHostGetDevicePointer(device_data,host_data, 0));
 	} else {
 		//pinned memory mode - use special function to get OS-pinned memory
-		_CUDA(cudaHostAlloc( (void**)host_data, buffer_size, cudaHostAllocDefault));
+		//_CUDA(cudaHostAlloc( (void**)host_data, buffer_size, cudaHostAllocDefault));
 		if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"Using pinned memory: cudaHostAllocDefault.\n");
 		transferHostToDevice = transferHostToDevice_PINNED;	// set memory transfer function
 		transferDeviceToHost = transferDeviceToHost_PINNED;	// set memory transfer function
