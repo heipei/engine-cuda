@@ -1,0 +1,58 @@
+From 29373957c244c46a9e2b176eb366add54b9a061f Mon Sep 17 00:00:00 2001
+From: Johannes Gilger <heipei@hackvalue.de>
+Date: Thu, 9 Jun 2011 11:10:23 +0200
+Subject: [PATCH] Changes needed for engine-cuda
+
+Signed-off-by: Johannes Gilger <heipei@hackvalue.de>
+---
+ apps/speed.c         |    6 +++---
+ crypto/evp/bio_enc.c |    2 +-
+ 2 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/apps/speed.c b/apps/speed.c
+index 0cb7f24..8ac7ed8 100644
+--- a/apps/speed.c
++++ b/apps/speed.c
+@@ -199,7 +199,7 @@
+ #endif
+ 
+ #undef BUFSIZE
+-#define BUFSIZE	((long)1024*8+1)
++#define BUFSIZE	((long)1024*1024*8+1)
+ int run=0;
+ 
+ static int mr=0;
+@@ -215,7 +215,7 @@ static int do_multi(int multi);
+ #endif
+ 
+ #define ALGOR_NUM	29
+-#define SIZE_NUM	5
++#define SIZE_NUM	17
+ #define RSA_NUM		4
+ #define DSA_NUM		3
+ 
+@@ -231,7 +231,7 @@ static const char *names[ALGOR_NUM]={
+   "evp","sha256","sha512","whirlpool",
+   "aes-128 ige","aes-192 ige","aes-256 ige"};
+ static double results[ALGOR_NUM][SIZE_NUM];
+-static int lengths[SIZE_NUM]={16,64,256,1024,8*1024};
++static int lengths[SIZE_NUM]={16,64,256,1024,2*1024,4*1024,8*1024,16*1024,32*1024,64*1024,128*1024,256*1024,512*1024,1024*1024,2*1024*1024,4*1024*1024,8*1024*1024};
+ #ifndef OPENSSL_NO_RSA
+ static double rsa_results[RSA_NUM][2];
+ #endif
+diff --git a/crypto/evp/bio_enc.c b/crypto/evp/bio_enc.c
+index b6efb5f..80bfe5c 100644
+--- a/crypto/evp/bio_enc.c
++++ b/crypto/evp/bio_enc.c
+@@ -70,7 +70,7 @@ static long enc_ctrl(BIO *h, int cmd, long arg1, void *arg2);
+ static int enc_new(BIO *h);
+ static int enc_free(BIO *data);
+ static long enc_callback_ctrl(BIO *h, int cmd, bio_info_cb *fps);
+-#define ENC_BLOCK_SIZE	(1024*4)
++#define ENC_BLOCK_SIZE	(1024*1024*8) // 8MB
+ #define BUF_OFFSET	(EVP_MAX_BLOCK_LENGTH*2)
+ 
+ typedef struct enc_struct
+-- 
+1.7.0.4
+
