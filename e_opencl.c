@@ -77,6 +77,7 @@ static cl_kernel bf_cbc_dec_kernel;
 static cl_kernel cast_dec_kernel;
 static cl_kernel cmll_dec_kernel;
 static cl_kernel des_dec_kernel;
+static cl_kernel des_cbc_dec_kernel;
 
 static cl_kernel *device_kernel;
 
@@ -217,6 +218,7 @@ int opencl_init(ENGINE * engine) {
 	CL_ASSIGN(cast_dec_kernel = clCreateKernel(device_program, "CASTdecKernel", &error));
 	CL_ASSIGN(cmll_dec_kernel = clCreateKernel(device_program, "CMLLdecKernel", &error));
 	CL_ASSIGN(des_dec_kernel = clCreateKernel(device_program, "DESdecKernel", &error));
+	CL_ASSIGN(des_cbc_dec_kernel = clCreateKernel(device_program, "DESdecKernel_cbc", &error));
 
 	gettimeofday(&curtime, NULL);
 	timeval_subtract(&difference,&curtime,&starttime);
@@ -304,6 +306,7 @@ static int opencl_cipher_nids[] = {
 	NID_camellia_128_ecb,
 	NID_cast5_ecb,
 	NID_des_ecb,
+	NID_des_cbc,
 	NID_idea_ecb
 };
 
@@ -360,6 +363,7 @@ static int opencl_init_key(EVP_CIPHER_CTX *ctx, const unsigned char *key, const 
 	    DES_set_key((const_DES_cblock *)key,&des_key_schedule);
 	    device_schedule = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(DES_key_schedule), &des_key_schedule, &error);
 	    DES_opencl_transfer_key_schedule(&des_key_schedule,&device_schedule,queue);
+	    if(iv) DES_opencl_transfer_iv(context,iv,queue);
 	    break;
 	  case NID_bf_ecb:
 	  case NID_bf_cbc:
@@ -446,6 +450,10 @@ int opencl_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigned cha
 	    opencl_device_crypt = BF_opencl_crypt;
 	    device_kernel = &bf_cbc_dec_kernel;
 	    break;
+	  case NID_des_cbc:
+	    opencl_device_crypt = DES_opencl_crypt;
+	    device_kernel = &des_cbc_dec_kernel;
+	    break;
 	  case NID_des_ecb:
 	    opencl_device_crypt = DES_opencl_crypt;
 	    device_kernel = ctx->encrypt ? &des_enc_kernel : &des_dec_kernel;
@@ -531,6 +539,7 @@ DECLARE_EVP(bf,BF,128,ecb,ECB);
 DECLARE_EVP(camellia,CAMELLIA,128,ecb,ECB);
 DECLARE_EVP(cast,CAST,128,ecb,ECB);
 DECLARE_EVP(des,DES,64,ecb,ECB);
+DECLARE_EVP(des,DES,64,cbc,CBC);
 DECLARE_EVP(idea,IDEA,64,ecb,ECB);
 
 static int opencl_ciphers(ENGINE *e, const EVP_CIPHER **cipher, const int **nids, int nid) {
@@ -571,6 +580,9 @@ static int opencl_ciphers(ENGINE *e, const EVP_CIPHER **cipher, const int **nids
 	    break;
 	  case NID_des_ecb:
 	    *cipher = &opencl_des_ecb;
+	    break;
+	  case NID_des_cbc:
+	    *cipher = &opencl_des_cbc;
 	    break;
 	  case NID_idea_ecb:
 	    *cipher = &opencl_idea_ecb;

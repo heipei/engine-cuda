@@ -636,6 +636,63 @@ __kernel void DESdecKernel(__global unsigned long *data, __global unsigned int *
 	data[get_global_id(0)]=left|((unsigned long)right)<<32;
 }
 
+__kernel void DESdecKernel_cbc(__global unsigned long *data, __global unsigned int *des_d_sp_c, __global unsigned long *cs, __global unsigned long *d_iv) {
+	__local unsigned char des_SP[2048];
+	__local unsigned long s[16];
+	
+	if(get_local_id(0) < 16)
+		s[get_local_id(0)] = cs[get_local_id(0)];
+
+	((__local ulong *)des_SP)[get_local_id(0)] = ((__global ulong *)des_d_sp_c)[get_local_id(0)];
+	#if MAX_THREAD == 128
+		((__local ulong *)des_SP)[get_local_id(0)+128] = ((__global ulong *)des_d_sp_c)[get_local_id(0)+128];
+	#endif
+
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	__private unsigned long load = data[get_global_id(0)];
+	__private unsigned int right = load;
+	__private unsigned int left = load>>32;
+	
+	__private unsigned int t,u;
+
+	IP(right,left);
+
+	left=ROTATE(left,29);
+	right=ROTATE(right,29);
+
+	D_ENCRYPT(left,right,15);
+	D_ENCRYPT(right,left,14);
+	D_ENCRYPT(left,right,13);
+	D_ENCRYPT(right,left,12);
+	D_ENCRYPT(left,right,11);
+	D_ENCRYPT(right,left,10);
+	D_ENCRYPT(left,right, 9);
+	D_ENCRYPT(right,left, 8);
+	D_ENCRYPT(left,right, 7);
+	D_ENCRYPT(right,left, 6);
+	D_ENCRYPT(left,right, 5);
+	D_ENCRYPT(right,left, 4);
+	D_ENCRYPT(left,right, 3);
+	D_ENCRYPT(right,left, 2);
+	D_ENCRYPT(left,right, 1);
+	D_ENCRYPT(right,left, 0);
+
+	left=ROTATE(left,3);
+	right=ROTATE(right,3);
+	FP(right,left);
+	
+	load=left|((unsigned long)right)<<32; 
+
+	if(get_global_id(0) == 0)
+		load ^= *d_iv;
+	else
+		load ^= data[get_global_id(0) - 1];
+	
+	barrier(CLK_GLOBAL_MEM_FENCE);
+	data[get_global_id(0)]=load;
+}
+
 // #############
 // # CAST5 ECB #
 // #############

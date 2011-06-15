@@ -178,6 +178,7 @@ uint32_t des_d_sp_host[8][64]={
 }};
 
 static cl_mem des_sbox = NULL;
+static cl_mem des_iv = NULL;
 
 void DES_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, cl_mem *device_buffer, cl_mem *device_schedule, cl_command_queue queue, cl_kernel device_kernel, cl_context context) {
 
@@ -204,6 +205,12 @@ void DES_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes
 		clSetKernelArg(device_kernel, 2, sizeof(cl_mem), device_schedule);
 	}
 
+	cl_uint args;
+	clGetKernelInfo(device_kernel,CL_KERNEL_NUM_ARGS,4,&args,NULL);
+	if(args > 3 && des_iv) {
+		clSetKernelArg(device_kernel, 3, sizeof(cl_mem), &des_iv);
+	}
+
 	clEnqueueWriteBuffer(queue,*device_buffer,CL_TRUE,0,nbytes,in,0,NULL,NULL);
 
 	OPENCL_TIME_KERNEL("DES     ",1)
@@ -214,5 +221,11 @@ void DES_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes
 
 void DES_opencl_transfer_key_schedule(DES_key_schedule *ks, cl_mem *device_schedule,cl_command_queue queue) {
 	clEnqueueWriteBuffer(queue,*device_schedule,CL_TRUE,0,sizeof(DES_key_schedule),ks,0,NULL,NULL);
+}
+
+void DES_opencl_transfer_iv(cl_context context, const unsigned char *iv,cl_command_queue queue) {
+	cl_int error;
+	CL_ASSIGN(des_iv = clCreateBuffer(context,CL_MEM_READ_ONLY,DES_BLOCK_SIZE,NULL,&error));
+	CL_WRAPPER(clEnqueueWriteBuffer(queue,des_iv,CL_TRUE,0,DES_BLOCK_SIZE,iv,0,NULL,NULL));
 }
 

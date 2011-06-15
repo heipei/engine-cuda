@@ -45,6 +45,7 @@ void BF_opencl_transfer_iv(cl_context, const unsigned char*, cl_command_queue);
 #include <openssl/des.h>
 void DES_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, cl_mem *device_buffer, cl_mem *device_schedule, cl_command_queue queue, cl_kernel device_kernel, cl_context context);
 void DES_opencl_transfer_key_schedule(DES_key_schedule *ks, cl_mem *device_schedule,cl_command_queue queue);
+void DES_opencl_transfer_iv(cl_context, const unsigned char*, cl_command_queue);
 
 #include <openssl/cast.h>
 void CAST_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, cl_mem *device_buffer, cl_mem *device_schedule, cl_command_queue queue, cl_kernel device_kernel, cl_context context);
