@@ -183,6 +183,7 @@ __device__ uint32_t des_d_sp_c[8][64]={
 __shared__ unsigned char des_SP[2048];
 
 __constant__ uint64_t cs[16];
+__constant__ uint64_t d_iv;
 
 //__device__ uint32_t *des_d_iv;
 
@@ -310,6 +311,58 @@ __global__ void DESdecKernel(uint64_t *data) {
 	data[TX]=left|((uint64_t)right)<<32;
 }
 
+__global__ void DESdecKernel_cbc(uint64_t *data) {
+	
+	((uint64_t *)des_SP)[threadIdx.x] = ((uint64_t *)des_d_sp_c)[threadIdx.x];
+	#if MAX_THREAD == 128
+		((uint64_t *)des_d_sp)[threadIdx.x+128] = ((uint64_t *)des_d_sp_c)[threadIdx.x+128];
+	#endif
+
+	__syncthreads();
+
+	register uint64_t load = data[TX];
+	register uint32_t right = load;
+	register uint32_t left = load >> 32;
+	
+	IP(right,left);
+
+	left=ROTATE(left,29);
+	right=ROTATE(right,29);
+
+	D_ENCRYPT(left,right,15);
+	D_ENCRYPT(right,left,14);
+	D_ENCRYPT(left,right,13);
+	D_ENCRYPT(right,left,12);
+	D_ENCRYPT(left,right,11);
+	D_ENCRYPT(right,left,10);
+	D_ENCRYPT(left,right, 9);
+	D_ENCRYPT(right,left, 8);
+	D_ENCRYPT(left,right, 7);
+	D_ENCRYPT(right,left, 6);
+	D_ENCRYPT(left,right, 5);
+	D_ENCRYPT(right,left, 4);
+	D_ENCRYPT(left,right, 3);
+	D_ENCRYPT(right,left, 2);
+	D_ENCRYPT(left,right, 1);
+	D_ENCRYPT(right,left, 0);
+
+	left=ROTATE(left,3);
+	right=ROTATE(right,3);
+
+	FP(right,left);
+	load=left|((uint64_t)right)<<32;
+	
+	if(TX == 0)
+		load ^= d_iv;
+	else
+		load ^= data[TX-1];
+	
+	__syncthreads();
+
+	data[TX] = load;
+
+}
+
 extern "C" void DES_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, EVP_CIPHER_CTX *ctx, uint8_t **host_data, uint64_t **device_data) {
 	int gridSize;
 
@@ -328,8 +381,10 @@ extern "C" void DES_cuda_crypt(const unsigned char *in, unsigned char *out, size
 
 	if(ctx->encrypt == DES_ENCRYPT) {
 		DESencKernel<<<gridSize,MAX_THREAD>>>(*device_data);
-	} else {
+	} else if (!ctx->encrypt && EVP_CIPHER_CTX_mode(ctx) == EVP_CIPH_ECB_MODE) {
 		DESdecKernel<<<gridSize,MAX_THREAD>>>(*device_data);
+	} else if (!ctx->encrypt && EVP_CIPHER_CTX_mode(ctx) == EVP_CIPH_CBC_MODE) {
+		DESdecKernel_cbc<<<gridSize,MAX_THREAD>>>(*device_data);
 	}
 	
 	CUDA_STOP_TIME("DES        ")
@@ -340,6 +395,11 @@ extern "C" void DES_cuda_crypt(const unsigned char *in, unsigned char *out, size
 extern "C" void DES_cuda_transfer_key_schedule(DES_key_schedule *ks) {
 	cudaError_t cudaerrno;
 	_CUDA(cudaMemcpyToSymbolAsync(cs,ks,sizeof(DES_key_schedule),0,cudaMemcpyHostToDevice));
+}
+
+extern "C" void DES_cuda_transfer_iv(const unsigned char *iv) {
+	cudaError_t cudaerrno;
+	_CUDA(cudaMemcpyToSymbolAsync(d_iv,iv,DES_BLOCK_SIZE,0,cudaMemcpyHostToDevice));
 }
 
 #else
