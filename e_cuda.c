@@ -157,6 +157,7 @@ IMPLEMENT_DYNAMIC_BIND_FN(cuda_bind_fn)
 
 static int cuda_cipher_nids[] = {
 	NID_bf_ecb,
+	NID_bf_cbc,
 	NID_camellia_128_ecb,
 	NID_cast5_ecb,
 	NID_des_ecb,
@@ -186,6 +187,8 @@ static int cuda_init_key(EVP_CIPHER_CTX *ctx, const unsigned char *key, const un
 	    BF_KEY key_schedule;
 	    BF_set_key(&key_schedule,ctx->key_len,key);
 	    BF_cuda_transfer_key_schedule(&key_schedule);
+	    if(iv)
+		BF_cuda_transfer_iv(iv);
 	    break;
 	  case NID_cast5_ecb:
 	    if (!quiet && verbose) fprintf(stdout,"Start calculating CAST5 key schedule...\n");
@@ -273,6 +276,7 @@ static int cuda_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigne
 	    cuda_device_crypt = DES_cuda_crypt;
 	    break;
 	  case NID_bf_ecb:
+	  case NID_bf_cbc:
 	    cuda_device_crypt = BF_cuda_crypt;
 	    break;
 	  case NID_cast5_ecb:
@@ -347,6 +351,7 @@ static const EVP_CIPHER cuda_##lciph##_##ksize##_##lmode = {  \
 #define NID_idea_64_cbc NID_idea_cbc
 
 DECLARE_EVP(bf,BF,128,ecb,ECB);
+DECLARE_EVP(bf,BF,128,cbc,CBC);
 DECLARE_EVP(camellia,CAMELLIA,128,ecb,ECB);
 DECLARE_EVP(cast,CAST,128,ecb,ECB);
 DECLARE_EVP(des,DES,64,ecb,ECB);
@@ -367,6 +372,9 @@ static int cuda_ciphers(ENGINE *e, const EVP_CIPHER **cipher, const int **nids, 
 	switch (nid) {
 	  case NID_bf_ecb:
 	    *cipher = &cuda_bf_ecb;
+	    break;
+	  case NID_bf_cbc:
+	    *cipher = &cuda_bf_cbc;
 	    break;
 	  case NID_camellia_128_ecb:
 	    *cipher = &cuda_camellia_128_ecb;
