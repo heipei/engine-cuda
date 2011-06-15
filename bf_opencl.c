@@ -31,6 +31,8 @@
 #include "common.h"
 #include "opencl_common.h"
 
+static cl_mem bf_iv = NULL;
+
 void BF_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, cl_mem *device_buffer, cl_mem *device_schedule, cl_command_queue queue, cl_kernel device_kernel, cl_context context) {
 	assert(in && out && nbytes);
 
@@ -51,6 +53,12 @@ void BF_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes,
 	clSetKernelArg(device_kernel, 0, sizeof(cl_mem), device_buffer);
 	clSetKernelArg(device_kernel, 1, sizeof(cl_mem), device_schedule);
 
+	cl_uint args;
+	clGetKernelInfo(device_kernel,CL_KERNEL_NUM_ARGS,4,&args,NULL);
+	if(args > 2 && bf_iv) {
+		clSetKernelArg(device_kernel, 2, sizeof(cl_mem), &bf_iv);
+	}
+
 	clEnqueueWriteBuffer(queue,*device_buffer,CL_TRUE,0,nbytes,in,0,NULL,NULL);
 
 	OPENCL_TIME_KERNEL("BF      ",1)
@@ -61,4 +69,10 @@ void BF_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes,
 void BF_opencl_transfer_key_schedule(BF_KEY *ks,cl_mem *device_schedule,cl_command_queue queue) {
 	assert(ks);
 	clEnqueueWriteBuffer(queue,*device_schedule,CL_TRUE,0,sizeof(BF_KEY),ks,0,NULL,NULL);
+}
+
+void BF_opencl_transfer_iv(cl_context context, const unsigned char *iv,cl_command_queue queue) {
+	cl_int error;
+	CL_ASSIGN(bf_iv = clCreateBuffer(context,CL_MEM_READ_ONLY,BF_BLOCK_SIZE,NULL,&error));
+	CL_WRAPPER(clEnqueueWriteBuffer(queue,bf_iv,CL_TRUE,0,BF_BLOCK_SIZE,iv,0,NULL,NULL));
 }

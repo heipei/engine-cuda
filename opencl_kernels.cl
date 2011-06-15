@@ -129,6 +129,46 @@ __kernel void BFdecKernel(__global unsigned long *data, __global unsigned int *p
 	data[get_global_id(0)] = block;
 }
 
+__kernel void BFdecKernel_cbc(__global unsigned long *data, __global unsigned int *p, __global unsigned long *d_iv) {
+	__private unsigned int l, r;
+	__private unsigned long block = data[get_global_id(0)];
+	
+	nl2i(block,l,r);
+
+	__global unsigned int *s=p+18;
+
+	l^=p[17];
+	BF_ENC(r,l,s,p[16]);
+	BF_ENC(l,r,s,p[15]);
+	BF_ENC(r,l,s,p[14]);
+	BF_ENC(l,r,s,p[13]);
+	BF_ENC(r,l,s,p[12]);
+	BF_ENC(l,r,s,p[11]);
+	BF_ENC(r,l,s,p[10]);
+	BF_ENC(l,r,s,p[ 9]);
+	BF_ENC(r,l,s,p[ 8]);
+	BF_ENC(l,r,s,p[ 7]);
+	BF_ENC(r,l,s,p[ 6]);
+	BF_ENC(l,r,s,p[ 5]);
+	BF_ENC(r,l,s,p[ 4]);
+	BF_ENC(l,r,s,p[ 3]);
+	BF_ENC(r,l,s,p[ 2]);
+	BF_ENC(l,r,s,p[ 1]);
+	r^=p[0];
+
+	block = ((unsigned long)r) << 32 | l;
+	flip64(block);
+	
+	if(get_global_id(0) == 0)
+		block ^= *d_iv;
+	else
+		block ^= data[get_global_id(0) - 1];
+	
+	barrier(CLK_GLOBAL_MEM_FENCE);
+	
+	data[get_global_id(0)] = block;
+}
+
 // ###########
 // # AES ECB #
 // ###########

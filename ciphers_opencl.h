@@ -40,6 +40,7 @@ int AES_opencl_set_decrypt_key(const unsigned char *userKey, const int bits, AES
 #include <openssl/blowfish.h>
 void BF_opencl_transfer_key_schedule(BF_KEY *ks,cl_mem *device_schedule,cl_command_queue queue);
 void BF_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, cl_mem *device_buffer, cl_mem *device_schedule, cl_command_queue queue, cl_kernel device_kernel, cl_context context);
+void BF_opencl_transfer_iv(cl_context, const unsigned char*, cl_command_queue);
 
 #include <openssl/des.h>
 void DES_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, cl_mem *device_buffer, cl_mem *device_schedule, cl_command_queue queue, cl_kernel device_kernel, cl_context context);
