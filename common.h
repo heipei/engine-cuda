@@ -67,7 +67,7 @@
 #define CAMELLIA_KEY_SIZE_192	24
 #define CAMELLIA_KEY_SIZE_256	32
 
-void cuda_device_init(int *nm, int buffer_size, int output_verbosity, uint8_t **host_data, uint64_t **device_data);
+void cuda_device_init(int *nm, int buffer_size, int output_verbosity, uint8_t **host_data, uint64_t **device_data, uint64_t**);
 void cuda_device_finish(uint8_t *host_data, uint64_t *device_data);
 
 

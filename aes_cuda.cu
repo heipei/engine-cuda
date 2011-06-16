@@ -885,13 +885,11 @@ uint8_t  *h_iv;
 		load ^= (uint64_t)aes_key[2] | ((uint64_t)aes_key[3] << 32); \
 		s2 = load; \
 		s3 = load >> 32; 
-		//cuPrintf("s0: %x, s1: %x, s2: %x, s3: %x\n", s0, s1, s2, s3);
 #else
 	#define GLOBAL_LOAD_SHARED_SETUP \
 		__shared__ uint32_t t[MAX_THREAD]; \
 		__shared__ uint32_t s[MAX_THREAD]; \
 		s[SX] = data[__umul24(blockIdx.x,MAX_THREAD)+SX] ^ aes_key[threadIdx.x]; 
-		//cuPrintf("s0: %x, s1: %x, s2: %x, s3: %x\n", s[0], s[1], s[2], s[3]);
 #endif
 
 __global__ void AES128encKernel(DATA_TYPE data[]) {
@@ -1006,20 +1004,19 @@ __global__ void AES256encKernel(DATA_TYPE data[]) {
 		AES_FINAL_DEC_STEP(N,1,0,3,2); \
 		AES_FINAL_DEC_STEP(N,2,1,0,3); \
 		AES_FINAL_DEC_STEP(N,3,2,1,0); \
-		__syncthreads(); \
 		if(blockIdx.x == 0 && threadIdx.x == 0) { \
 			load = ((uint64_t)s0) | ((uint64_t)s1) << 32; \
 			load ^= d_iv[0]; \
-			data[0] = load; \
+			data_out[0] = load; \
 			load = ((uint64_t)s2) | ((uint64_t)s3) << 32; \
 			load ^= d_iv[1]; \
-			data[1] = load; \
+			data_out[1] = load; \
 		} else { \
 			load = ((uint64_t)s0 | (((uint64_t)s1) << 32)) ^ data[2*(TX-1)]; \
-			data[2*TX] = load; \
+			data_out[2*TX] = load; \
 			load = ((uint64_t)s2 | (((uint64_t)s3) << 32)) ^ data[2*(TX-1)+1]; \
-			data[2*TX+1] = load; \
-		}	
+			data_out[2*TX+1] = load; \
+		}
 
 #else
 
@@ -1105,7 +1102,7 @@ __global__ void AES256decKernel(DATA_TYPE data[]) {
 	AES_FINAL_DEC_ROUND(56);
 }
 
-__global__ void AES128decKernel_cbc(DATA_TYPE data[]) {
+__global__ void AES128decKernel_cbc(DATA_TYPE data[], DATA_TYPE data_out[]) {
 
 	GLOBAL_LOAD_SHARED_SETUP
 	COPY_CONSTANT_SHARED_DEC
@@ -1122,7 +1119,7 @@ __global__ void AES128decKernel_cbc(DATA_TYPE data[]) {
 	AES_FINAL_DEC_ROUND_CBC(40);
 }
 
-__global__ void AES192decKernel_cbc(DATA_TYPE data[]) {
+__global__ void AES192decKernel_cbc(DATA_TYPE data[], DATA_TYPE data_out[]) {
 
 	GLOBAL_LOAD_SHARED_SETUP
 	COPY_CONSTANT_SHARED_DEC
@@ -1141,7 +1138,7 @@ __global__ void AES192decKernel_cbc(DATA_TYPE data[]) {
 	AES_FINAL_DEC_ROUND_CBC(48);
 }
 
-__global__ void AES256decKernel_cbc(DATA_TYPE data[]) {
+__global__ void AES256decKernel_cbc(DATA_TYPE data[], DATA_TYPE data_out[]) {
 
 	GLOBAL_LOAD_SHARED_SETUP
 	COPY_CONSTANT_SHARED_DEC
@@ -1162,8 +1159,19 @@ __global__ void AES256decKernel_cbc(DATA_TYPE data[]) {
 	AES_FINAL_DEC_ROUND_CBC(56);
 }
 
+extern "C" void AES_cuda_transfer_key_schedule(AES_KEY *ks) {
+	assert(ks);
+	cudaError_t cudaerrno;
+	size_t ks_size = sizeof(AES_KEY);
+	_CUDA(cudaMemcpyToSymbolAsync(aes_key,ks,ks_size,0,cudaMemcpyHostToDevice));
+}
 
-extern "C" void AES_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, EVP_CIPHER_CTX *ctx, uint8_t **host_data, uint64_t **device_data) {
+extern "C" void AES_cuda_transfer_iv(const unsigned char *iv) {
+	cudaError_t cudaerrno;
+	_CUDA(cudaMemcpyToSymbolAsync(d_iv,iv,AES_BLOCK_SIZE,0,cudaMemcpyHostToDevice));
+}
+
+extern "C" void AES_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, EVP_CIPHER_CTX *ctx, uint8_t **host_data, uint64_t **device_data, uint64_t **device_data_out) {
 	int gridSize;
 
 	transferHostToDevice(&in, (uint32_t **)device_data, host_data, &nbytes);
@@ -1198,6 +1206,7 @@ extern "C" void AES_cuda_crypt(const unsigned char *in, unsigned char *out, size
 				AES256encKernel<<<gridSize,dimBlock>>>((DATA_TYPE *)*device_data);
 				break;
 		}
+		transferDeviceToHost(&out, (uint32_t **)device_data, host_data, host_data, &nbytes);
 	} else if (!ctx->encrypt && EVP_CIPHER_CTX_mode(ctx) == EVP_CIPH_ECB_MODE) {
 		switch(EVP_CIPHER_CTX_key_length(ctx)) {
 			case 16:
@@ -1210,35 +1219,25 @@ extern "C" void AES_cuda_crypt(const unsigned char *in, unsigned char *out, size
 				AES256decKernel<<<gridSize,dimBlock>>>((DATA_TYPE *)*device_data);
 				break;
 		}
+		transferDeviceToHost(&out, (uint32_t **)device_data, host_data, host_data, &nbytes);
 	}
 
 	if (!ctx->encrypt && EVP_CIPHER_CTX_mode(ctx) == EVP_CIPH_CBC_MODE) {
 		switch(EVP_CIPHER_CTX_key_length(ctx)) {
 			case 16:
-				AES128decKernel_cbc<<<gridSize,dimBlock>>>((DATA_TYPE *)*device_data);
+				AES128decKernel_cbc<<<gridSize,dimBlock>>>((DATA_TYPE *)*device_data,(DATA_TYPE *)*device_data_out);
 				break;
 			case 24:
-				AES192decKernel_cbc<<<gridSize,dimBlock>>>((DATA_TYPE *)*device_data);
+				AES192decKernel_cbc<<<gridSize,dimBlock>>>((DATA_TYPE *)*device_data,(DATA_TYPE *)*device_data_out);
 				break;
 			case 32:
-				AES256decKernel_cbc<<<gridSize,dimBlock>>>((DATA_TYPE *)*device_data);
+				AES256decKernel_cbc<<<gridSize,dimBlock>>>((DATA_TYPE *)*device_data,(DATA_TYPE *)*device_data_out);
 				break;
 		}
+		transferDeviceToHost(&out, (uint32_t **)device_data_out, host_data, host_data, &nbytes);
+		AES_cuda_transfer_iv(in+nbytes-AES_BLOCK_SIZE);
 	}
 
 	CUDA_STOP_TIME("AES        ")
-
-	transferDeviceToHost(&out, (uint32_t **)device_data, host_data, host_data, &nbytes);
 }
 
-extern "C" void AES_cuda_transfer_key_schedule(AES_KEY *ks) {
-	assert(ks);
-	cudaError_t cudaerrno;
-	size_t ks_size = sizeof(AES_KEY);
-	_CUDA(cudaMemcpyToSymbolAsync(aes_key,ks,ks_size,0,cudaMemcpyHostToDevice));
-}
-
-extern "C" void AES_cuda_transfer_iv(const unsigned char *iv) {
-	cudaError_t cudaerrno;
-	_CUDA(cudaMemcpyToSymbolAsync(d_iv,iv,AES_BLOCK_SIZE,0,cudaMemcpyHostToDevice));
-}

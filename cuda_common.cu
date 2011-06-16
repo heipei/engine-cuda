@@ -37,7 +37,8 @@ extern "C" void transferHostToDevice_PINNED   (const unsigned char **input, uint
 		memcpy(*hostMem,*input,*size);
         	_CUDA(cudaMemcpyAsync(*deviceMem, *hostMem, *size, cudaMemcpyHostToDevice, 0));
 	} else {
-		_CUDA(cudaMemcpy(*deviceMem, *input, *size, cudaMemcpyHostToDevice));
+		//fprintf(stdout, "Now trying cudaMemcpy\n");
+		_CUDA(cudaMemcpyAsync(*deviceMem, *input, *size, cudaMemcpyHostToDevice,0));
 	}
 }
 #if CUDART_VERSION >= 2020
@@ -57,9 +58,13 @@ extern "C" void transferHostToDevice_PAGEABLE (const unsigned char **input, uint
 #ifndef PAGEABLE
 extern "C" void transferDeviceToHost_PINNED   (unsigned char **output, uint32_t **deviceMem, uint8_t **hostMemS, uint8_t **hostMemOUT, size_t *size) {
 	cudaError_t cudaerrno;
-        _CUDA(cudaMemcpyAsync(*hostMemS, *deviceMem, *size, cudaMemcpyDeviceToHost, 0));
-	_CUDA(cudaThreadSynchronize());
-	memcpy(*output,*hostMemS,*size);
+	if(*size <= 1048576) {
+        	_CUDA(cudaMemcpyAsync(*hostMemS, *deviceMem, *size, cudaMemcpyDeviceToHost, 0));
+		_CUDA(cudaThreadSynchronize());
+		memcpy(*output,*hostMemS,*size);
+	} else {
+		_CUDA(cudaMemcpyAsync(*output, *deviceMem, *size, cudaMemcpyDeviceToHost, 0));
+	}
 }
 #if CUDART_VERSION >= 2020
 extern "C" void transferDeviceToHost_ZEROCOPY (unsigned char **output, uint32_t **deviceMem, uint8_t **hostMemS, uint8_t **hostMemOUT, size_t *size) {
@@ -132,7 +137,7 @@ void checkCUDADevice(struct cudaDeviceProp *deviceProp, int output_verbosity) {
 	}
 }
 
-extern "C" void cuda_device_init(int *nm, int buffer_size, int output_verbosity, uint8_t **host_data, uint64_t **device_data) {
+extern "C" void cuda_device_init(int *nm, int buffer_size, int output_verbosity, uint8_t **host_data, uint64_t **device_data, uint64_t **device_data_out) {
 	assert(nm);
 	cudaError_t cudaerrno;
 	cudaDeviceProp deviceProp;
@@ -168,6 +173,7 @@ extern "C" void cuda_device_init(int *nm, int buffer_size, int output_verbosity,
 		transferHostToDevice = transferHostToDevice_PINNED;	// set memory transfer function
 		transferDeviceToHost = transferDeviceToHost_PINNED;	// set memory transfer function
 		_CUDA(cudaMalloc((void **)device_data,buffer_size));
+		_CUDA(cudaMalloc((void **)device_data_out,buffer_size));
 	}
 #else
         //pinned memory mode - use special function to get OS-pinned memory
@@ -176,12 +182,14 @@ extern "C" void cuda_device_init(int *nm, int buffer_size, int output_verbosity,
 	transferHostToDevice = transferHostToDevice_PINNED;			// set memory transfer function
 	transferDeviceToHost = transferDeviceToHost_PINNED;			// set memory transfer function
 	_CUDA(cudaMalloc((void **)device_data,buffer_size));
+	_CUDA(cudaMalloc((void **)device_data_out,buffer_size));
 #endif
 #else
         if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"Using pageable memory.\n");
 	transferHostToDevice = transferHostToDevice_PAGEABLE;			// set memory transfer function
 	transferDeviceToHost = transferDeviceToHost_PAGEABLE;			// set memory transfer function
 	_CUDA(cudaMalloc((void **)device_data,buffer_size));
+	_CUDA(cudaMalloc((void **)device_data_out,buffer_size));
 #endif
 
 	if (output_verbosity!=OUTPUT_QUIET) fprintf(stdout,"The current buffer size is %d.\n\n", buffer_size);
@@ -203,18 +211,14 @@ extern "C" void cuda_device_finish(uint8_t *host_data, uint64_t *device_data) {
 #if CUDART_VERSION >= 2020
 	if(isIntegrated) {
 		_CUDA(cudaFreeHost(host_data));
-		//_CUDA(cudaFreeHost(h_iv));
 	} else {
 		_CUDA(cudaFree(device_data));
-		//_CUDA(cudaFree(d_iv));
 	}
 #else	
 	_CUDA(cudaFree(device_data));
-	//_CUDA(cudaFree(d_iv));
 #endif
 #else
 	_CUDA(cudaFree(device_data));
-	//_CUDA(cudaFree(d_iv));
 #endif	
 
 	if(output_verbosity>=OUTPUT_NORMAL) {
