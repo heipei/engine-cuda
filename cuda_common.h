@@ -23,6 +23,7 @@
  */
 #include <stdint.h>
 #include <cuda_runtime_api.h>
+#include <openssl/evp.h>
 #ifdef DEBUG
 	#include <sys/time.h>
 #endif

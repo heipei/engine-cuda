@@ -70,6 +70,17 @@
 void cuda_device_init(int *nm, int buffer_size, int output_verbosity, uint8_t **host_data, uint64_t **device_data, uint64_t**);
 void cuda_device_finish(uint8_t *host_data, uint64_t *device_data);
 
+#include <openssl/evp.h>
+typedef struct cuda_crypt_parameters_st {
+	const unsigned char *in;	// host input buffer 
+	unsigned char *out;		// host output buffer
+	size_t nbytes;			// number of bytes to be operated on
+	EVP_CIPHER_CTX *ctx;		// EVP OpenSSL structure
+	uint8_t **host_data;		// possible page-locked host memory
+	uint64_t **d_in;		// Device memory (input)
+	uint64_t **d_out;		// Device memory (output)
+} cuda_crypt_parameters;
+
 
 // Split uint64_t into two uint32_t and convert each from BE to LE
 #define nl2i(s,a,b)      a = ((s >> 24L) & 0x000000ff) | \

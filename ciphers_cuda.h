@@ -27,20 +27,16 @@
 #include <assert.h>
 #include <memory.h>
 #include <openssl/engine.h>
-#include <openssl/evp.h>
 #include <cuda_runtime_api.h>
 
+#include "common.h"
+
 #include <openssl/aes.h>
-void AES_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, EVP_CIPHER_CTX *ctx, uint8_t **host_data, uint64_t **device_data);
+void AES_cuda_crypt(cuda_crypt_parameters *crypt);
 void AES_cuda_transfer_key_schedule(AES_KEY *ks);
 int AES_cuda_set_encrypt_key(const unsigned char *userKey, const int bits, AES_KEY *key);
 int AES_cuda_set_decrypt_key(const unsigned char *userKey, const int bits, AES_KEY *key);
 void AES_cuda_transfer_iv(const unsigned char *iv);
-
-/*
-void AES_cuda_init(int* nm,int buffer_size_engine,int verbosity);
-void AES_cuda_finish();
-*/
 
 #include <openssl/blowfish.h>
 void BF_cuda_transfer_key_schedule(const BF_KEY *key);

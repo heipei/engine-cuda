@@ -34,7 +34,7 @@
 
 static int cuda_ciphers (ENGINE *e, const EVP_CIPHER **cipher, const int **nids, int nid);
 static int cuda_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigned char *in_arg, size_t nbytes);
-void (*cuda_device_crypt) (const unsigned char *in_arg, unsigned char *out_arg, size_t nbytes, EVP_CIPHER_CTX *ctx, uint8_t **host_data, uint64_t **device_data, uint64_t **device_data_out);
+void (*cuda_device_crypt) (cuda_crypt_parameters *crypt);
 void (*transferHostToDevice) (const unsigned char  **input, uint32_t **deviceMem, uint8_t **hostMem, size_t *size);
 void (*transferDeviceToHost) (      unsigned char **output, uint32_t **deviceMem, uint8_t **hostMemS, uint8_t **hostMemOUT, size_t *size);
 
@@ -50,7 +50,7 @@ static int initialized = 0;
 static char *library_path=NULL;
 static int maxbytes = 8388608;
 
-static __device__ uint64_t *device_data;
+static __device__ uint64_t *device_data_in;
 static __device__ uint64_t *device_data_out;
 static uint8_t *host_data;
 
@@ -70,7 +70,7 @@ int inc_verbose(void) {
 }
 
 int cuda_finish(ENGINE * engine) {
-	cuda_device_finish(host_data,device_data);
+	cuda_device_finish(host_data,device_data_in);
 
 	return 1;
 }
@@ -83,7 +83,7 @@ int cuda_init(ENGINE * engine) {
 	if(verbose) 
 		verbosity=OUTPUT_VERBOSE;
 
-	cuda_device_init(&num_multiprocessors,buffer_size,verbosity,&host_data,&device_data,&device_data_out);
+	cuda_device_init(&num_multiprocessors,buffer_size,verbosity,&host_data,&device_data_in,&device_data_out);
 
 	initialized=1;
 	return 1;
@@ -275,6 +275,8 @@ static int cuda_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigne
 	size_t current=0;
 	int chunk;
 
+	cuda_crypt_parameters crypt = {in_arg, out_arg, nbytes, ctx, &host_data, &device_data_in, &device_data_out};
+
 	switch(EVP_CIPHER_CTX_nid(ctx)) {
 	  case NID_des_ecb:
 	  case NID_des_cbc:
@@ -308,10 +310,10 @@ static int cuda_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigne
 	while (nbytes!=current) {
 		chunk=(nbytes-current)/maxbytes;
 		if(chunk>=1) {
-			cuda_device_crypt((in_arg+current),(out_arg+current),maxbytes,ctx,&host_data,&device_data,&device_data_out);
+			cuda_device_crypt(&crypt);
 			current+=maxbytes;  
 		} else {
-			cuda_device_crypt((in_arg+current),(out_arg+current),(nbytes-current),ctx,&host_data,&device_data,&device_data_out);
+			cuda_device_crypt(&crypt);
 			current+=(nbytes-current);
 		}
 	}
