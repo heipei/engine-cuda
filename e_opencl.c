@@ -44,7 +44,7 @@
 
 static int opencl_ciphers (ENGINE *e, const EVP_CIPHER **cipher, const int **nids, int nid);
 static int opencl_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigned char *in_arg, size_t nbytes);
-void (*opencl_device_crypt) (const unsigned char *in, unsigned char *out, size_t nbytes, int enc, cl_mem *device_buffer, cl_mem *device_schedule, cl_command_queue queue, cl_kernel device_kernel, cl_context context);
+void (*opencl_device_crypt) (opencl_crypt_parameters *c);
 
 int buffer_size = 0;
 #ifdef DEBUG
@@ -475,17 +475,25 @@ int opencl_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigned cha
 	}
 	}
 
+	opencl_crypt_parameters c = { in_arg,out_arg,nbytes,ctx,NULL,&device_buffer,NULL,&device_schedule,&queue,device_kernel,&context};
+
 	while (nbytes!=current) {
 		chunk=(nbytes-current)/maxbytes;
 		if(chunk>=1) {
 			//memcpy(host_data,in_arg+current,maxbytes);
-			opencl_device_crypt(in_arg+current,out_arg+current,maxbytes,ctx->encrypt,&device_buffer,&device_schedule,queue,*device_kernel, context);
+			opencl_device_crypt(&c);
 			//memcpy(out_arg+current,host_data,maxbytes);
 			current+=maxbytes;  
+			c.nbytes-=maxbytes;
+			c.in+=maxbytes;
+			c.out+=maxbytes;
 		} else {
 			//memcpy(host_data,in_arg+current,nbytes-current);
-			opencl_device_crypt(in_arg+current,out_arg+current,(nbytes-current),ctx->encrypt,&device_buffer,&device_schedule,queue,*device_kernel, context);
+			opencl_device_crypt(&c);
 			current+=(nbytes-current);
+			c.nbytes-=(nbytes-current);
+			c.in+=(nbytes-current);
+			c.out+=(nbytes-current);
 		}
 	}
 

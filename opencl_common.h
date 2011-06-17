@@ -21,6 +21,9 @@
  * along with engine-cuda. If not, see <http://www.gnu.org/licenses/>.
  *
  */
+#ifndef __OPENCL_COMMON_H
+#define __OPENCL_COMMON_H
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -43,28 +46,44 @@ void check_opencl_error(cl_int error);
 int timeval_subtract (struct timeval *result, struct timeval *x, struct timeval *y);
 const char *cl_error_to_str(cl_int e);
 
+#include <openssl/evp.h>
+#include <CL/opencl.h>
+typedef struct opencl_crypt_parameters_st {
+	const unsigned char *in;	// host input buffer 
+	unsigned char *out;		// host output buffer
+	size_t nbytes;			// number of bytes to be operated on
+	EVP_CIPHER_CTX *ctx;		// EVP OpenSSL structure
+	uint8_t **host_data;		// possible page-locked host memory
+	cl_mem *d_in;			// Device memory (input)
+	cl_mem *d_out;			// Device memory (output)
+	cl_mem *d_schedule;		// Device schedule
+	cl_command_queue *queue;
+	cl_kernel *d_kernel;
+	cl_context *context;
+} opencl_crypt_parameters;
+
 #ifdef DEBUG
 	#define OPENCL_TIME_KERNEL(NAME,DIM) \
 		cl_event event; \
-		clFinish(queue); \
+		clFinish(*c->queue); \
 		struct timeval starttime,curtime,difference; \
 		gettimeofday(&starttime, NULL); \
 		fprintf(stdout, "nbytes: %zu, gridsize: %zu, blocksize: %zu\n", nbytes, gridSize[0], blockSize[0]); \
 		\
 		clEnqueueNDRangeKernel(queue,device_kernel, DIM, NULL,gridSize, blockSize, 0, NULL, &event); \
 		\
-		clFinish(queue); \
+		clFinish(*c->queue); \
 		cl_ulong start, end; \
 		clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_END,sizeof(cl_ulong), &end, NULL); \
 		clGetEventProfilingInfo(event, CL_PROFILING_COMMAND_START,sizeof(cl_ulong), &start, NULL); \
 		gettimeofday(&curtime, NULL); \
 		timeval_subtract(&difference,&curtime,&starttime); \
 		unsigned long opencl_time = (end - start) / 1000; \
-		fprintf(stdout, NAME " OpenCL %zu bytes, %06lu usecs, %lu Mb/s\n", nbytes, opencl_time, (1000000/opencl_time * 8 * (unsigned int)nbytes / 1024 / 1024)); \
-		fprintf(stdout, NAME " OpenCs %zu bytes, %06d usecs, %u Mb/s\n", nbytes, (int)difference.tv_usec, (1000000/(unsigned int)difference.tv_usec * 8 * (unsigned int)nbytes / 1024 / 1024));
+		fprintf(stdout, NAME " OpenCL %zu bytes, %06lu usecs, %lu Mb/s\n", c->nbytes, opencl_time, (1000000/opencl_time * 8 * (unsigned int)nbytes / 1024 / 1024)); \
+		fprintf(stdout, NAME " OpenCs %zu bytes, %06d usecs, %u Mb/s\n", c->nbytes, (int)difference.tv_usec, (1000000/(unsigned int)difference.tv_usec * 8 * (unsigned int)c->nbytes / 1024 / 1024));
 #else
 	#define OPENCL_TIME_KERNEL(NAME,DIM) \
-		clEnqueueNDRangeKernel(queue,device_kernel, DIM, NULL,gridSize, blockSize, 0, NULL, NULL); 
+		clEnqueueNDRangeKernel(*c->queue,*c->d_kernel, DIM, NULL,gridSize, blockSize, 0, NULL, NULL); 
 #endif
 
 #ifndef __OPENCL_HELPER_MACROS__
@@ -90,4 +109,5 @@ int err;
     }
  
  
+#endif
 #endif

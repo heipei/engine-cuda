@@ -180,15 +180,15 @@ uint32_t des_d_sp_host[8][64]={
 static cl_mem des_sbox = NULL;
 static cl_mem des_iv = NULL;
 
-void DES_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, cl_mem *device_buffer, cl_mem *device_schedule, cl_command_queue queue, cl_kernel device_kernel, cl_context context) {
+void DES_opencl_crypt(opencl_crypt_parameters *c) {
 
 	size_t gridSize[3] = {1, 0, 0};
 	size_t blockSize[3] = {MAX_THREAD, 0, 0};
 	
-	if ((nbytes%DES_BLOCK_SIZE)==0) {
-		gridSize[0] = nbytes/DES_BLOCK_SIZE;
+	if ((c->nbytes%DES_BLOCK_SIZE)==0) {
+		gridSize[0] = c->nbytes/DES_BLOCK_SIZE;
 	} else {
-		gridSize[0] = nbytes/DES_BLOCK_SIZE+1;
+		gridSize[0] = c->nbytes/DES_BLOCK_SIZE+1;
 	}
 
 	if(gridSize[0] < MAX_THREAD) {
@@ -197,25 +197,25 @@ void DES_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes
 
 	if(!des_sbox) {
 		cl_int error;
-		CL_ASSIGN(des_sbox = clCreateBuffer(context, CL_MEM_READ_ONLY, 2048, NULL, &error));
-		CL_WRAPPER(clEnqueueWriteBuffer(queue,des_sbox,CL_TRUE,0,2048,des_d_sp_host,0,NULL,NULL));
+		CL_ASSIGN(des_sbox = clCreateBuffer(*c->context, CL_MEM_READ_ONLY, 2048, NULL, &error));
+		CL_WRAPPER(clEnqueueWriteBuffer(*c->queue,des_sbox,CL_TRUE,0,2048,des_d_sp_host,0,NULL,NULL));
 
-		clSetKernelArg(device_kernel, 0, sizeof(cl_mem), device_buffer);
-		clSetKernelArg(device_kernel, 1, sizeof(cl_mem), &des_sbox);
-		clSetKernelArg(device_kernel, 2, sizeof(cl_mem), device_schedule);
+		clSetKernelArg(*c->d_kernel, 0, sizeof(cl_mem), *c->d_in);
+		clSetKernelArg(*c->d_kernel, 1, sizeof(cl_mem), &des_sbox);
+		clSetKernelArg(*c->d_kernel, 2, sizeof(cl_mem), *c->d_schedule);
 	}
 
 	cl_uint args;
-	clGetKernelInfo(device_kernel,CL_KERNEL_NUM_ARGS,4,&args,NULL);
+	clGetKernelInfo(*c->d_kernel,CL_KERNEL_NUM_ARGS,4,&args,NULL);
 	if(args > 3 && des_iv) {
-		clSetKernelArg(device_kernel, 3, sizeof(cl_mem), &des_iv);
+		clSetKernelArg(*c->d_kernel, 3, sizeof(cl_mem), &des_iv);
 	}
 
-	clEnqueueWriteBuffer(queue,*device_buffer,CL_TRUE,0,nbytes,in,0,NULL,NULL);
+	clEnqueueWriteBuffer(*c->queue,*c->d_in,CL_TRUE,0,c->nbytes,c->in,0,NULL,NULL);
 
 	OPENCL_TIME_KERNEL("DES     ",1)
 
-	clEnqueueReadBuffer(queue,*device_buffer,CL_TRUE,0,nbytes,out,0,NULL,NULL);
+	clEnqueueReadBuffer(*c->queue,*c->d_in,CL_TRUE,0,c->nbytes,c->out,0,NULL,NULL);
 
 }
 

@@ -33,16 +33,15 @@
 
 static cl_mem bf_iv = NULL;
 
-void BF_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, cl_mem *device_buffer, cl_mem *device_schedule, cl_command_queue queue, cl_kernel device_kernel, cl_context context) {
-	assert(in && out && nbytes);
+void BF_opencl_crypt(opencl_crypt_parameters *c) {
 
 	size_t gridSize[3] = {1, 0, 0};
 	size_t blockSize[3] = {MAX_THREAD, 0, 0};
 	
-	if ((nbytes%BF_BLOCK_SIZE)==0) {
-		gridSize[0] = nbytes/BF_BLOCK_SIZE;
+	if ((c->nbytes%BF_BLOCK_SIZE)==0) {
+		gridSize[0] = c->nbytes/BF_BLOCK_SIZE;
 	} else {
-		gridSize[0] = nbytes/BF_BLOCK_SIZE+1;
+		gridSize[0] = c->nbytes/BF_BLOCK_SIZE+1;
 	}
 
 	if(gridSize[0] < MAX_THREAD) {
@@ -50,20 +49,20 @@ void BF_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes,
 	}
 
 	//fprintf(stdout, "\nMax buffer size: %d, BF_KEY size: %zu\n", CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE, sizeof(BF_KEY));
-	clSetKernelArg(device_kernel, 0, sizeof(cl_mem), device_buffer);
-	clSetKernelArg(device_kernel, 1, sizeof(cl_mem), device_schedule);
+	clSetKernelArg(*c->d_kernel, 0, sizeof(cl_mem), *c->d_in);
+	clSetKernelArg(*c->d_kernel, 1, sizeof(cl_mem), *c->d_schedule);
 
 	cl_uint args;
-	clGetKernelInfo(device_kernel,CL_KERNEL_NUM_ARGS,4,&args,NULL);
+	clGetKernelInfo(*c->d_kernel,CL_KERNEL_NUM_ARGS,4,&args,NULL);
 	if(args > 2 && bf_iv) {
-		clSetKernelArg(device_kernel, 2, sizeof(cl_mem), &bf_iv);
+		clSetKernelArg(*c->d_kernel, 2, sizeof(cl_mem), &bf_iv);
 	}
 
-	clEnqueueWriteBuffer(queue,*device_buffer,CL_TRUE,0,nbytes,in,0,NULL,NULL);
+	clEnqueueWriteBuffer(*c->queue,*c->d_in,CL_TRUE,0,c->nbytes,c->in,0,NULL,NULL);
 
 	OPENCL_TIME_KERNEL("BF      ",1)
 
-	clEnqueueReadBuffer(queue,*device_buffer,CL_TRUE,0,nbytes,out,0,NULL,NULL);
+	clEnqueueReadBuffer(*c->queue,*c->d_in,CL_TRUE,0,c->nbytes,c->out,0,NULL,NULL);
 }
 
 void BF_opencl_transfer_key_schedule(BF_KEY *ks,cl_mem *device_schedule,cl_command_queue queue) {

@@ -637,7 +637,7 @@ uint32_t Ted[9][256] = {{
 	0xdabfbf65U,0x31e6e6d7U,0xc6424284U,0xb86868d0U,
 	0xc3414182U,0xb0999929U,0x772d2d5aU,0x110f0f1eU,
 	0xcbb0b07bU,0xfc5454a8U,0xd6bbbb6dU,0x3a16162cU,
-	},{
+},{
 	0x6363c6a5U,0x7c7cf884U,0x7777ee99U,0x7b7bf68dU,
 	0xf2f2ff0dU,0x6b6bd6bdU,0x6f6fdeb1U,0xc5c59154U,
 	0x30306050U,0x01010203U,0x6767cea9U,0x2b2b567dU,
@@ -702,7 +702,7 @@ uint32_t Ted[9][256] = {{
 	0xbfbf65daU,0xe6e6d731U,0x424284c6U,0x6868d0b8U,
 	0x414182c3U,0x999929b0U,0x2d2d5a77U,0x0f0f1e11U,
 	0xb0b07bcbU,0x5454a8fcU,0xbbbb6dd6U,0x16162c3aU,
-	},{
+},{
 	0x63c6a563U,0x7cf8847cU,0x77ee9977U,0x7bf68d7bU,
 	0xf2ff0df2U,0x6bd6bd6bU,0x6fdeb16fU,0xc59154c5U,
 	0x30605030U,0x01020301U,0x67cea967U,0x2b567d2bU,
@@ -767,7 +767,7 @@ uint32_t Ted[9][256] = {{
 	0xbf65dabfU,0xe6d731e6U,0x4284c642U,0x68d0b868U,
 	0x4182c341U,0x9929b099U,0x2d5a772dU,0x0f1e110fU,
 	0xb07bcbb0U,0x54a8fc54U,0xbb6dd6bbU,0x162c3a16U,
-	},{
+},{
 	0xc6a56363U,0xf8847c7cU,0xee997777U,0xf68d7b7bU,
 	0xff0df2f2U,0xd6bd6b6bU,0xdeb16f6fU,0x9154c5c5U,
 	0x60503030U,0x02030101U,0xcea96767U,0x567d2b2bU,
@@ -1130,16 +1130,16 @@ uint32_t Ted[9][256] = {{
 static cl_mem aes_sbox = NULL;
 static cl_mem aes_iv = NULL;
 
-void AES_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, cl_mem *device_buffer, cl_mem *device_schedule, cl_command_queue queue, cl_kernel device_kernel, cl_context context) {
+void AES_opencl_crypt(opencl_crypt_parameters *c) {
 
 	#ifdef AES_COARSE
-		size_t gridSize[3] = {nbytes/AES_BLOCK_SIZE, 0, 0};
+		size_t gridSize[3] = {c->nbytes/AES_BLOCK_SIZE, 0, 0};
 		size_t blockSize[3] = {MAX_THREAD, 0, 0};
 
-		if(nbytes%(MAX_THREAD*AES_BLOCK_SIZE)==0) {
-			gridSize[0] = nbytes/AES_BLOCK_SIZE;
+		if(c->nbytes%(MAX_THREAD*AES_BLOCK_SIZE)==0) {
+			gridSize[0] = c->nbytes/AES_BLOCK_SIZE;
 		} else {
-			gridSize[0] = ((nbytes/AES_BLOCK_SIZE)+MAX_THREAD)%MAX_THREAD;
+			gridSize[0] = ((c->nbytes/AES_BLOCK_SIZE)+MAX_THREAD)%MAX_THREAD;
 		}
 
 		if(gridSize[0] < MAX_THREAD) {
@@ -1149,11 +1149,11 @@ void AES_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes
 		size_t gridSize[3] = {1, 0, 0};
 		size_t blockSize[3] = {STATE_THREAD_AES,MAX_THREAD/STATE_THREAD_AES, 0};
 		
-		if ((nbytes%(MAX_THREAD*STATE_THREAD_DES))==0) {
-			gridSize[0] = nbytes/STATE_THREAD_AES/64;
+		if ((c->nbytes%(MAX_THREAD*STATE_THREAD_DES))==0) {
+			gridSize[0] = c->nbytes/STATE_THREAD_AES/64;
 			gridSize[1] = MAX_THREAD/STATE_THREAD_AES;
 		} else {
-			gridSize[0] = nbytes/STATE_THREAD_AES/64+1;
+			gridSize[0] = c->nbytes/STATE_THREAD_AES/64+1;
 			gridSize[1] = MAX_THREAD/STATE_THREAD_AES;
 		}
 
@@ -1164,20 +1164,20 @@ void AES_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes
 
 	if(!aes_sbox) {
 		cl_int error;
-		CL_ASSIGN(aes_sbox = clCreateBuffer(context, CL_MEM_READ_ONLY, 9216, NULL, &error));
-		CL_WRAPPER(clEnqueueWriteBuffer(queue,aes_sbox,CL_TRUE,0,9216,Ted,0,NULL,NULL));
+		CL_ASSIGN(aes_sbox = clCreateBuffer(*c->context, CL_MEM_READ_ONLY, 9216, NULL, &error));
+		CL_WRAPPER(clEnqueueWriteBuffer(*c->queue,aes_sbox,CL_TRUE,0,9216,Ted,0,NULL,NULL));
 
-		clSetKernelArg(device_kernel, 0, sizeof(cl_mem), device_buffer);
-		clSetKernelArg(device_kernel, 1, sizeof(cl_mem), &aes_sbox);
-		clSetKernelArg(device_kernel, 2, sizeof(cl_mem), device_schedule);
+		clSetKernelArg(*c->d_kernel, 0, sizeof(cl_mem), c->d_in);
+		clSetKernelArg(*c->d_kernel, 1, sizeof(cl_mem), &aes_sbox);
+		clSetKernelArg(*c->d_kernel, 2, sizeof(cl_mem), c->d_schedule);
 	}
 	cl_uint args;
-	clGetKernelInfo(device_kernel,CL_KERNEL_NUM_ARGS,4,&args,NULL);
+	clGetKernelInfo(*c->d_kernel,CL_KERNEL_NUM_ARGS,4,&args,NULL);
 	if(args > 3 && aes_iv) {
-		clSetKernelArg(device_kernel, 3, sizeof(cl_mem), &aes_iv);
+		clSetKernelArg(*c->d_kernel, 3, sizeof(cl_mem), &aes_iv);
 	}
 
-	clEnqueueWriteBuffer(queue,*device_buffer,CL_TRUE,0,nbytes,in,0,NULL,NULL);
+	clEnqueueWriteBuffer(*c->queue,*c->d_in,CL_TRUE,0,c->nbytes,c->in,0,NULL,NULL);
 	
 	#ifdef AES_COARSE
 		OPENCL_TIME_KERNEL("AES     ",1)
@@ -1185,7 +1185,7 @@ void AES_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes
 		OPENCL_TIME_KERNEL("AES     ",2)
 	#endif
 
-	clEnqueueReadBuffer(queue,*device_buffer,CL_TRUE,0,nbytes,out,0,NULL,NULL);
+	clEnqueueReadBuffer(*c->queue,*c->d_in,CL_TRUE,0,c->nbytes,c->out,0,NULL,NULL);
 }
 
 void AES_opencl_transfer_key_schedule(AES_KEY *ks, cl_mem *device_schedule,cl_command_queue queue) {

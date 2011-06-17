@@ -30,28 +30,28 @@
 #include "common.h"
 #include "opencl_common.h"
 
-void IDEA_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, cl_mem *device_buffer, cl_mem *device_schedule, cl_command_queue queue, cl_kernel device_kernel, cl_context context) {
+void IDEA_opencl_crypt(opencl_crypt_parameters *c) {
 	size_t gridSize[3] = {1, 0, 0};
 	size_t blockSize[3] = {MAX_THREAD, 0, 0};
 	
-	if ((nbytes%IDEA_BLOCK_SIZE)==0) {
-		gridSize[0] = nbytes/IDEA_BLOCK_SIZE;
+	if ((c->nbytes%IDEA_BLOCK_SIZE)==0) {
+		gridSize[0] = c->nbytes/IDEA_BLOCK_SIZE;
 	} else {
-		gridSize[0] = nbytes/IDEA_BLOCK_SIZE+1;
+		gridSize[0] = c->nbytes/IDEA_BLOCK_SIZE+1;
 	}
 
 	if(gridSize[0] < MAX_THREAD) {
 		blockSize[0] = gridSize[0] = MAX_THREAD;
 	}
 
-	clSetKernelArg(device_kernel, 0, sizeof(cl_mem), device_buffer);
-	clSetKernelArg(device_kernel, 1, sizeof(cl_mem), device_schedule);
+	clSetKernelArg(*c->d_kernel, 0, sizeof(cl_mem), c->d_in);
+	clSetKernelArg(*c->d_kernel, 1, sizeof(cl_mem), c->d_schedule);
 
-	clEnqueueWriteBuffer(queue,*device_buffer,CL_TRUE,0,nbytes,in,0,NULL,NULL);
+	clEnqueueWriteBuffer(*c->queue,*c->d_in,CL_TRUE,0,c->nbytes,c->in,0,NULL,NULL);
 
 	OPENCL_TIME_KERNEL("IDEA    ",1)
 
-	clEnqueueReadBuffer(queue,*device_buffer,CL_TRUE,0,nbytes,out,0,NULL,NULL);
+	clEnqueueReadBuffer(*c->queue,*c->d_in,CL_TRUE,0,c->nbytes,c->out,0,NULL,NULL);
 }
 
 void IDEA_opencl_transfer_key_schedule(IDEA_KEY_SCHEDULE *ks, cl_mem *device_schedule, cl_command_queue queue) {

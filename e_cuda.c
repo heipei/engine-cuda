@@ -311,10 +311,14 @@ static int cuda_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigne
 		chunk=(nbytes-current)/maxbytes;
 		if(chunk>=1) {
 			cuda_device_crypt(&crypt);
-			current+=maxbytes;  
+			current+=maxbytes;
+			crypt.in+=maxbytes;
+			crypt.out+=maxbytes;
 		} else {
 			cuda_device_crypt(&crypt);
 			current+=(nbytes-current);
+			crypt.in+=(nbytes-current);
+			crypt.out+=(nbytes-current);
 		}
 	}
 

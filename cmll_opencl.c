@@ -207,14 +207,14 @@ unsigned int CMLL_SBOX[1024] = {
 
 static cl_mem cmll_stable = NULL;
 
-void CMLL_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, int enc, cl_mem *device_buffer, cl_mem *device_schedule, cl_command_queue queue, cl_kernel device_kernel, cl_context context) {
+void CMLL_opencl_crypt(opencl_crypt_parameters *c) {
 	size_t gridSize[3] = {1, 0, 0};
 	size_t blockSize[3] = {MAX_THREAD, 0, 0};
 	
-	if ((nbytes%CMLL_BLOCK_SIZE)==0) {
-		gridSize[0] = nbytes/CMLL_BLOCK_SIZE;
+	if ((c->nbytes%CMLL_BLOCK_SIZE)==0) {
+		gridSize[0] = c->nbytes/CMLL_BLOCK_SIZE;
 	} else {
-		gridSize[0] = nbytes/CMLL_BLOCK_SIZE+1;
+		gridSize[0] = c->nbytes/CMLL_BLOCK_SIZE+1;
 	}
 
 	if(gridSize[0] < MAX_THREAD) {
@@ -223,19 +223,19 @@ void CMLL_opencl_crypt(const unsigned char *in, unsigned char *out, size_t nbyte
 
 	if(!cmll_stable) {
 		cl_int error;
-		CL_ASSIGN(cmll_stable = clCreateBuffer(context, CL_MEM_READ_ONLY, 4096, NULL, &error));
-		CL_WRAPPER(clEnqueueWriteBuffer(queue,cmll_stable,CL_TRUE,0,4096,CMLL_SBOX,0,NULL,NULL));
+		CL_ASSIGN(cmll_stable = clCreateBuffer(*c->context, CL_MEM_READ_ONLY, 4096, NULL, &error));
+		CL_WRAPPER(clEnqueueWriteBuffer(*c->queue,cmll_stable,CL_TRUE,0,4096,CMLL_SBOX,0,NULL,NULL));
 
-		clSetKernelArg(device_kernel, 0, sizeof(cl_mem), device_buffer);
-		clSetKernelArg(device_kernel, 1, sizeof(cl_mem), device_schedule);
-		clSetKernelArg(device_kernel, 2, sizeof(cl_mem), &cmll_stable);
+		clSetKernelArg(*c->d_kernel, 0, sizeof(cl_mem), *c->d_in);
+		clSetKernelArg(*c->d_kernel, 1, sizeof(cl_mem), *c->d_schedule);
+		clSetKernelArg(*c->d_kernel, 2, sizeof(cl_mem), &cmll_stable);
 	}
 
-	clEnqueueWriteBuffer(queue,*device_buffer,CL_TRUE,0,nbytes,in,0,NULL,NULL);
+	clEnqueueWriteBuffer(*c->queue,*c->d_in,CL_TRUE,0,c->nbytes,c->in,0,NULL,NULL);
 	
 	OPENCL_TIME_KERNEL("CMLL-128",1)
 
-	clEnqueueReadBuffer(queue,*device_buffer,CL_TRUE,0,nbytes,out,0,NULL,NULL);
+	clEnqueueReadBuffer(*c->queue,*c->d_in,CL_TRUE,0,c->nbytes,c->out,0,NULL,NULL);
 }
 
 void CMLL_opencl_transfer_key_schedule(CAMELLIA_KEY *ks, cl_mem *device_schedule, cl_command_queue queue) {
