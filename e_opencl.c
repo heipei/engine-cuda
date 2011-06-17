@@ -28,8 +28,6 @@
 #include <libgen.h>
 #include <openssl/obj_mac.h>
 
-#include "ciphers_cuda.h"
-
 #include "ciphers_opencl.h"
 #include "common.h"
 #include "opencl_common.h"
@@ -83,7 +81,8 @@ static cl_kernel *device_kernel;
 
 static cl_context context;
 static cl_command_queue queue;
-static cl_mem device_buffer;
+static cl_mem device_data_in;
+static cl_mem device_data_out;
 static cl_mem device_schedule;
 static cl_device_id device;
 static cl_int error = 0;
@@ -112,7 +111,8 @@ int opencl_finish(ENGINE * engine) {
 
 	clReleaseCommandQueue(queue);
 	clReleaseContext(context);
-	clReleaseMemObject(device_buffer);
+	clReleaseMemObject(device_data_in);
+	clReleaseMemObject(device_data_out);
 	clReleaseMemObject(device_schedule);
 
 	return 1;
@@ -148,8 +148,9 @@ int opencl_init(ENGINE * engine) {
 	#else
 		CL_ASSIGN(queue = clCreateCommandQueue(context, device,CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, &error));
 	#endif
-	CL_ASSIGN(device_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE|CL_MEM_ALLOC_HOST_PTR, maxbytes, NULL, &error));
-	CL_ASSIGN(host_data = (unsigned char *)clEnqueueMapBuffer(queue,device_buffer,CL_TRUE,CL_MAP_WRITE|CL_MAP_READ,0,maxbytes,0,NULL,NULL,&error));
+	CL_ASSIGN(device_data_in = clCreateBuffer(context, CL_MEM_READ_WRITE|CL_MEM_ALLOC_HOST_PTR, maxbytes, NULL, &error));
+	CL_ASSIGN(device_data_out = clCreateBuffer(context, CL_MEM_READ_WRITE|CL_MEM_ALLOC_HOST_PTR, maxbytes, NULL, &error));
+	CL_ASSIGN(host_data = (unsigned char *)clEnqueueMapBuffer(queue,device_data_in,CL_TRUE,CL_MAP_WRITE|CL_MAP_READ,0,maxbytes,0,NULL,NULL,&error));
 
 	char szTmp[32];
 	char kernels_file[200];
@@ -475,7 +476,7 @@ int opencl_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigned cha
 	}
 	}
 
-	opencl_crypt_parameters c = { in_arg,out_arg,nbytes,ctx,NULL,&device_buffer,NULL,&device_schedule,&queue,device_kernel,&context};
+	opencl_crypt_parameters c = { in_arg,out_arg,nbytes,ctx,NULL,&device_data_in,&device_data_out,&device_schedule,&queue,device_kernel,&context};
 
 	while (nbytes!=current) {
 		chunk=(nbytes-current)/maxbytes;

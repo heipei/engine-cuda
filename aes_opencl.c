@@ -1130,6 +1130,16 @@ uint32_t Ted[9][256] = {{
 static cl_mem aes_sbox = NULL;
 static cl_mem aes_iv = NULL;
 
+void AES_opencl_transfer_key_schedule(AES_KEY *ks, cl_mem *device_schedule,cl_command_queue queue) {
+	clEnqueueWriteBuffer(queue,*device_schedule,CL_TRUE,0,sizeof(AES_KEY),ks,0,NULL,NULL);
+}
+
+void AES_opencl_transfer_iv(cl_context context, const unsigned char *iv,cl_command_queue queue) {
+	cl_int error;
+	CL_ASSIGN(aes_iv = clCreateBuffer(context,CL_MEM_READ_ONLY,AES_BLOCK_SIZE,NULL,&error));
+	CL_WRAPPER(clEnqueueWriteBuffer(queue,aes_iv,CL_TRUE,0,AES_BLOCK_SIZE,iv,0,NULL,NULL));
+}
+
 void AES_opencl_crypt(opencl_crypt_parameters *c) {
 
 	#ifdef AES_COARSE
@@ -1175,6 +1185,7 @@ void AES_opencl_crypt(opencl_crypt_parameters *c) {
 	clGetKernelInfo(*c->d_kernel,CL_KERNEL_NUM_ARGS,4,&args,NULL);
 	if(args > 3 && aes_iv) {
 		clSetKernelArg(*c->d_kernel, 3, sizeof(cl_mem), &aes_iv);
+		clSetKernelArg(*c->d_kernel, 4, sizeof(cl_mem), c->d_out);
 	}
 
 	clEnqueueWriteBuffer(*c->queue,*c->d_in,CL_TRUE,0,c->nbytes,c->in,0,NULL,NULL);
@@ -1185,17 +1196,13 @@ void AES_opencl_crypt(opencl_crypt_parameters *c) {
 		OPENCL_TIME_KERNEL("AES     ",2)
 	#endif
 
-	clEnqueueReadBuffer(*c->queue,*c->d_in,CL_TRUE,0,c->nbytes,c->out,0,NULL,NULL);
-}
-
-void AES_opencl_transfer_key_schedule(AES_KEY *ks, cl_mem *device_schedule,cl_command_queue queue) {
-	clEnqueueWriteBuffer(queue,*device_schedule,CL_TRUE,0,sizeof(AES_KEY),ks,0,NULL,NULL);
-}
-
-void AES_opencl_transfer_iv(cl_context context, const unsigned char *iv,cl_command_queue queue) {
-	cl_int error;
-	CL_ASSIGN(aes_iv = clCreateBuffer(context,CL_MEM_READ_ONLY,AES_BLOCK_SIZE,NULL,&error));
-	CL_WRAPPER(clEnqueueWriteBuffer(queue,aes_iv,CL_TRUE,0,AES_BLOCK_SIZE,iv,0,NULL,NULL));
+	if(args > 3) {
+		clEnqueueReadBuffer(*c->queue,*c->d_out,CL_TRUE,0,c->nbytes,c->out,0,NULL,NULL);
+		AES_opencl_transfer_iv(*c->context,c->in+c->nbytes-AES_BLOCK_SIZE,*c->queue);
+	} else {
+		clEnqueueReadBuffer(*c->queue,*c->d_in,CL_TRUE,0,c->nbytes,c->out,0,NULL,NULL);
+	}
+		
 }
 
 static uint8_t Te4[256] = {

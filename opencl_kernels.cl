@@ -254,21 +254,19 @@ __kernel void BFdecKernel_cbc(__global unsigned long *data, __global unsigned in
 		AES_FINAL_DEC_STEP(N,1,0,3,2); \
 		AES_FINAL_DEC_STEP(N,2,1,0,3); \
 		AES_FINAL_DEC_STEP(N,3,2,1,0); \
-		barrier(CLK_GLOBAL_MEM_FENCE); \
 		if(TX > 0) { \
 			load = (s0 | ((unsigned long)s1 << 32)) ^ data[2*(TX-1)]; \
-			data[2*TX] = load; \
+			out[2*TX] = load; \
 			load = (s2 | ((unsigned long)s3 << 32)) ^ data[2*(TX-1)+1]; \
-			data[2*TX+1] = load; \
+			out[2*TX+1] = load; \
 		} \
-		barrier(CLK_GLOBAL_MEM_FENCE); \
 		if(TX == 0) { \
 			load = (unsigned long)s0 | ((unsigned long)s1) << 32; \
 			load ^= d_iv[0]; \
-			data[2*TX] = load; \
+			out[2*TX] = load; \
 			load = (unsigned long)s2 | (((unsigned long)s3) << 32); \
 			load ^= d_iv[1]; \
-			data[2*TX+1] = load; \
+			out[2*TX+1] = load; \
 		}	
 
 #else
@@ -440,7 +438,7 @@ __kernel void AES256decKernel(__global AES_DATA_TYPE *data, __global unsigned in
 	AES_FINAL_DEC_ROUND(56);
 }
 
-__kernel void AES128decKernel_cbc(__global AES_DATA_TYPE *data, __global unsigned int *Tdg, __constant unsigned int *aes_key, __global unsigned long *d_iv) {
+__kernel void AES128decKernel_cbc(__global AES_DATA_TYPE *data, __global unsigned int *Tdg, __constant unsigned int *aes_key, __global unsigned long *d_iv,__global AES_DATA_TYPE *out) {
 
 	GLOBAL_LOAD_SHARED_SETUP
 	AES_COPY_GLOBAL_SHARED_DEC
@@ -457,7 +455,7 @@ __kernel void AES128decKernel_cbc(__global AES_DATA_TYPE *data, __global unsigne
 	AES_FINAL_DEC_ROUND_CBC(40);
 }
 
-__kernel void AES192decKernel_cbc(__global AES_DATA_TYPE *data, __global unsigned int *Tdg, __constant unsigned int *aes_key, __global unsigned long *d_iv) {
+__kernel void AES192decKernel_cbc(__global AES_DATA_TYPE *data, __global unsigned int *Tdg, __constant unsigned int *aes_key, __global unsigned long *d_iv,__global AES_DATA_TYPE *out) {
 
 	GLOBAL_LOAD_SHARED_SETUP
 	AES_COPY_GLOBAL_SHARED_DEC
@@ -476,7 +474,7 @@ __kernel void AES192decKernel_cbc(__global AES_DATA_TYPE *data, __global unsigne
 	AES_FINAL_DEC_ROUND_CBC(48);
 }
 
-__kernel void AES256decKernel_cbc(__global AES_DATA_TYPE *data, __global unsigned int *Tdg, __constant unsigned int *aes_key, __global unsigned long *d_iv) {
+__kernel void AES256decKernel_cbc(__global AES_DATA_TYPE *data, __global unsigned int *Tdg, __constant unsigned int *aes_key, __global unsigned long *d_iv,__global AES_DATA_TYPE *out) {
 
 	GLOBAL_LOAD_SHARED_SETUP
 	AES_COPY_GLOBAL_SHARED_DEC
