@@ -76,9 +76,9 @@ typedef struct cuda_crypt_parameters_st {
 	unsigned char *out;		// host output buffer
 	size_t nbytes;			// number of bytes to be operated on
 	EVP_CIPHER_CTX *ctx;		// EVP OpenSSL structure
-	uint8_t **host_data;		// possible page-locked host memory
-	uint64_t **d_in;		// Device memory (input)
-	uint64_t **d_out;		// Device memory (output)
+	uint8_t *host_data;		// possible page-locked host memory
+	uint64_t *d_in;		// Device memory (input)
+	uint64_t *d_out;		// Device memory (output)
 } cuda_crypt_parameters;
 
 

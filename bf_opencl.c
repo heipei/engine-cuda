@@ -48,9 +48,8 @@ void BF_opencl_crypt(opencl_crypt_parameters *c) {
 		blockSize[0] = gridSize[0];
 	}
 
-	//fprintf(stdout, "\nMax buffer size: %d, BF_KEY size: %zu\n", CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE, sizeof(BF_KEY));
-	clSetKernelArg(*c->d_kernel, 0, sizeof(cl_mem), *c->d_in);
-	clSetKernelArg(*c->d_kernel, 1, sizeof(cl_mem), *c->d_schedule);
+	clSetKernelArg(*c->d_kernel, 0, sizeof(cl_mem), c->d_in);
+	clSetKernelArg(*c->d_kernel, 1, sizeof(cl_mem), c->d_schedule);
 
 	cl_uint args;
 	clGetKernelInfo(*c->d_kernel,CL_KERNEL_NUM_ARGS,4,&args,NULL);

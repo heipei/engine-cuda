@@ -275,7 +275,7 @@ static int cuda_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigne
 	size_t current=0;
 	int chunk;
 
-	cuda_crypt_parameters crypt = {in_arg, out_arg, nbytes, ctx, &host_data, &device_data_in, &device_data_out};
+	cuda_crypt_parameters crypt = {in_arg, out_arg, nbytes, ctx, host_data, device_data_in, device_data_out};
 
 	switch(EVP_CIPHER_CTX_nid(ctx)) {
 	  case NID_des_ecb:

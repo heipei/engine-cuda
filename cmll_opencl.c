@@ -226,8 +226,8 @@ void CMLL_opencl_crypt(opencl_crypt_parameters *c) {
 		CL_ASSIGN(cmll_stable = clCreateBuffer(*c->context, CL_MEM_READ_ONLY, 4096, NULL, &error));
 		CL_WRAPPER(clEnqueueWriteBuffer(*c->queue,cmll_stable,CL_TRUE,0,4096,CMLL_SBOX,0,NULL,NULL));
 
-		clSetKernelArg(*c->d_kernel, 0, sizeof(cl_mem), *c->d_in);
-		clSetKernelArg(*c->d_kernel, 1, sizeof(cl_mem), *c->d_schedule);
+		clSetKernelArg(*c->d_kernel, 0, sizeof(cl_mem), c->d_in);
+		clSetKernelArg(*c->d_kernel, 1, sizeof(cl_mem), c->d_schedule);
 		clSetKernelArg(*c->d_kernel, 2, sizeof(cl_mem), &cmll_stable);
 	}
 

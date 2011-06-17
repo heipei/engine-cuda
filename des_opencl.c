@@ -200,9 +200,9 @@ void DES_opencl_crypt(opencl_crypt_parameters *c) {
 		CL_ASSIGN(des_sbox = clCreateBuffer(*c->context, CL_MEM_READ_ONLY, 2048, NULL, &error));
 		CL_WRAPPER(clEnqueueWriteBuffer(*c->queue,des_sbox,CL_TRUE,0,2048,des_d_sp_host,0,NULL,NULL));
 
-		clSetKernelArg(*c->d_kernel, 0, sizeof(cl_mem), *c->d_in);
+		clSetKernelArg(*c->d_kernel, 0, sizeof(cl_mem), c->d_in);
 		clSetKernelArg(*c->d_kernel, 1, sizeof(cl_mem), &des_sbox);
-		clSetKernelArg(*c->d_kernel, 2, sizeof(cl_mem), *c->d_schedule);
+		clSetKernelArg(*c->d_kernel, 2, sizeof(cl_mem), c->d_schedule);
 	}
 
 	cl_uint args;

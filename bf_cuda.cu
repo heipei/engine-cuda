@@ -225,34 +225,33 @@ __global__ void BFdecKernel_cbc(uint64_t *data) {
 	
 }
 
-extern "C" void BF_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, EVP_CIPHER_CTX *ctx, uint8_t **host_data, uint64_t **device_data) {
-	assert(in && out && nbytes);
+extern "C" void BF_cuda_crypt(cuda_crypt_parameters *c) {
 	int gridSize;
 
-	transferHostToDevice(&in, (uint32_t **)device_data, host_data, &nbytes);
+	transferHostToDevice(c->in, (uint32_t *)c->d_in, c->host_data, c->nbytes);
 
-	if ((nbytes%(MAX_THREAD*BF_BLOCK_SIZE))==0) {
-		gridSize = nbytes/(MAX_THREAD*BF_BLOCK_SIZE);
+	if ((c->nbytes%(MAX_THREAD*BF_BLOCK_SIZE))==0) {
+		gridSize = c->nbytes/(MAX_THREAD*BF_BLOCK_SIZE);
 	} else {
-		gridSize = nbytes/(MAX_THREAD*BF_BLOCK_SIZE)+1;
+		gridSize = c->nbytes/(MAX_THREAD*BF_BLOCK_SIZE)+1;
 	}
 
 	if (output_verbosity==OUTPUT_VERBOSE)
-		fprintf(stdout,"Starting BF kernel for %zu bytes with (%d, (%d))...\n", nbytes, gridSize, MAX_THREAD);
+		fprintf(stdout,"Starting BF kernel for %zu bytes with (%d, (%d))...\n", c->nbytes, gridSize, MAX_THREAD);
 
 	CUDA_START_TIME
 
-	if(ctx->encrypt == BF_ENCRYPT && EVP_CIPHER_CTX_mode(ctx) == EVP_CIPH_ECB_MODE) {
-		BFencKernel<<<gridSize,MAX_THREAD>>>(*device_data);
-	} else if (!ctx->encrypt && EVP_CIPHER_CTX_mode(ctx) == EVP_CIPH_ECB_MODE) {
-		BFdecKernel<<<gridSize,MAX_THREAD>>>(*device_data);
-	} else if (!ctx->encrypt && EVP_CIPHER_CTX_mode(ctx) == EVP_CIPH_CBC_MODE) {
-		BFdecKernel_cbc<<<gridSize,MAX_THREAD>>>(*device_data);
+	if(c->ctx->encrypt == BF_ENCRYPT && EVP_CIPHER_CTX_mode(c->ctx) == EVP_CIPH_ECB_MODE) {
+		BFencKernel<<<gridSize,MAX_THREAD>>>(c->d_in);
+	} else if (!c->ctx->encrypt && EVP_CIPHER_CTX_mode(c->ctx) == EVP_CIPH_ECB_MODE) {
+		BFdecKernel<<<gridSize,MAX_THREAD>>>(c->d_in);
+	} else if (!c->ctx->encrypt && EVP_CIPHER_CTX_mode(c->ctx) == EVP_CIPH_CBC_MODE) {
+		BFdecKernel_cbc<<<gridSize,MAX_THREAD>>>(c->d_in);
 	}
 
 	CUDA_STOP_TIME("BF         ")
 
-	transferDeviceToHost(&out, (uint32_t **)device_data, host_data, host_data, &nbytes);
+	transferDeviceToHost(c->out, (uint32_t *)c->d_in, c->host_data, c->host_data, c->nbytes);
 }
 
 extern "C" void BF_cuda_transfer_key_schedule(BF_KEY *ks) {

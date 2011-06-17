@@ -107,27 +107,27 @@ __global__ void IDEAencKernel(uint64_t *data) {
 	data[TX] = block;
 }
 
-extern "C" void IDEA_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, EVP_CIPHER_CTX *ctx, uint8_t **host_data, uint64_t **device_data) {
+extern "C" void IDEA_cuda_crypt(cuda_crypt_parameters *c) {
 	int gridSize;
 
-	transferHostToDevice(&in, (uint32_t **)device_data, host_data, &nbytes);
+	transferHostToDevice(c->in, (uint32_t *)c->d_in, c->host_data, c->nbytes);
 
-	if ((nbytes%(MAX_THREAD*IDEA_BLOCK_SIZE))==0) {
-		gridSize = nbytes/(MAX_THREAD*IDEA_BLOCK_SIZE);
+	if ((c->nbytes%(MAX_THREAD*IDEA_BLOCK_SIZE))==0) {
+		gridSize = c->nbytes/(MAX_THREAD*IDEA_BLOCK_SIZE);
 	} else {
-		gridSize = nbytes/(MAX_THREAD*IDEA_BLOCK_SIZE)+1;
+		gridSize = c->nbytes/(MAX_THREAD*IDEA_BLOCK_SIZE)+1;
 	}
 
 	if(output_verbosity == OUTPUT_VERBOSE)
-		fprintf(stdout,"Starting IDEA kernel for %zu bytes with (%d, (%d))...\n", nbytes, gridSize, MAX_THREAD);
+		fprintf(stdout,"Starting IDEA kernel for %zu bytes with (%d, (%d))...\n", c->nbytes, gridSize, MAX_THREAD);
 
 	CUDA_START_TIME
 
-	IDEAencKernel<<<gridSize,MAX_THREAD>>>(*device_data);
+	IDEAencKernel<<<gridSize,MAX_THREAD>>>(c->d_in);
 	
 	CUDA_STOP_TIME("IDEA       ")
 
-	transferDeviceToHost(&out, (uint32_t **)device_data, host_data, host_data, &nbytes);
+	transferDeviceToHost(c->out, (uint32_t *)c->d_in, c->host_data, c->host_data, c->nbytes);
 }
 
 extern "C" void IDEA_cuda_transfer_key_schedule(IDEA_KEY_SCHEDULE *ks) {

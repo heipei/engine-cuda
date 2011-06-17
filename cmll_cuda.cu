@@ -393,31 +393,31 @@ __global__ void CMLLdecKernel(uint64_t *data) {
 	
 }
 
-extern "C" void CMLL_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, EVP_CIPHER_CTX *ctx, uint8_t **host_data, uint64_t **device_data) {
+extern "C" void CMLL_cuda_crypt(cuda_crypt_parameters *c) {
 	int gridSize;
 
-	transferHostToDevice(&in, (uint32_t **)device_data, host_data, &nbytes);
+	transferHostToDevice(c->in, (uint32_t *)c->d_in, c->host_data, c->nbytes);
 
-	if ((nbytes%(MAX_THREAD*CMLL_BLOCK_SIZE))==0) {
-		gridSize = nbytes/(MAX_THREAD*CMLL_BLOCK_SIZE);
+	if ((c->nbytes%(MAX_THREAD*CMLL_BLOCK_SIZE))==0) {
+		gridSize = c->nbytes/(MAX_THREAD*CMLL_BLOCK_SIZE);
 	} else {
-		gridSize = nbytes/(MAX_THREAD*CMLL_BLOCK_SIZE)+1;
+		gridSize = c->nbytes/(MAX_THREAD*CMLL_BLOCK_SIZE)+1;
 	}
 
 	if(output_verbosity == OUTPUT_VERBOSE)
-		fprintf(stdout,"Starting CMLL kernel for %zu bytes with (%d, (%d))...\n", nbytes, gridSize, MAX_THREAD);
+		fprintf(stdout,"Starting CMLL kernel for %zu bytes with (%d, (%d))...\n", c->nbytes, gridSize, MAX_THREAD);
 
 	CUDA_START_TIME
 
-	if(ctx->encrypt == CAMELLIA_ENCRYPT) {
-		CMLLencKernel<<<gridSize,MAX_THREAD>>>(*device_data);
+	if(c->ctx->encrypt == CAMELLIA_ENCRYPT) {
+		CMLLencKernel<<<gridSize,MAX_THREAD>>>(c->d_in);
 	} else {
-		CMLLdecKernel<<<gridSize,MAX_THREAD>>>(*device_data);
+		CMLLdecKernel<<<gridSize,MAX_THREAD>>>(c->d_in);
 	}
 
 	CUDA_STOP_TIME("CMLL-128   ")
 
-	transferDeviceToHost(&out, (uint32_t **)device_data, host_data, host_data, &nbytes);
+	transferDeviceToHost(c->out, (uint32_t *)c->d_in, c->host_data, c->host_data, c->nbytes);
 }
 
 extern "C" void CMLL_cuda_transfer_key_schedule(CAMELLIA_KEY *ks) {

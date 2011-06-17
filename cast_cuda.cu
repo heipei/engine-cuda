@@ -279,32 +279,31 @@ __global__ void CASTdecKernel(uint64_t *data) {
 	data[TX] = block;
 }
 
-extern "C" void CAST_cuda_crypt(const unsigned char *in, unsigned char *out, size_t nbytes, EVP_CIPHER_CTX *ctx, uint8_t **host_data, uint64_t **device_data) {
-	assert(in && out && nbytes);
+extern "C" void CAST_cuda_crypt(cuda_crypt_parameters *c) {
 	int gridSize;
 
-	transferHostToDevice(&in, (uint32_t **)device_data, host_data, &nbytes);
+	transferHostToDevice(c->in, (uint32_t *)c->d_in, c->host_data, c->nbytes);
 
-	if ((nbytes%(MAX_THREAD*CAST_BLOCK_SIZE))==0) {
-		gridSize = nbytes/(MAX_THREAD*CAST_BLOCK_SIZE);
+	if ((c->nbytes%(MAX_THREAD*CAST_BLOCK_SIZE))==0) {
+		gridSize = c->nbytes/(MAX_THREAD*CAST_BLOCK_SIZE);
 	} else {
-		gridSize = nbytes/(MAX_THREAD*CAST_BLOCK_SIZE)+1;
+		gridSize = c->nbytes/(MAX_THREAD*CAST_BLOCK_SIZE)+1;
 	}
 
 	if (output_verbosity==OUTPUT_VERBOSE)
-		fprintf(stdout,"Starting CAST kernel for %zu bytes with (%d, (%d))...\n", nbytes, gridSize, MAX_THREAD);
+		fprintf(stdout,"Starting CAST kernel for %zu bytes with (%d, (%d))...\n", c->nbytes, gridSize, MAX_THREAD);
 
 	CUDA_START_TIME
 
-	if(ctx->encrypt == CAST_ENCRYPT) {
-		CASTencKernel<<<gridSize,MAX_THREAD>>>(*device_data);
+	if(c->ctx->encrypt == CAST_ENCRYPT) {
+		CASTencKernel<<<gridSize,MAX_THREAD>>>(c->d_in);
 	} else {
-		CASTdecKernel<<<gridSize,MAX_THREAD>>>(*device_data);
+		CASTdecKernel<<<gridSize,MAX_THREAD>>>(c->d_in);
 	}
 	
 	CUDA_STOP_TIME("CAST5      ")
 
-	transferDeviceToHost(&out, (uint32_t **)device_data, host_data, host_data, &nbytes);
+	transferDeviceToHost(c->out, (uint32_t *)c->d_in, c->host_data, c->host_data, c->nbytes);
 }
 
 extern "C" void CAST_cuda_transfer_key_schedule(CAST_KEY *ks) {

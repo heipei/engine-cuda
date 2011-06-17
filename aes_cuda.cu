@@ -1174,7 +1174,7 @@ extern "C" void AES_cuda_transfer_iv(const unsigned char *iv) {
 extern "C" void AES_cuda_crypt(cuda_crypt_parameters *c) {
 	int gridSize;
 
-	transferHostToDevice(&c->in, (uint32_t **)c->d_in, c->host_data, &(c->nbytes));
+	transferHostToDevice(c->in, (uint32_t *)c->d_in, c->host_data, c->nbytes);
 
 	#ifdef AES_COARSE
 		dim3 dimBlock(MAX_THREAD);
@@ -1197,44 +1197,44 @@ extern "C" void AES_cuda_crypt(cuda_crypt_parameters *c) {
 	if(c->ctx->encrypt && EVP_CIPHER_CTX_mode(c->ctx) == EVP_CIPH_ECB_MODE) {
 		switch(EVP_CIPHER_CTX_key_length(c->ctx)) {
 			case 16:
-				AES128encKernel<<<gridSize,dimBlock>>>((DATA_TYPE *)*c->d_in);
+				AES128encKernel<<<gridSize,dimBlock>>>((DATA_TYPE *)c->d_in);
 				break;
 			case 24:
-				AES192encKernel<<<gridSize,dimBlock>>>((DATA_TYPE *)*c->d_in);
+				AES192encKernel<<<gridSize,dimBlock>>>((DATA_TYPE *)c->d_in);
 				break;
 			case 32:
-				AES256encKernel<<<gridSize,dimBlock>>>((DATA_TYPE *)*c->d_in);
+				AES256encKernel<<<gridSize,dimBlock>>>((DATA_TYPE *)c->d_in);
 				break;
 		}
-		transferDeviceToHost(&c->out, (uint32_t **)c->d_in, c->host_data, c->host_data, &c->nbytes);
+		transferDeviceToHost(c->out, (uint32_t *)c->d_in, c->host_data, c->host_data, c->nbytes);
 	} else if (!c->ctx->encrypt && EVP_CIPHER_CTX_mode(c->ctx) == EVP_CIPH_ECB_MODE) {
 		switch(EVP_CIPHER_CTX_key_length(c->ctx)) {
 			case 16:
-				AES128decKernel<<<gridSize,dimBlock>>>((DATA_TYPE *)*c->d_in);
+				AES128decKernel<<<gridSize,dimBlock>>>((DATA_TYPE *)c->d_in);
 				break;
 			case 24:
-				AES192decKernel<<<gridSize,dimBlock>>>((DATA_TYPE *)*c->d_in);
+				AES192decKernel<<<gridSize,dimBlock>>>((DATA_TYPE *)c->d_in);
 				break;
 			case 32:
-				AES256decKernel<<<gridSize,dimBlock>>>((DATA_TYPE *)*c->d_in);
+				AES256decKernel<<<gridSize,dimBlock>>>((DATA_TYPE *)c->d_in);
 				break;
 		}
-		transferDeviceToHost(&c->out, (uint32_t **)c->d_in, c->host_data, c->host_data, &c->nbytes);
+		transferDeviceToHost(c->out, (uint32_t *)c->d_in, c->host_data, c->host_data, c->nbytes);
 	}
 
 	if (!c->ctx->encrypt && EVP_CIPHER_CTX_mode(c->ctx) == EVP_CIPH_CBC_MODE) {
 		switch(EVP_CIPHER_CTX_key_length(c->ctx)) {
 			case 16:
-				AES128decKernel_cbc<<<gridSize,dimBlock>>>((DATA_TYPE *)*c->d_in,(DATA_TYPE *)*c->d_out);
+				AES128decKernel_cbc<<<gridSize,dimBlock>>>((DATA_TYPE *)c->d_in,(DATA_TYPE *)c->d_out);
 				break;
 			case 24:
-				AES192decKernel_cbc<<<gridSize,dimBlock>>>((DATA_TYPE *)*c->d_in,(DATA_TYPE *)*c->d_out);
+				AES192decKernel_cbc<<<gridSize,dimBlock>>>((DATA_TYPE *)c->d_in,(DATA_TYPE *)c->d_out);
 				break;
 			case 32:
-				AES256decKernel_cbc<<<gridSize,dimBlock>>>((DATA_TYPE *)*c->d_in,(DATA_TYPE *)*c->d_out);
+				AES256decKernel_cbc<<<gridSize,dimBlock>>>((DATA_TYPE *)c->d_in,(DATA_TYPE *)c->d_out);
 				break;
 		}
-		transferDeviceToHost(&c->out, (uint32_t **)c->d_out, c->host_data, c->host_data, &c->nbytes);
+		transferDeviceToHost(c->out, (uint32_t *)c->d_out, c->host_data, c->host_data, c->nbytes);
 		AES_cuda_transfer_iv(c->in+c->nbytes-AES_BLOCK_SIZE);
 	}
 
