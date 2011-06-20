@@ -218,7 +218,6 @@ __global__ void BFdecKernel_cbc(uint64_t *data, uint64_t *out) {
 	} else {
 		block ^= data[TX-1];
 	}
-	__syncthreads();
 
 	out[TX] = block;
 

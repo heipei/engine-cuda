@@ -164,6 +164,7 @@ static int cuda_cipher_nids[] = {
 	NID_des_ecb,
 	NID_des_cbc,
 	NID_idea_ecb,
+	NID_idea_cbc,
 	NID_aes_128_ecb,
 	NID_aes_128_cbc,
 	NID_aes_192_ecb,
@@ -220,6 +221,8 @@ static int cuda_init_key(EVP_CIPHER_CTX *ctx, const unsigned char *key, const un
 	      IDEA_cuda_transfer_key_schedule(&idea_key_schedule);
 	    }
 	    }
+	    if(iv)
+		IDEA_cuda_transfer_iv(iv);
 	    break;
 	  case NID_aes_128_ecb:
 	  case NID_aes_128_cbc:
@@ -293,6 +296,7 @@ static int cuda_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigne
 	    cuda_device_crypt = CMLL_cuda_crypt;
 	    break;
 	  case NID_idea_ecb:
+	  case NID_idea_cbc:
 	    cuda_device_crypt = IDEA_cuda_crypt;
 	    break;
 	  case NID_aes_128_ecb:
@@ -369,6 +373,7 @@ DECLARE_EVP(cast,CAST,128,ecb,ECB);
 DECLARE_EVP(des,DES,64,ecb,ECB);
 DECLARE_EVP(des,DES,64,cbc,CBC);
 DECLARE_EVP(idea,IDEA,64,ecb,ECB);
+DECLARE_EVP(idea,IDEA,64,cbc,CBC);
 
 DECLARE_EVP(aes,AES,128,ecb,ECB);
 DECLARE_EVP(aes,AES,128,cbc,CBC);
@@ -400,6 +405,9 @@ static int cuda_ciphers(ENGINE *e, const EVP_CIPHER **cipher, const int **nids, 
 	    break;
 	  case NID_des_ecb:
 	    *cipher = &cuda_des_ecb;
+	    break;
+	  case NID_idea_cbc:
+	    *cipher = &cuda_idea_cbc;
 	    break;
 	  case NID_idea_ecb:
 	    *cipher = &cuda_idea_ecb;
