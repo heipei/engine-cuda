@@ -310,6 +310,7 @@ static int cuda_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigne
 	while (nbytes!=current) {
 		chunk=(nbytes-current)/maxbytes;
 		if(chunk>=1) {
+			crypt.nbytes=maxbytes;
 			cuda_device_crypt(&crypt);
 			current+=maxbytes;
 			crypt.in+=maxbytes;
