@@ -129,7 +129,7 @@ __kernel void BFdecKernel(__global unsigned long *data, __global unsigned int *p
 	data[get_global_id(0)] = block;
 }
 
-__kernel void BFdecKernel_cbc(__global unsigned long *data, __global unsigned int *p, __global unsigned long *d_iv) {
+__kernel void BFdecKernel_cbc(__global unsigned long *data, __global unsigned int *p, __global unsigned long *d_iv, __global unsigned long *out) {
 	__private unsigned int l, r;
 	__private unsigned long block = data[get_global_id(0)];
 	
@@ -164,9 +164,7 @@ __kernel void BFdecKernel_cbc(__global unsigned long *data, __global unsigned in
 	else
 		block ^= data[get_global_id(0) - 1];
 	
-	barrier(CLK_GLOBAL_MEM_FENCE);
-	
-	data[get_global_id(0)] = block;
+	out[get_global_id(0)] = block;
 }
 
 // ###########
