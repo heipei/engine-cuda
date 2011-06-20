@@ -64,18 +64,19 @@ static cl_kernel cmll_enc_kernel;
 static cl_kernel des_enc_kernel;
 static cl_kernel idea_enc_kernel;
 
-static cl_kernel aes_128_dec_kernel;
-static cl_kernel aes_192_dec_kernel;
-static cl_kernel aes_256_dec_kernel;
 static cl_kernel aes_128_cbc_dec_kernel;
+static cl_kernel aes_128_dec_kernel;
 static cl_kernel aes_192_cbc_dec_kernel;
+static cl_kernel aes_192_dec_kernel;
 static cl_kernel aes_256_cbc_dec_kernel;
-static cl_kernel bf_dec_kernel;
+static cl_kernel aes_256_dec_kernel;
 static cl_kernel bf_cbc_dec_kernel;
+static cl_kernel bf_dec_kernel;
 static cl_kernel cast_dec_kernel;
 static cl_kernel cmll_dec_kernel;
-static cl_kernel des_dec_kernel;
 static cl_kernel des_cbc_dec_kernel;
+static cl_kernel des_dec_kernel;
+static cl_kernel idea_cbc_dec_kernel;
 
 static cl_kernel *device_kernel;
 
@@ -220,6 +221,7 @@ int opencl_init(ENGINE * engine) {
 	CL_ASSIGN(cmll_dec_kernel = clCreateKernel(device_program, "CMLLdecKernel", &error));
 	CL_ASSIGN(des_dec_kernel = clCreateKernel(device_program, "DESdecKernel", &error));
 	CL_ASSIGN(des_cbc_dec_kernel = clCreateKernel(device_program, "DESdecKernel_cbc", &error));
+	CL_ASSIGN(idea_cbc_dec_kernel = clCreateKernel(device_program, "IDEAdecKernel_cbc", &error));
 
 	gettimeofday(&curtime, NULL);
 	timeval_subtract(&difference,&curtime,&starttime);
@@ -308,7 +310,8 @@ static int opencl_cipher_nids[] = {
 	NID_cast5_ecb,
 	NID_des_ecb,
 	NID_des_cbc,
-	NID_idea_ecb
+	NID_idea_ecb,
+	NID_idea_cbc
 };
 
 static int opencl_cipher_nids_num = (sizeof(opencl_cipher_nids)/sizeof(opencl_cipher_nids[0]));
@@ -403,6 +406,8 @@ static int opencl_init_key(EVP_CIPHER_CTX *ctx, const unsigned char *key, const 
 	    }
 	    device_schedule = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(IDEA_KEY_SCHEDULE), &idea_key_schedule, &error);
 	    IDEA_opencl_transfer_key_schedule(&idea_key_schedule,&device_schedule,queue);
+	    if(iv)
+	    	IDEA_opencl_transfer_iv(context,iv,queue);
 	    break;
 	  default:
 	    return 0;
@@ -470,6 +475,10 @@ int opencl_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigned cha
 	  case NID_idea_ecb:
 	    opencl_device_crypt = IDEA_opencl_crypt;
 	    device_kernel = &idea_enc_kernel;
+	    break;
+	  case NID_idea_cbc:
+	    opencl_device_crypt = IDEA_opencl_crypt;
+	    device_kernel = &idea_cbc_dec_kernel;
 	    break;
 	  default:
 	    return 0;
@@ -547,6 +556,7 @@ DECLARE_EVP(cast,CAST,128,ecb,ECB);
 DECLARE_EVP(des,DES,64,ecb,ECB);
 DECLARE_EVP(des,DES,64,cbc,CBC);
 DECLARE_EVP(idea,IDEA,64,ecb,ECB);
+DECLARE_EVP(idea,IDEA,64,cbc,CBC);
 
 static int opencl_ciphers(ENGINE *e, const EVP_CIPHER **cipher, const int **nids, int nid) {
 	if (!cipher) {
@@ -592,6 +602,9 @@ static int opencl_ciphers(ENGINE *e, const EVP_CIPHER **cipher, const int **nids
 	    break;
 	  case NID_idea_ecb:
 	    *cipher = &opencl_idea_ecb;
+	    break;
+	  case NID_idea_cbc:
+	    *cipher = &opencl_idea_cbc;
 	    break;
 	  default:
 	    *cipher = NULL;
