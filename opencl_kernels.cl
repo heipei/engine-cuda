@@ -987,6 +987,95 @@ __kernel void CMLLdecKernel(__global unsigned long *data, __constant unsigned in
 	data[(get_global_id(0)*2)+1] = block;
 }
 
+__kernel void CMLLdecKernel_cbc(__global unsigned long *data, __constant unsigned int *k, __global unsigned int *Camellia_global_SBOX, __global unsigned long *d_iv, __global unsigned long *out) {
+	__local unsigned int Camellia_SBOX[4][256];
+
+	#if MAX_THREAD == 128
+		((__local ulong *)Camellia_SBOX[0])[get_local_id(0)] = ((__global ulong *)Camellia_global_SBOX)[get_local_id(0)];
+		((__local ulong *)Camellia_SBOX[1])[get_local_id(0)] = ((__global ulong *)Camellia_global_SBOX)[get_local_id(0)+128];
+		((__local ulong *)Camellia_SBOX[2])[get_local_id(0)] = ((__global ulong *)Camellia_global_SBOX)[get_local_id(0)+256];
+		((__local ulong *)Camellia_SBOX[3])[get_local_id(0)] = ((__global ulong *)Camellia_global_SBOX)[get_local_id(0)+384];
+	#elif MAX_THREAD == 256
+		((__local uint *)Camellia_SBOX[0])[get_local_id(0)] = ((__global uint *)Camellia_global_SBOX)[get_local_id(0)];
+		((__local uint *)Camellia_SBOX[1])[get_local_id(0)] = ((__global uint *)Camellia_global_SBOX)[get_local_id(0)+256];
+		((__local uint *)Camellia_SBOX[2])[get_local_id(0)] = ((__global uint *)Camellia_global_SBOX)[get_local_id(0)+512];
+		((__local uint *)Camellia_SBOX[3])[get_local_id(0)] = ((__global uint *)Camellia_global_SBOX)[get_local_id(0)+768];
+	#endif
+
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	__private unsigned int s0,s1,s2,s3; 
+	k+=48;
+
+	__private unsigned long block = data[get_global_id(0)*2];
+	nl2i(block,s0,s1);
+	s1 ^= k[0];
+	s0 ^= k[1];
+
+	block = data[(get_global_id(0)*2)+1];
+	nl2i(block,s2,s3);
+	s3 ^= k[2];
+	s2 ^= k[3];
+
+	k -= 12;
+	Camellia_Feistel(s0,s1,s2,s3,k+10);
+	Camellia_Feistel(s2,s3,s0,s1,k+8);
+	Camellia_Feistel(s0,s1,s2,s3,k+6);
+	Camellia_Feistel(s2,s3,s0,s1,k+4);
+	Camellia_Feistel(s0,s1,s2,s3,k+2);
+	Camellia_Feistel(s2,s3,s0,s1,k+0);
+
+	k -= 4;
+	s1 ^= LeftRotate(s0 & k[3], 1);
+	s2 ^= s3 | k[0];
+	s0 ^= s1 | k[2];
+	s3 ^= LeftRotate(s2 & k[1], 1);
+
+	k -= 12;
+	Camellia_Feistel(s0,s1,s2,s3,k+10);
+	Camellia_Feistel(s2,s3,s0,s1,k+8);
+	Camellia_Feistel(s0,s1,s2,s3,k+6);
+	Camellia_Feistel(s2,s3,s0,s1,k+4);
+	Camellia_Feistel(s0,s1,s2,s3,k+2);
+	Camellia_Feistel(s2,s3,s0,s1,k+0);
+
+	k -= 4;
+	s1 ^= LeftRotate(s0 & k[3], 1);
+	s2 ^= s3 | k[0];
+	s0 ^= s1 | k[2];
+	s3 ^= LeftRotate(s2 & k[1], 1);
+
+	k -= 12;
+	Camellia_Feistel(s0,s1,s2,s3,k+10);
+	Camellia_Feistel(s2,s3,s0,s1,k+8);
+	Camellia_Feistel(s0,s1,s2,s3,k+6);
+	Camellia_Feistel(s2,s3,s0,s1,k+4);
+	Camellia_Feistel(s0,s1,s2,s3,k+2);
+	Camellia_Feistel(s2,s3,s0,s1,k+0);
+
+	k -= 4;
+	s2 ^= k[1], s3 ^= k[0], s0 ^= k[3], s1 ^= k[2];
+
+	block = ((unsigned long)s2) << 32 | s3;
+	flip64(block);
+	if(get_global_id(0) == 0) {
+		block ^= d_iv[0];
+	} else {
+		block ^= data[(get_global_id(0)-1)*2];
+	}
+
+	out[get_global_id(0)*2] = block;
+
+	block = ((unsigned long)s0) << 32 | s1;
+	flip64(block);
+	if(get_global_id(0) == 0) {
+		block ^= d_iv[1];
+	} else {
+		block ^= data[(get_global_id(0)-1)*2+1];
+	}
+
+	out[(get_global_id(0)*2)+1] = block;
+}
 // ############
 // # IDEA ECB #
 // ############

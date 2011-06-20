@@ -74,6 +74,7 @@ static cl_kernel bf_cbc_dec_kernel;
 static cl_kernel bf_dec_kernel;
 static cl_kernel cast_dec_kernel;
 static cl_kernel cmll_dec_kernel;
+static cl_kernel cmll_cbc_dec_kernel;
 static cl_kernel des_cbc_dec_kernel;
 static cl_kernel des_dec_kernel;
 static cl_kernel idea_cbc_dec_kernel;
@@ -219,6 +220,7 @@ int opencl_init(ENGINE * engine) {
 	CL_ASSIGN(bf_cbc_dec_kernel = clCreateKernel(device_program, "BFdecKernel_cbc", &error));
 	CL_ASSIGN(cast_dec_kernel = clCreateKernel(device_program, "CASTdecKernel", &error));
 	CL_ASSIGN(cmll_dec_kernel = clCreateKernel(device_program, "CMLLdecKernel", &error));
+	CL_ASSIGN(cmll_cbc_dec_kernel = clCreateKernel(device_program, "CMLLdecKernel_cbc", &error));
 	CL_ASSIGN(des_dec_kernel = clCreateKernel(device_program, "DESdecKernel", &error));
 	CL_ASSIGN(des_cbc_dec_kernel = clCreateKernel(device_program, "DESdecKernel_cbc", &error));
 	CL_ASSIGN(idea_cbc_dec_kernel = clCreateKernel(device_program, "IDEAdecKernel_cbc", &error));
@@ -307,6 +309,7 @@ static int opencl_cipher_nids[] = {
 	NID_bf_cbc,
 	NID_bf_ecb,
 	NID_camellia_128_ecb,
+	NID_camellia_128_cbc,
 	NID_cast5_ecb,
 	NID_des_ecb,
 	NID_des_cbc,
@@ -394,6 +397,8 @@ static int opencl_init_key(EVP_CIPHER_CTX *ctx, const unsigned char *key, const 
 	    Camellia_set_key(key,ctx->key_len*8,&cmll_key_schedule);
 	    device_schedule = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(CAMELLIA_KEY), &cmll_key_schedule, &error);
 	    CMLL_opencl_transfer_key_schedule(&cmll_key_schedule,&device_schedule,queue);
+	    if(iv)
+	    	CMLL_opencl_transfer_iv(context,iv,queue);
 	    break;
 	  case NID_idea_ecb:
 	  case NID_idea_cbc:
@@ -467,6 +472,10 @@ int opencl_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigned cha
 	  case NID_camellia_128_ecb:
 	    opencl_device_crypt = CMLL_opencl_crypt;
 	    device_kernel = ctx->encrypt ? &cmll_enc_kernel : &cmll_dec_kernel;
+	    break;
+	  case NID_camellia_128_cbc:
+	    opencl_device_crypt = CMLL_opencl_crypt;
+	    device_kernel = &cmll_cbc_dec_kernel;
 	    break;
 	  case NID_cast5_ecb:
 	    opencl_device_crypt = CAST_opencl_crypt;
@@ -552,6 +561,7 @@ DECLARE_EVP(aes,AES,256,cbc,CBC);
 DECLARE_EVP(bf,BF,128,cbc,CBC);
 DECLARE_EVP(bf,BF,128,ecb,ECB);
 DECLARE_EVP(camellia,CAMELLIA,128,ecb,ECB);
+DECLARE_EVP(camellia,CAMELLIA,128,cbc,CBC);
 DECLARE_EVP(cast,CAST,128,ecb,ECB);
 DECLARE_EVP(des,DES,64,ecb,ECB);
 DECLARE_EVP(des,DES,64,cbc,CBC);
@@ -590,6 +600,9 @@ static int opencl_ciphers(ENGINE *e, const EVP_CIPHER **cipher, const int **nids
 	    break;
 	  case NID_camellia_128_ecb:
 	    *cipher = &opencl_camellia_128_ecb;
+	    break;
+	  case NID_camellia_128_cbc:
+	    *cipher = &opencl_camellia_128_cbc;
 	    break;
 	  case NID_cast5_ecb:
 	    *cipher = &opencl_cast5_ecb;
