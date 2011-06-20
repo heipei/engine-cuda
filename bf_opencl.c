@@ -64,6 +64,7 @@ void BF_opencl_crypt(opencl_crypt_parameters *c) {
 
 	cl_uint args;
 	clGetKernelInfo(*c->d_kernel,CL_KERNEL_NUM_ARGS,4,&args,NULL);
+
 	if(args > 3 && bf_iv) {
 		clSetKernelArg(*c->d_kernel, 2, sizeof(cl_mem), &bf_iv);
 		clSetKernelArg(*c->d_kernel, 3, sizeof(cl_mem), c->d_out);

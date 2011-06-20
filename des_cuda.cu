@@ -311,7 +311,7 @@ __global__ void DESdecKernel(uint64_t *data) {
 	data[TX]=left|((uint64_t)right)<<32;
 }
 
-__global__ void DESdecKernel_cbc(uint64_t *data) {
+__global__ void DESdecKernel_cbc(uint64_t *data, uint64_t *out) {
 	
 	((uint64_t *)des_SP)[threadIdx.x] = ((uint64_t *)des_d_sp_c)[threadIdx.x];
 	#if MAX_THREAD == 128
@@ -356,11 +356,19 @@ __global__ void DESdecKernel_cbc(uint64_t *data) {
 		load ^= d_iv;
 	else
 		load ^= data[TX-1];
-	
-	__syncthreads();
 
-	data[TX] = load;
+	out[TX] = load;
 
+}
+
+extern "C" void DES_cuda_transfer_key_schedule(DES_key_schedule *ks) {
+	cudaError_t cudaerrno;
+	_CUDA(cudaMemcpyToSymbolAsync(cs,ks,sizeof(DES_key_schedule),0,cudaMemcpyHostToDevice));
+}
+
+extern "C" void DES_cuda_transfer_iv(const unsigned char *iv) {
+	cudaError_t cudaerrno;
+	_CUDA(cudaMemcpyToSymbolAsync(d_iv,iv,DES_BLOCK_SIZE,0,cudaMemcpyHostToDevice));
 }
 
 extern "C" void DES_cuda_crypt(cuda_crypt_parameters *c) {
@@ -384,22 +392,17 @@ extern "C" void DES_cuda_crypt(cuda_crypt_parameters *c) {
 	} else if (!c->ctx->encrypt && EVP_CIPHER_CTX_mode(c->ctx) == EVP_CIPH_ECB_MODE) {
 		DESdecKernel<<<gridSize,MAX_THREAD>>>(c->d_in);
 	} else if (!c->ctx->encrypt && EVP_CIPHER_CTX_mode(c->ctx) == EVP_CIPH_CBC_MODE) {
-		DESdecKernel_cbc<<<gridSize,MAX_THREAD>>>(c->d_in);
+		DESdecKernel_cbc<<<gridSize,MAX_THREAD>>>(c->d_in, c->d_out);
 	}
 	
 	CUDA_STOP_TIME("DES        ")
 
-	transferDeviceToHost(c->out, (uint32_t *)c->d_in, c->host_data, c->host_data, c->nbytes);
-}
-
-extern "C" void DES_cuda_transfer_key_schedule(DES_key_schedule *ks) {
-	cudaError_t cudaerrno;
-	_CUDA(cudaMemcpyToSymbolAsync(cs,ks,sizeof(DES_key_schedule),0,cudaMemcpyHostToDevice));
-}
-
-extern "C" void DES_cuda_transfer_iv(const unsigned char *iv) {
-	cudaError_t cudaerrno;
-	_CUDA(cudaMemcpyToSymbolAsync(d_iv,iv,DES_BLOCK_SIZE,0,cudaMemcpyHostToDevice));
+	if(EVP_CIPHER_CTX_mode(c->ctx) == EVP_CIPH_ECB_MODE) {
+		transferDeviceToHost(c->out, (uint32_t *)c->d_in, c->host_data, c->host_data, c->nbytes);
+	} else {
+		transferDeviceToHost(c->out, (uint32_t *)c->d_out, c->host_data, c->host_data, c->nbytes);
+		DES_cuda_transfer_iv(c->in+c->nbytes-DES_BLOCK_SIZE);
+	}
 }
 
 #else

@@ -632,7 +632,7 @@ __kernel void DESdecKernel(__global unsigned long *data, __global unsigned int *
 	data[get_global_id(0)]=left|((unsigned long)right)<<32;
 }
 
-__kernel void DESdecKernel_cbc(__global unsigned long *data, __global unsigned int *des_d_sp_c, __global unsigned long *cs, __global unsigned long *d_iv) {
+__kernel void DESdecKernel_cbc(__global unsigned long *data, __global unsigned int *des_d_sp_c, __global unsigned long *cs, __global unsigned long *d_iv, __global unsigned long *out) {
 	__local unsigned char des_SP[2048];
 	__local unsigned long s[16];
 	
@@ -685,8 +685,7 @@ __kernel void DESdecKernel_cbc(__global unsigned long *data, __global unsigned i
 	else
 		load ^= data[get_global_id(0) - 1];
 	
-	barrier(CLK_GLOBAL_MEM_FENCE);
-	data[get_global_id(0)]=load;
+	out[get_global_id(0)]=load;
 }
 
 // #############
