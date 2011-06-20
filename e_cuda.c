@@ -160,6 +160,7 @@ static int cuda_cipher_nids[] = {
 	NID_bf_ecb,
 	NID_bf_cbc,
 	NID_camellia_128_ecb,
+	NID_camellia_128_cbc,
 	NID_cast5_ecb,
 	NID_des_ecb,
 	NID_des_cbc,
@@ -207,6 +208,8 @@ static int cuda_init_key(EVP_CIPHER_CTX *ctx, const unsigned char *key, const un
 	    CAMELLIA_KEY cmll_key_schedule;
 	    Camellia_set_key(key,ctx->key_len*8,&cmll_key_schedule);
 	    CMLL_cuda_transfer_key_schedule(&cmll_key_schedule);
+	    if(iv)
+		CMLL_cuda_transfer_iv(iv);
 	    break;
 	  case NID_idea_ecb:
 	  case NID_idea_cbc:
@@ -293,6 +296,7 @@ static int cuda_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigne
 	    cuda_device_crypt = CAST_cuda_crypt;
 	    break;
 	  case NID_camellia_128_ecb:
+	  case NID_camellia_128_cbc:
 	    cuda_device_crypt = CMLL_cuda_crypt;
 	    break;
 	  case NID_idea_ecb:
@@ -369,6 +373,7 @@ static const EVP_CIPHER cuda_##lciph##_##ksize##_##lmode = {  \
 DECLARE_EVP(bf,BF,128,ecb,ECB);
 DECLARE_EVP(bf,BF,128,cbc,CBC);
 DECLARE_EVP(camellia,CAMELLIA,128,ecb,ECB);
+DECLARE_EVP(camellia,CAMELLIA,128,cbc,CBC);
 DECLARE_EVP(cast,CAST,128,ecb,ECB);
 DECLARE_EVP(des,DES,64,ecb,ECB);
 DECLARE_EVP(des,DES,64,cbc,CBC);
@@ -396,6 +401,9 @@ static int cuda_ciphers(ENGINE *e, const EVP_CIPHER **cipher, const int **nids, 
 	    break;
 	  case NID_camellia_128_ecb:
 	    *cipher = &cuda_camellia_128_ecb;
+	    break;
+	  case NID_camellia_128_cbc:
+	    *cipher = &cuda_camellia_128_cbc;
 	    break;
 	  case NID_cast5_ecb:
 	    *cipher = &cuda_cast5_ecb;

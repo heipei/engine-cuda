@@ -215,6 +215,8 @@ __device__ uint32_t Camellia_global_SBOX[1024] = {
     0xbb00bbbb, 0xe300e3e3, 0x40004040, 0x4f004f4f
 };
 
+__constant__ uint64_t d_iv[2];
+
 #define RightRotate(x, s) ( ((x) >> (s)) | ((x) << (32 - s)) )
 #define LeftRotate(x, s)  ( ((x) << (s)) | ((x) >> (32 - s)) )
 
@@ -393,6 +395,108 @@ __global__ void CMLLdecKernel(uint64_t *data) {
 	
 }
 
+__global__ void CMLLdecKernel_cbc(uint64_t *data, uint64_t *out) {
+
+	#if MAX_THREAD == 128
+		((uint64_t *)Camellia_SBOX[0])[threadIdx.x] = ((uint64_t *)Camellia_global_SBOX)[threadIdx.x];
+		((uint64_t *)Camellia_SBOX[1])[threadIdx.x] = ((uint64_t *)Camellia_global_SBOX)[threadIdx.x+128];
+		((uint64_t *)Camellia_SBOX[2])[threadIdx.x] = ((uint64_t *)Camellia_global_SBOX)[threadIdx.x+256];
+		((uint64_t *)Camellia_SBOX[3])[threadIdx.x] = ((uint64_t *)Camellia_global_SBOX)[threadIdx.x+384];
+	#elif MAX_THREAD == 256
+		((uint32_t *)Camellia_SBOX[0])[threadIdx.x] = ((uint32_t *)Camellia_global_SBOX)[threadIdx.x];
+		((uint32_t *)Camellia_SBOX[1])[threadIdx.x] = ((uint32_t *)Camellia_global_SBOX)[threadIdx.x+256];
+		((uint32_t *)Camellia_SBOX[2])[threadIdx.x] = ((uint32_t *)Camellia_global_SBOX)[threadIdx.x+512];
+		((uint32_t *)Camellia_SBOX[3])[threadIdx.x] = ((uint32_t *)Camellia_global_SBOX)[threadIdx.x+768];
+	#endif
+
+	register uint32_t *k = (uint32_t *)&cmll_constant_schedule.u.rd_key+48;
+	register uint32_t s0,s1,s2,s3; 
+
+	register uint64_t block = data[TX*2];
+	nl2i(block,s0,s1);
+	s1 ^= k[0];
+	s0 ^= k[1];
+
+	block = data[(TX*2)+1];
+	nl2i(block,s2,s3);
+	s3 ^= k[2];
+	s2 ^= k[3];
+
+	__syncthreads();
+
+	k -= 12;
+	Camellia_Feistel(s0,s1,s2,s3,k+10);
+	Camellia_Feistel(s2,s3,s0,s1,k+8);
+	Camellia_Feistel(s0,s1,s2,s3,k+6);
+	Camellia_Feistel(s2,s3,s0,s1,k+4);
+	Camellia_Feistel(s0,s1,s2,s3,k+2);
+	Camellia_Feistel(s2,s3,s0,s1,k+0);
+
+	k -= 4;
+	s1 ^= LeftRotate(s0 & k[3], 1);
+	s2 ^= s3 | k[0];
+	s0 ^= s1 | k[2];
+	s3 ^= LeftRotate(s2 & k[1], 1);
+
+	k -= 12;
+	Camellia_Feistel(s0,s1,s2,s3,k+10);
+	Camellia_Feistel(s2,s3,s0,s1,k+8);
+	Camellia_Feistel(s0,s1,s2,s3,k+6);
+	Camellia_Feistel(s2,s3,s0,s1,k+4);
+	Camellia_Feistel(s0,s1,s2,s3,k+2);
+	Camellia_Feistel(s2,s3,s0,s1,k+0);
+
+	k -= 4;
+	s1 ^= LeftRotate(s0 & k[3], 1);
+	s2 ^= s3 | k[0];
+	s0 ^= s1 | k[2];
+	s3 ^= LeftRotate(s2 & k[1], 1);
+
+	k -= 12;
+	Camellia_Feistel(s0,s1,s2,s3,k+10);
+	Camellia_Feistel(s2,s3,s0,s1,k+8);
+	Camellia_Feistel(s0,s1,s2,s3,k+6);
+	Camellia_Feistel(s2,s3,s0,s1,k+4);
+	Camellia_Feistel(s0,s1,s2,s3,k+2);
+	Camellia_Feistel(s2,s3,s0,s1,k+0);
+
+	k -= 4;
+	s2 ^= k[1], s3 ^= k[0], s0 ^= k[3], s1 ^= k[2];
+
+	block = ((uint64_t)s2) << 32 | s3;
+	flip64(block);
+
+	if(blockIdx.x == 0 && threadIdx.x == 0) {
+		block ^= d_iv[0];
+	} else {
+		block ^= data[(TX-1)*2];
+	}
+
+	out[TX*2] = block;
+
+	block = ((uint64_t)s0) << 32 | s1;
+	flip64(block);
+
+	if(blockIdx.x == 0 && threadIdx.x == 0) {
+		block ^= d_iv[1];
+	} else {
+		block ^= data[(TX-1)*2+1];
+	}
+	
+	out[(TX*2)+1] = block;
+	
+}
+
+extern "C" void CMLL_cuda_transfer_key_schedule(CAMELLIA_KEY *ks) {
+	cudaError_t cudaerrno;
+	_CUDA(cudaMemcpyToSymbolAsync(cmll_constant_schedule,ks,sizeof(CAMELLIA_KEY),0,cudaMemcpyHostToDevice));
+}
+
+extern "C" void CMLL_cuda_transfer_iv(const unsigned char *iv) {
+	cudaError_t cudaerrno;
+	_CUDA(cudaMemcpyToSymbolAsync(d_iv,iv,CMLL_BLOCK_SIZE,0,cudaMemcpyHostToDevice));
+}
+
 extern "C" void CMLL_cuda_crypt(cuda_crypt_parameters *c) {
 	int gridSize;
 
@@ -409,20 +513,22 @@ extern "C" void CMLL_cuda_crypt(cuda_crypt_parameters *c) {
 
 	CUDA_START_TIME
 
-	if(c->ctx->encrypt == CAMELLIA_ENCRYPT) {
+	if(c->ctx->encrypt && EVP_CIPHER_CTX_mode(c->ctx) == EVP_CIPH_ECB_MODE) {
 		CMLLencKernel<<<gridSize,MAX_THREAD>>>(c->d_in);
-	} else {
+	} else if (!c->ctx->encrypt && EVP_CIPHER_CTX_mode(c->ctx) == EVP_CIPH_ECB_MODE) {
 		CMLLdecKernel<<<gridSize,MAX_THREAD>>>(c->d_in);
+	} else if (!c->ctx->encrypt && EVP_CIPHER_CTX_mode(c->ctx) == EVP_CIPH_CBC_MODE) {
+		CMLLdecKernel_cbc<<<gridSize,MAX_THREAD>>>(c->d_in,c->d_out);
 	}
 
 	CUDA_STOP_TIME("CMLL-128   ")
 
-	transferDeviceToHost(c->out, (uint32_t *)c->d_in, c->host_data, c->host_data, c->nbytes);
-}
-
-extern "C" void CMLL_cuda_transfer_key_schedule(CAMELLIA_KEY *ks) {
-	cudaError_t cudaerrno;
-	_CUDA(cudaMemcpyToSymbolAsync(cmll_constant_schedule,ks,sizeof(CAMELLIA_KEY),0,cudaMemcpyHostToDevice));
+	if(EVP_CIPHER_CTX_mode(c->ctx) == EVP_CIPH_ECB_MODE) {
+		transferDeviceToHost(c->out, (uint32_t *)c->d_in, c->host_data, c->host_data, c->nbytes);
+	} else {
+		transferDeviceToHost(c->out, (uint32_t *)c->d_out, c->host_data, c->host_data, c->nbytes);
+		CMLL_cuda_transfer_iv(c->in+c->nbytes-CMLL_BLOCK_SIZE);
+	}
 }
 
 #else
