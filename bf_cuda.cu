@@ -163,7 +163,7 @@ __global__ void BFdecKernel(uint64_t *data) {
 	
 }
 
-__global__ void BFdecKernel_cbc(uint64_t *data) {
+__global__ void BFdecKernel_cbc(uint64_t *data, uint64_t *out) {
 	register uint32_t l, r;
 	register uint64_t block = data[TX];
 
@@ -220,10 +220,23 @@ __global__ void BFdecKernel_cbc(uint64_t *data) {
 	}
 	__syncthreads();
 
-	data[TX] = block;
+	out[TX] = block;
 
 	
 }
+
+extern "C" void BF_cuda_transfer_key_schedule(BF_KEY *ks) {
+	assert(ks);
+	cudaError_t cudaerrno;
+	size_t ks_size = sizeof(BF_KEY);
+	_CUDA(cudaMemcpyToSymbolAsync(bf_global_schedule,ks,ks_size,0,cudaMemcpyHostToDevice));
+}
+
+extern "C" void BF_cuda_transfer_iv(const unsigned char *iv) {
+	cudaError_t cudaerrno;
+	_CUDA(cudaMemcpyToSymbolAsync(d_iv,iv,sizeof(uint64_t),0,cudaMemcpyHostToDevice));
+}
+
 
 extern "C" void BF_cuda_crypt(cuda_crypt_parameters *c) {
 	int gridSize;
@@ -246,26 +259,18 @@ extern "C" void BF_cuda_crypt(cuda_crypt_parameters *c) {
 	} else if (!c->ctx->encrypt && EVP_CIPHER_CTX_mode(c->ctx) == EVP_CIPH_ECB_MODE) {
 		BFdecKernel<<<gridSize,MAX_THREAD>>>(c->d_in);
 	} else if (!c->ctx->encrypt && EVP_CIPHER_CTX_mode(c->ctx) == EVP_CIPH_CBC_MODE) {
-		BFdecKernel_cbc<<<gridSize,MAX_THREAD>>>(c->d_in);
+		BFdecKernel_cbc<<<gridSize,MAX_THREAD>>>(c->d_in,c->d_out);
 	}
 
 	CUDA_STOP_TIME("BF         ")
 
-	transferDeviceToHost(c->out, (uint32_t *)c->d_in, c->host_data, c->host_data, c->nbytes);
+	if(EVP_CIPHER_CTX_mode(c->ctx) == EVP_CIPH_ECB_MODE) {
+		transferDeviceToHost(c->out, (uint32_t *)c->d_in, c->host_data, c->host_data, c->nbytes);
+	} else {
+		transferDeviceToHost(c->out, (uint32_t *)c->d_out, c->host_data, c->host_data, c->nbytes);
+		BF_cuda_transfer_iv(c->in+c->nbytes-BF_BLOCK_SIZE);
+	}
 }
-
-extern "C" void BF_cuda_transfer_key_schedule(BF_KEY *ks) {
-	assert(ks);
-	cudaError_t cudaerrno;
-	size_t ks_size = sizeof(BF_KEY);
-	_CUDA(cudaMemcpyToSymbolAsync(bf_global_schedule,ks,ks_size,0,cudaMemcpyHostToDevice));
-}
-
-extern "C" void BF_cuda_transfer_iv(const unsigned char *iv) {
-	cudaError_t cudaerrno;
-	_CUDA(cudaMemcpyToSymbolAsync(d_iv,iv,sizeof(uint64_t),0,cudaMemcpyHostToDevice));
-}
-
 #else
 #error "ERROR: DEVICE EMULATION is NOT supported."
 #endif
