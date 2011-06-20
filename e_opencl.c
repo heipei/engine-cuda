@@ -476,20 +476,21 @@ int opencl_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigned cha
 	}
 	}
 
-	opencl_crypt_parameters c = { in_arg,out_arg,nbytes,ctx,NULL,&device_data_in,&device_data_out,&device_schedule,&queue,device_kernel,&context};
+	opencl_crypt_parameters c = { in_arg,out_arg,maxbytes,ctx,NULL,&device_data_in,&device_data_out,&device_schedule,&queue,device_kernel,&context};
 
 	while (nbytes!=current) {
 		chunk=(nbytes-current)/maxbytes;
 		if(chunk>=1) {
 			//memcpy(host_data,in_arg+current,maxbytes);
+			c.nbytes=maxbytes;
 			opencl_device_crypt(&c);
 			//memcpy(out_arg+current,host_data,maxbytes);
 			current+=maxbytes;  
-			c.nbytes-=maxbytes;
 			c.in+=maxbytes;
 			c.out+=maxbytes;
 		} else {
 			//memcpy(host_data,in_arg+current,nbytes-current);
+			c.nbytes=nbytes;
 			opencl_device_crypt(&c);
 			current+=(nbytes-current);
 			c.nbytes-=(nbytes-current);
