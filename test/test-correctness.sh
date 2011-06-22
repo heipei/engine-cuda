@@ -2,8 +2,9 @@
 # vim:ft=sh
 
 ENC_CIPHERS=(aes-128-ecb aes-192-ecb aes-256-ecb bf-ecb camellia-128-ecb cast5-ecb des-ecb idea-ecb)
-#DEC_CIPHERS=(aes-128-ecb aes-192-ecb aes-256-ecb aes-128-cbc aes-192-cbc aes-256-cbc bf-ecb des-ecb idea-ecb cast5-ecb camellia-128-ecb)
-DEC_CIPHERS=(bf-cbc aes-128-cbc)
+DEC_CIPHERS=(aes-128-ecb aes-192-ecb aes-256-ecb aes-128-cbc aes-192-cbc aes-256-cbc bf-ecb bf-cbc des-ecb des-cbc idea-ecb idea-cbc cast5-ecb cast5-cbc camellia-128-ecb camellia-128-cbc)
+#DEC_CIPHERS=(camellia-128-cbc des-cbc bf-cbc aes-128-cbc)
+#DEC_CIPHERS=(cast5-cbc)
 
 IV="FFFF"
 BUFSIZE=8388608
@@ -49,13 +50,13 @@ for cipher in $ENC_CIPHERS; do
 	echo "\n==== $cipher ENCRYPTION tests ===="
 	echo ">> CUDA encryption" 1>> correctness.log 2>> correctness.log
 	echo "---------------" 1>> correctness.log 2>> correctness.log
-	time openssl enc -engine cudamrg -e -$cipher -nosalt -nopad -v -in $2 -out $cipher.out.cuda -bufsize $BUFSIZE -K "$KEY" 1>> correctness.log 2>> correctness.log
+	time openssl enc -engine cudamrg -e -$cipher -nosalt -v -in $2 -out $cipher.out.cuda -bufsize $BUFSIZE -K "$KEY" 1>> correctness.log 2>> correctness.log
 	echo ">> OpenCL encryption" 1>> correctness.log 2>> correctness.log
 	echo "---------------" 1>> correctness.log 2>> correctness.log
-	time openssl enc -engine opencl -e -$cipher -nosalt -nopad -v -in $2 -out $cipher.out.opencl -bufsize $BUFSIZE -K "$KEY" 1>> correctness.log 2>> correctness.log
+	time openssl enc -engine opencl -e -$cipher -nosalt -v -in $2 -out $cipher.out.opencl -bufsize $BUFSIZE -K "$KEY" 1>> correctness.log 2>> correctness.log
 	echo -e "\n>> CPU encryption" 1>> correctness.log 2>> correctness.log
 	echo "--------------" 1>> correctness.log 2>> correctness.log
-	time openssl enc -e -$cipher -nosalt -nopad -v -in $2 -out $cipher.out.cpu -K "$KEY" 1>> correctness.log 2>> correctness.log
+	time openssl enc -e -$cipher -nosalt -v -in $2 -out $cipher.out.cpu -K "$KEY" 1>> correctness.log 2>> correctness.log
 
 	CHKCPU=`cksum $cipher.out.cpu|awk {'print $1'}`
 	CHKCUDA=`cksum $cipher.out.cuda|awk {'print $1'}`
@@ -83,16 +84,16 @@ for cipher in $DEC_CIPHERS; do
 	echo "\n==== $cipher DECRYPTION tests ===="
 	echo -e "\n>> CPU encryption" 1>> correctness.log 2>> correctness.log
 	echo "--------------" 1>> correctness.log 2>> correctness.log
-	time openssl enc -e -$cipher -nosalt -nopad -v -in $2 -out $cipher.enc -K "$KEY" -iv "$IV" 1>> correctness.log 2>> correctness.log
+	time openssl enc -e -$cipher -nosalt -v -in $2 -out $cipher.enc -K "$KEY" -iv "$IV" 1>> correctness.log 2>> correctness.log
 	echo ">> CUDA decryption" 1>> correctness.log 2>> correctness.log
 	echo "---------------" 1>> correctness.log 2>> correctness.log
-	time openssl enc -engine cudamrg -d -$cipher -nosalt -nopad -v -in $cipher.enc -out $cipher.out.cuda -bufsize $BUFSIZE -K "$KEY" -iv "$IV" 1>> correctness.log 2>> correctness.log
+	time openssl enc -engine cudamrg -d -$cipher -nosalt -v -in $cipher.enc -out $cipher.out.cuda -bufsize $BUFSIZE -K "$KEY" -iv "$IV" 1>> correctness.log 2>> correctness.log
 	echo ">> OpenCL decryption" 1>> correctness.log 2>> correctness.log
 	echo "---------------" 1>> correctness.log 2>> correctness.log
-	time openssl enc -engine opencl -d -$cipher -nosalt -nopad -v -in $cipher.enc -out $cipher.out.opencl -bufsize $BUFSIZE -K "$KEY" -iv "$IV" 1>> correctness.log 2>> correctness.log
+	time openssl enc -engine opencl -d -$cipher -nosalt -v -in $cipher.enc -out $cipher.out.opencl -bufsize $BUFSIZE -K "$KEY" -iv "$IV" 1>> correctness.log 2>> correctness.log
 	echo -e "\n>> CPU decryption" 1>> correctness.log 2>> correctness.log
 	echo "--------------" 1>> correctness.log 2>> correctness.log
-	time openssl enc -d -$cipher -nosalt -nopad -v -in $cipher.enc -out $cipher.out.cpu -K "$KEY" -iv "$IV" 1>> correctness.log 2>> correctness.log
+	time openssl enc -d -$cipher -nosalt -v -in $cipher.enc -out $cipher.out.cpu -K "$KEY" -iv "$IV" 1>> correctness.log 2>> correctness.log
 
 	CHKCPU=`cksum $cipher.out.cpu|awk {'print $1'}`
 	CHKCUDA=`cksum $cipher.out.cuda|awk {'print $1'}`
