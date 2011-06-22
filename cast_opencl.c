@@ -175,17 +175,12 @@ void CAST_opencl_transfer_iv(cl_context context, const unsigned char *iv,cl_comm
 }
 
 void CAST_opencl_crypt(opencl_crypt_parameters *c) {
-	size_t gridSize[3] = {1, 0, 0};
-	size_t blockSize[3] = {MAX_THREAD, 0, 0};
-	
-	if ((c->nbytes%CAST_BLOCK_SIZE)==0) {
-		gridSize[0] = c->nbytes/CAST_BLOCK_SIZE;
-	} else {
-		gridSize[0] = c->nbytes/CAST_BLOCK_SIZE+1;
-	}
 
-	if(gridSize[0] < MAX_THREAD) {
-		blockSize[0] = gridSize[0] = 256;
+	size_t blockSize[3] = {MAX_THREAD, 0, 0};
+	size_t gridSize[3] = {c->nbytes/CAST_BLOCK_SIZE, 0, 0};
+
+	if (!(c->nbytes%(CAST_BLOCK_SIZE*MAX_THREAD))==0) {
+		gridSize[0] += (MAX_THREAD - (gridSize[0]%MAX_THREAD));
 	}
 
 	if(!cast_stable) {

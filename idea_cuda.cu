@@ -171,15 +171,12 @@ extern "C" void IDEA_cuda_transfer_iv(const unsigned char *iv) {
 
 
 extern "C" void IDEA_cuda_crypt(cuda_crypt_parameters *c) {
-	int gridSize;
+
+	int gridSize = c->nbytes/(MAX_THREAD*IDEA_BLOCK_SIZE);
+	if (!(c->nbytes%(MAX_THREAD*IDEA_BLOCK_SIZE))==0)
+		gridSize = c->nbytes/(MAX_THREAD*IDEA_BLOCK_SIZE)+1;
 
 	transferHostToDevice(c->in, (uint32_t *)c->d_in, c->host_data, c->nbytes);
-
-	if ((c->nbytes%(MAX_THREAD*IDEA_BLOCK_SIZE))==0) {
-		gridSize = c->nbytes/(MAX_THREAD*IDEA_BLOCK_SIZE);
-	} else {
-		gridSize = c->nbytes/(MAX_THREAD*IDEA_BLOCK_SIZE)+1;
-	}
 
 	if(output_verbosity == OUTPUT_VERBOSE)
 		fprintf(stdout,"Starting IDEA kernel for %zu bytes with (%d, (%d))...\n", c->nbytes, gridSize, MAX_THREAD);

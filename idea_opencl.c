@@ -44,17 +44,12 @@ void IDEA_opencl_transfer_iv(cl_context context, const unsigned char *iv,cl_comm
 }
 
 void IDEA_opencl_crypt(opencl_crypt_parameters *c) {
-	size_t gridSize[3] = {1, 0, 0};
-	size_t blockSize[3] = {MAX_THREAD, 0, 0};
-	
-	if ((c->nbytes%IDEA_BLOCK_SIZE)==0) {
-		gridSize[0] = c->nbytes/IDEA_BLOCK_SIZE;
-	} else {
-		gridSize[0] = c->nbytes/IDEA_BLOCK_SIZE+1;
-	}
 
-	if(gridSize[0] < MAX_THREAD) {
-		blockSize[0] = gridSize[0] = MAX_THREAD;
+	size_t blockSize[3] = {MAX_THREAD, 0, 0};
+	size_t gridSize[3] = {c->nbytes/IDEA_BLOCK_SIZE, 0, 0};
+
+	if (!(c->nbytes%(IDEA_BLOCK_SIZE*MAX_THREAD))==0) {
+		gridSize[0] += (MAX_THREAD - (gridSize[0]%MAX_THREAD));
 	}
 
 	clSetKernelArg(*c->d_kernel, 0, sizeof(cl_mem), c->d_in);
