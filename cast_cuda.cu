@@ -173,6 +173,9 @@ __device__ CAST_LONG CAST_S_table_constant[1024]={
 	0x8644213e,0xb7dc59d0,0x7965291f,0xccd6fd43,0x41823979,0x932bcdf6,0xb657c34d,0x4edfd282,
 	0x7ae5290c,0x3cb9536b,0x851e20fe,0x9833557e,0x13ecf0b0,0xd3ffb372,0x3f85c5c1,0x0aef7ed2,
 	};
+
+__constant__ uint64_t d_iv;
+
 #define ROTL(a,n)     ((((a)<<(n)))|((a)>>(32-(n))))
 
 #define C_M    0x3fc
@@ -279,6 +282,65 @@ __global__ void CASTdecKernel(uint64_t *data) {
 	data[TX] = block;
 }
 
+__global__ void CASTdecKernel_cbc(uint64_t *data, uint64_t *out) {
+	register uint32_t l,r,t;
+	register uint64_t block = data[TX];
+
+	nl2i(block,l,r);
+
+	#if MAX_THREAD == 128
+		((uint64_t *)CAST_S_table0)[threadIdx.x] = ((uint64_t *)CAST_S_table_constant)[threadIdx.x];
+		((uint64_t *)CAST_S_table1)[threadIdx.x] = ((uint64_t *)CAST_S_table_constant)[threadIdx.x+128];
+		((uint64_t *)CAST_S_table2)[threadIdx.x] = ((uint64_t *)CAST_S_table_constant)[threadIdx.x+256];
+		((uint64_t *)CAST_S_table3)[threadIdx.x] = ((uint64_t *)CAST_S_table_constant)[threadIdx.x+384];
+	#elif MAX_THREAD == 256
+		((uint32_t *)CAST_S_table0)[threadIdx.x] = ((uint32_t *)CAST_S_table_constant)[threadIdx.x];
+		((uint32_t *)CAST_S_table1)[threadIdx.x] = ((uint32_t *)CAST_S_table_constant)[threadIdx.x+256];
+		((uint32_t *)CAST_S_table2)[threadIdx.x] = ((uint32_t *)CAST_S_table_constant)[threadIdx.x+512];
+		((uint32_t *)CAST_S_table3)[threadIdx.x] = ((uint32_t *)CAST_S_table_constant)[threadIdx.x+768];
+	#endif
+
+	__syncthreads();
+
+	E_CAST(30,cast_constant_schedule,l,r,+,^,-);
+	E_CAST(28,cast_constant_schedule,r,l,-,+,^);
+	E_CAST(26,cast_constant_schedule,l,r,^,-,+);
+	E_CAST(24,cast_constant_schedule,r,l,+,^,-);
+	E_CAST(22,cast_constant_schedule,l,r,-,+,^);
+	E_CAST(20,cast_constant_schedule,r,l,^,-,+);
+	E_CAST(18,cast_constant_schedule,l,r,+,^,-);
+	E_CAST(16,cast_constant_schedule,r,l,-,+,^);
+	E_CAST(14,cast_constant_schedule,l,r,^,-,+);
+	E_CAST(12,cast_constant_schedule,r,l,+,^,-);
+	E_CAST(10,cast_constant_schedule,l,r,-,+,^);
+	E_CAST( 8,cast_constant_schedule,r,l,^,-,+);
+	E_CAST( 6,cast_constant_schedule,l,r,+,^,-);
+	E_CAST( 4,cast_constant_schedule,r,l,-,+,^);
+	E_CAST( 2,cast_constant_schedule,l,r,^,-,+);
+	E_CAST( 0,cast_constant_schedule,r,l,+,^,-);
+
+	block = ((uint64_t)r) << 32 | l;
+
+	flip64(block);
+
+	if(TX == 0)
+		block ^= d_iv;
+	else
+		block ^= data[TX-1];
+
+	out[TX] = block;
+}
+
+extern "C" void CAST_cuda_transfer_key_schedule(CAST_KEY *ks) {
+	cudaError_t cudaerrno;
+	_CUDA(cudaMemcpyToSymbolAsync(cast_constant_schedule,ks,sizeof(CAST_KEY),0,cudaMemcpyHostToDevice));
+}
+
+extern "C" void CAST_cuda_transfer_iv(const unsigned char *iv) {
+	cudaError_t cudaerrno;
+	_CUDA(cudaMemcpyToSymbolAsync(d_iv,iv,CAST_BLOCK_SIZE,0,cudaMemcpyHostToDevice));
+}
+
 extern "C" void CAST_cuda_crypt(cuda_crypt_parameters *c) {
 	int gridSize;
 
@@ -297,19 +359,22 @@ extern "C" void CAST_cuda_crypt(cuda_crypt_parameters *c) {
 
 	if(c->ctx->encrypt == CAST_ENCRYPT) {
 		CASTencKernel<<<gridSize,MAX_THREAD>>>(c->d_in);
-	} else {
+	} else if (!c->ctx->encrypt && EVP_CIPHER_CTX_mode(c->ctx) == EVP_CIPH_ECB_MODE) {
 		CASTdecKernel<<<gridSize,MAX_THREAD>>>(c->d_in);
+	} else if (!c->ctx->encrypt && EVP_CIPHER_CTX_mode(c->ctx) == EVP_CIPH_CBC_MODE) {
+		CASTdecKernel_cbc<<<gridSize,MAX_THREAD>>>(c->d_in, c->d_out);
 	}
 	
 	CUDA_STOP_TIME("CAST5      ")
 
-	transferDeviceToHost(c->out, (uint32_t *)c->d_in, c->host_data, c->host_data, c->nbytes);
+	if(EVP_CIPHER_CTX_mode(c->ctx) == EVP_CIPH_ECB_MODE) {
+		transferDeviceToHost(c->out, (uint32_t *)c->d_in, c->host_data, c->host_data, c->nbytes);
+	} else {
+		transferDeviceToHost(c->out, (uint32_t *)c->d_out, c->host_data, c->host_data, c->nbytes);
+		CAST_cuda_transfer_iv(c->in+c->nbytes-CAST_BLOCK_SIZE);
+	}
 }
 
-extern "C" void CAST_cuda_transfer_key_schedule(CAST_KEY *ks) {
-	cudaError_t cudaerrno;
-	_CUDA(cudaMemcpyToSymbolAsync(cast_constant_schedule,ks,sizeof(CAST_KEY),0,cudaMemcpyHostToDevice));
-}
 #else
 #error "ERROR: DEVICE EMULATION is NOT supported."
 #endif
