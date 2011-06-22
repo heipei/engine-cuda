@@ -797,6 +797,55 @@ __kernel void CASTdecKernel(__global unsigned long *data, __constant unsigned in
 	data[get_global_id(0)] = block;
 }
 
+__kernel void CASTdecKernel_cbc(__global unsigned long *data, __constant unsigned int *k, __global unsigned int *CAST_S_table, __global unsigned long *d_iv, __global unsigned long *out) {
+	__local unsigned int CAST_S_table0[256], CAST_S_table1[256], CAST_S_table2[256], CAST_S_table3[256];
+	__private unsigned int l,r,t;
+
+	__private unsigned long block = data[get_global_id(0)];
+
+	nl2i(block,l,r);
+
+	#if MAX_THREAD == 128
+		((__local ulong *)CAST_S_table0)[get_local_id(0)] = ((__global ulong *)CAST_S_table)[get_local_id(0)];
+		((__local ulong *)CAST_S_table2)[get_local_id(0)] = ((__global ulong *)CAST_S_table)[get_local_id(0)+128];
+	#elif MAX_THREAD == 256
+		((__local uint *)CAST_S_table0)[get_local_id(0)] = ((__global uint *)CAST_S_table)[get_local_id(0)];
+		((__local uint *)CAST_S_table1)[get_local_id(0)] = ((__global uint *)CAST_S_table)[get_local_id(0)+256];
+		((__local uint *)CAST_S_table2)[get_local_id(0)] = ((__global uint *)CAST_S_table)[get_local_id(0)+512];
+		((__local uint *)CAST_S_table3)[get_local_id(0)] = ((__global uint *)CAST_S_table)[get_local_id(0)+768];
+	#endif
+
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	E_CAST(15,k,l,r,+,^,-);
+	E_CAST(14,k,r,l,-,+,^);
+	E_CAST(13,k,l,r,^,-,+);
+	E_CAST(12,k,r,l,+,^,-);
+	E_CAST(11,k,l,r,-,+,^);
+	E_CAST(10,k,r,l,^,-,+);
+	E_CAST( 9,k,l,r,+,^,-);
+	E_CAST( 8,k,r,l,-,+,^);
+	E_CAST( 7,k,l,r,^,-,+);
+	E_CAST( 6,k,r,l,+,^,-);
+	E_CAST( 5,k,l,r,-,+,^);
+	E_CAST( 4,k,r,l,^,-,+);
+	E_CAST( 3,k,l,r,+,^,-);
+	E_CAST( 2,k,r,l,-,+,^);
+	E_CAST( 1,k,l,r,^,-,+);
+	E_CAST( 0,k,r,l,+,^,-);
+
+	block = ((unsigned long)r) << 32 | l;
+
+	flip64(block);
+
+	if(get_global_id(0) == 0)
+		block ^= *d_iv;
+	else
+		block ^= data[get_global_id(0) - 1];
+
+	out[get_global_id(0)] = block;
+}
+
 // ####################
 // # Camellia-128 ECB #
 // ####################

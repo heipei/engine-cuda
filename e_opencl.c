@@ -73,6 +73,7 @@ static cl_kernel aes_256_dec_kernel;
 static cl_kernel bf_cbc_dec_kernel;
 static cl_kernel bf_dec_kernel;
 static cl_kernel cast_dec_kernel;
+static cl_kernel cast_cbc_dec_kernel;
 static cl_kernel cmll_dec_kernel;
 static cl_kernel cmll_cbc_dec_kernel;
 static cl_kernel des_cbc_dec_kernel;
@@ -219,6 +220,7 @@ int opencl_init(ENGINE * engine) {
 	CL_ASSIGN(bf_dec_kernel = clCreateKernel(device_program, "BFdecKernel", &error));
 	CL_ASSIGN(bf_cbc_dec_kernel = clCreateKernel(device_program, "BFdecKernel_cbc", &error));
 	CL_ASSIGN(cast_dec_kernel = clCreateKernel(device_program, "CASTdecKernel", &error));
+	CL_ASSIGN(cast_cbc_dec_kernel = clCreateKernel(device_program, "CASTdecKernel_cbc", &error));
 	CL_ASSIGN(cmll_dec_kernel = clCreateKernel(device_program, "CMLLdecKernel", &error));
 	CL_ASSIGN(cmll_cbc_dec_kernel = clCreateKernel(device_program, "CMLLdecKernel_cbc", &error));
 	CL_ASSIGN(des_dec_kernel = clCreateKernel(device_program, "DESdecKernel", &error));
@@ -300,21 +302,22 @@ IMPLEMENT_DYNAMIC_CHECK_FN()
 IMPLEMENT_DYNAMIC_BIND_FN(opencl_bind_fn)
 
 static int opencl_cipher_nids[] = {
-	NID_aes_128_ecb,
-	NID_aes_192_ecb,
-	NID_aes_256_ecb,
 	NID_aes_128_cbc,
+	NID_aes_128_ecb,
 	NID_aes_192_cbc,
+	NID_aes_192_ecb,
 	NID_aes_256_cbc,
+	NID_aes_256_ecb,
 	NID_bf_cbc,
 	NID_bf_ecb,
-	NID_camellia_128_ecb,
 	NID_camellia_128_cbc,
+	NID_camellia_128_ecb,
+	NID_cast5_cbc,
 	NID_cast5_ecb,
-	NID_des_ecb,
 	NID_des_cbc,
-	NID_idea_ecb,
-	NID_idea_cbc
+	NID_des_ecb,
+	NID_idea_cbc,
+	NID_idea_ecb
 };
 
 static int opencl_cipher_nids_num = (sizeof(opencl_cipher_nids)/sizeof(opencl_cipher_nids[0]));
@@ -384,11 +387,14 @@ static int opencl_init_key(EVP_CIPHER_CTX *ctx, const unsigned char *key, const 
 	    	BF_opencl_transfer_iv(context,iv,queue);
 	    break;
 	  case NID_cast5_ecb:
+	  case NID_cast5_cbc:
 	    if (!quiet && verbose) fprintf(stdout,"Start calculating CAST5 key schedule...\n");
 	    CAST_KEY cast_key_schedule;
 	    CAST_set_key(&cast_key_schedule,ctx->key_len*8,key);
 	    device_schedule = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(CAST_KEY), &key_schedule, &error);
 	    CAST_opencl_transfer_key_schedule(&cast_key_schedule,&device_schedule,queue);
+	    if(iv)
+	    	CAST_opencl_transfer_iv(context,iv,queue);
 	    break;
 	  case NID_camellia_128_ecb:
 	  case NID_camellia_128_cbc:
@@ -481,6 +487,10 @@ int opencl_crypt(EVP_CIPHER_CTX *ctx, unsigned char *out_arg, const unsigned cha
 	    opencl_device_crypt = CAST_opencl_crypt;
 	    device_kernel = ctx->encrypt ? &cast_enc_kernel : &cast_dec_kernel;
 	    break;
+	  case NID_cast5_cbc:
+	    opencl_device_crypt = CAST_opencl_crypt;
+	    device_kernel =&cast_cbc_dec_kernel;
+	    break;
 	  case NID_idea_ecb:
 	    opencl_device_crypt = IDEA_opencl_crypt;
 	    device_kernel = &idea_enc_kernel;
@@ -542,6 +552,10 @@ static const EVP_CIPHER opencl_##lciph##_##ksize##_##lmode = {\
 #define opencl_cast_128_ecb opencl_cast_ecb
 #define NID_cast_128_ecb NID_cast5_ecb
 
+#define opencl_cast5_cbc opencl_cast_cbc
+#define opencl_cast_128_cbc opencl_cast_cbc
+#define NID_cast_128_cbc NID_cast5_cbc
+
 #define opencl_bf_128_ecb opencl_bf_ecb
 #define opencl_bf_128_cbc opencl_bf_cbc
 #define NID_bf_128_ecb NID_bf_ecb
@@ -563,6 +577,7 @@ DECLARE_EVP(bf,BF,128,ecb,ECB);
 DECLARE_EVP(camellia,CAMELLIA,128,ecb,ECB);
 DECLARE_EVP(camellia,CAMELLIA,128,cbc,CBC);
 DECLARE_EVP(cast,CAST,128,ecb,ECB);
+DECLARE_EVP(cast,CAST,128,cbc,CBC);
 DECLARE_EVP(des,DES,64,ecb,ECB);
 DECLARE_EVP(des,DES,64,cbc,CBC);
 DECLARE_EVP(idea,IDEA,64,ecb,ECB);
@@ -603,6 +618,9 @@ static int opencl_ciphers(ENGINE *e, const EVP_CIPHER **cipher, const int **nids
 	    break;
 	  case NID_camellia_128_cbc:
 	    *cipher = &opencl_camellia_128_cbc;
+	    break;
+	  case NID_cast5_cbc:
+	    *cipher = &opencl_cast5_cbc;
 	    break;
 	  case NID_cast5_ecb:
 	    *cipher = &opencl_cast5_ecb;

@@ -52,6 +52,7 @@ void DES_opencl_transfer_iv(cl_context, const unsigned char*, cl_command_queue);
 #include <openssl/cast.h>
 void CAST_opencl_crypt(opencl_crypt_parameters *c);
 void CAST_opencl_transfer_key_schedule(CAST_KEY *ks, cl_mem *device_schedule,cl_command_queue queue);
+void CAST_opencl_transfer_iv(cl_context, const unsigned char*, cl_command_queue);
 
 #include <openssl/camellia.h>
 void CMLL_opencl_crypt(opencl_crypt_parameters *c);

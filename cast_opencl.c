@@ -162,6 +162,17 @@ CAST_LONG CAST_S_table[1024]={
 	};
 
 static cl_mem cast_stable = NULL;
+static cl_mem cast_iv = NULL;
+
+void CAST_opencl_transfer_key_schedule(CAST_KEY *ks, cl_mem *device_schedule, cl_command_queue queue) {
+	clEnqueueWriteBuffer(queue,*device_schedule,CL_TRUE,0,sizeof(CAST_KEY),ks,0,NULL,NULL);
+}
+
+void CAST_opencl_transfer_iv(cl_context context, const unsigned char *iv,cl_command_queue queue) {
+	cl_int error;
+	CL_ASSIGN(cast_iv = clCreateBuffer(context,CL_MEM_READ_ONLY,CAST_BLOCK_SIZE,NULL,&error));
+	CL_WRAPPER(clEnqueueWriteBuffer(queue,cast_iv,CL_TRUE,0,CAST_BLOCK_SIZE,iv,0,NULL,NULL));
+}
 
 void CAST_opencl_crypt(opencl_crypt_parameters *c) {
 	size_t gridSize[3] = {1, 0, 0};
@@ -187,13 +198,23 @@ void CAST_opencl_crypt(opencl_crypt_parameters *c) {
 		clSetKernelArg(*c->d_kernel, 2, sizeof(cl_mem), &cast_stable);
 	}
 
+	cl_uint args;
+	clGetKernelInfo(*c->d_kernel,CL_KERNEL_NUM_ARGS,4,&args,NULL);
+
+	if(args > 3 && cast_iv) {
+		clSetKernelArg(*c->d_kernel, 3, sizeof(cl_mem), &cast_iv);
+		clSetKernelArg(*c->d_kernel, 4, sizeof(cl_mem), c->d_out);
+	}
+
 	clEnqueueWriteBuffer(*c->queue,*c->d_in,CL_TRUE,0,c->nbytes,c->in,0,NULL,NULL);
 
 	OPENCL_TIME_KERNEL("CAST5   ",1)
 
-	clEnqueueReadBuffer(*c->queue,*c->d_in,CL_TRUE,0,c->nbytes,c->out,0,NULL,NULL);
-}
+	if(args > 3) {
+		clEnqueueReadBuffer(*c->queue,*c->d_out,CL_TRUE,0,c->nbytes,c->out,0,NULL,NULL);
+		CAST_opencl_transfer_iv(*c->context,c->in+c->nbytes-DES_BLOCK_SIZE,*c->queue);
+	} else {
+		clEnqueueReadBuffer(*c->queue,*c->d_in,CL_TRUE,0,c->nbytes,c->out,0,NULL,NULL);
+	}
 
-void CAST_opencl_transfer_key_schedule(CAST_KEY *ks, cl_mem *device_schedule, cl_command_queue queue) {
-	clEnqueueWriteBuffer(queue,*device_schedule,CL_TRUE,0,sizeof(CAST_KEY),ks,0,NULL,NULL);
 }
