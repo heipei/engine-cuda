@@ -40,7 +40,8 @@ void BF_opencl_transfer_key_schedule(BF_KEY *ks,cl_mem *device_schedule,cl_comma
 
 void BF_opencl_transfer_iv(cl_context context, const unsigned char *iv,cl_command_queue queue) {
 	cl_int error;
-	CL_ASSIGN(bf_iv = clCreateBuffer(context,CL_MEM_READ_ONLY,BF_BLOCK_SIZE,NULL,&error));
+	if(!bf_iv)
+		CL_ASSIGN(bf_iv = clCreateBuffer(context,CL_MEM_READ_ONLY,BF_BLOCK_SIZE,NULL,&error));
 	CL_WRAPPER(clEnqueueWriteBuffer(queue,bf_iv,CL_TRUE,0,BF_BLOCK_SIZE,iv,0,NULL,NULL));
 }
 

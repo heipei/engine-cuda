@@ -214,7 +214,8 @@ void CMLL_opencl_transfer_key_schedule(CAMELLIA_KEY *ks, cl_mem *device_schedule
 
 void CMLL_opencl_transfer_iv(cl_context context, const unsigned char *iv,cl_command_queue queue) {
 	cl_int error;
-	CL_ASSIGN(cmll_iv = clCreateBuffer(context,CL_MEM_READ_ONLY,CMLL_BLOCK_SIZE,NULL,&error));
+	if(!cmll_iv)
+		CL_ASSIGN(cmll_iv = clCreateBuffer(context,CL_MEM_READ_ONLY,CMLL_BLOCK_SIZE,NULL,&error));
 	CL_WRAPPER(clEnqueueWriteBuffer(queue,cmll_iv,CL_TRUE,0,CMLL_BLOCK_SIZE,iv,0,NULL,NULL));
 }
 

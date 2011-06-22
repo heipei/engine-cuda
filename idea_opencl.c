@@ -39,7 +39,8 @@ void IDEA_opencl_transfer_key_schedule(IDEA_KEY_SCHEDULE *ks, cl_mem *device_sch
 
 void IDEA_opencl_transfer_iv(cl_context context, const unsigned char *iv,cl_command_queue queue) {
 	cl_int error;
-	CL_ASSIGN(idea_iv = clCreateBuffer(context,CL_MEM_READ_ONLY,IDEA_BLOCK_SIZE,NULL,&error));
+	if(!idea_iv)
+		CL_ASSIGN(idea_iv = clCreateBuffer(context,CL_MEM_READ_ONLY,IDEA_BLOCK_SIZE,NULL,&error));
 	CL_WRAPPER(clEnqueueWriteBuffer(queue,idea_iv,CL_TRUE,0,IDEA_BLOCK_SIZE,iv,0,NULL,NULL));
 }
 

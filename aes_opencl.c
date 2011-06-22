@@ -1136,7 +1136,8 @@ void AES_opencl_transfer_key_schedule(AES_KEY *ks, cl_mem *device_schedule,cl_co
 
 void AES_opencl_transfer_iv(cl_context context, const unsigned char *iv,cl_command_queue queue) {
 	cl_int error;
-	CL_ASSIGN(aes_iv = clCreateBuffer(context,CL_MEM_READ_ONLY,AES_BLOCK_SIZE,NULL,&error));
+	if(!aes_iv)
+		CL_ASSIGN(aes_iv = clCreateBuffer(context,CL_MEM_READ_ONLY,AES_BLOCK_SIZE,NULL,&error));
 	CL_WRAPPER(clEnqueueWriteBuffer(queue,aes_iv,CL_TRUE,0,AES_BLOCK_SIZE,iv,0,NULL,NULL));
 }
 

@@ -186,7 +186,8 @@ void DES_opencl_transfer_key_schedule(DES_key_schedule *ks, cl_mem *device_sched
 
 void DES_opencl_transfer_iv(cl_context context, const unsigned char *iv,cl_command_queue queue) {
 	cl_int error;
-	CL_ASSIGN(des_iv = clCreateBuffer(context,CL_MEM_READ_ONLY,DES_BLOCK_SIZE,NULL,&error));
+	if(!des_iv)
+		CL_ASSIGN(des_iv = clCreateBuffer(context,CL_MEM_READ_ONLY,DES_BLOCK_SIZE,NULL,&error));
 	CL_WRAPPER(clEnqueueWriteBuffer(queue,des_iv,CL_TRUE,0,DES_BLOCK_SIZE,iv,0,NULL,NULL));
 }
 

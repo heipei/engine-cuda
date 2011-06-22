@@ -170,7 +170,9 @@ void CAST_opencl_transfer_key_schedule(CAST_KEY *ks, cl_mem *device_schedule, cl
 
 void CAST_opencl_transfer_iv(cl_context context, const unsigned char *iv,cl_command_queue queue) {
 	cl_int error;
-	CL_ASSIGN(cast_iv = clCreateBuffer(context,CL_MEM_READ_ONLY,CAST_BLOCK_SIZE,NULL,&error));
+	if(!cast_iv)
+		CL_ASSIGN(cast_iv = clCreateBuffer(context,CL_MEM_READ_ONLY,CAST_BLOCK_SIZE,NULL,&error));
+
 	CL_WRAPPER(clEnqueueWriteBuffer(queue,cast_iv,CL_TRUE,0,CAST_BLOCK_SIZE,iv,0,NULL,NULL));
 }
 
