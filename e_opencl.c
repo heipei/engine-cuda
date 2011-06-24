@@ -91,6 +91,7 @@ static cl_device_id device;
 static cl_int error = 0;
 static cl_program device_program;
 unsigned char *host_data = NULL;
+unsigned char *host_data_out = NULL;
 
 int set_buffer_size(const char *buffer_size_string) {
 	buffer_size=atoi(buffer_size_string)*1024;
@@ -151,9 +152,10 @@ int opencl_init(ENGINE * engine) {
 	#else
 		CL_ASSIGN(queue = clCreateCommandQueue(context, device,CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, &error));
 	#endif
-	CL_ASSIGN(device_data_in = clCreateBuffer(context, CL_MEM_READ_WRITE|CL_MEM_ALLOC_HOST_PTR, maxbytes, NULL, &error));
-	CL_ASSIGN(device_data_out = clCreateBuffer(context, CL_MEM_READ_WRITE|CL_MEM_ALLOC_HOST_PTR, maxbytes, NULL, &error));
-	CL_ASSIGN(host_data = (unsigned char *)clEnqueueMapBuffer(queue,device_data_in,CL_TRUE,CL_MAP_WRITE|CL_MAP_READ,0,maxbytes,0,NULL,NULL,&error));
+	CL_ASSIGN(device_data_in = clCreateBuffer(context, 0, maxbytes, NULL, &error));
+	CL_ASSIGN(device_data_out = clCreateBuffer(context, 0, maxbytes, NULL, &error));
+	//CL_ASSIGN(host_data = (unsigned char *)clEnqueueMapBuffer(queue,device_data_in,CL_TRUE,CL_MAP_WRITE|CL_MAP_READ,0,maxbytes,0,NULL,NULL,&error));
+	//CL_ASSIGN(host_data_out = (unsigned char *)clEnqueueMapBuffer(queue,device_data_out,CL_TRUE,CL_MAP_WRITE|CL_MAP_READ,0,maxbytes,0,NULL,NULL,&error));
 
 	char szTmp[32];
 	char kernels_file[200];

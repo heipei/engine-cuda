@@ -65,12 +65,12 @@ void BF_opencl_crypt(opencl_crypt_parameters *c) {
 		clSetKernelArg(*c->d_kernel, 3, sizeof(cl_mem), c->d_out);
 	}
 
-	clEnqueueWriteBuffer(*c->queue,*c->d_in,CL_TRUE,0,c->nbytes,c->in,0,NULL,NULL);
+	clEnqueueWriteBuffer(*c->queue,*c->d_in,CL_FALSE,0,c->nbytes,c->in,0,NULL,NULL);
 
 	OPENCL_TIME_KERNEL("BF      ",1)
 
 	if(args > 3) {
-		clEnqueueReadBuffer(*c->queue,*c->d_out,CL_TRUE,0,c->nbytes,c->out,0,NULL,NULL);
+		clEnqueueReadBuffer(*c->queue,*c->d_out,CL_FALSE,0,c->nbytes,c->out,0,NULL,NULL);
 		BF_opencl_transfer_iv(*c->context,c->in+c->nbytes-BF_BLOCK_SIZE,*c->queue);
 	} else {
 		clEnqueueReadBuffer(*c->queue,*c->d_in,CL_TRUE,0,c->nbytes,c->out,0,NULL,NULL);

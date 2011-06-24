@@ -15,10 +15,26 @@ plot 'plot-data/aes-128-ecb_gpu_cudamrg.dat' using ($2/1048576) title 'AES-128 C
      'plot-data/aes-192-ecb_cpu.dat' using ($2/1048576) title 'AES-192 CPU' with linespoints lw 2 pt 9, \
      'plot-data/aes-256-ecb_cpu.dat' using ($2/1048576) title 'AES-256 CPU' with linespoints lw 2 pt 9
 
+set output "ecb-decrypt_aes-128.pdf"
+plot 'plot-data/aes-128-ecb_dec_gpu_cudamrg.dat' using ($2/1048576) title 'AES-128 CUDA' with linespoints lw 2 pt 9, \
+     'plot-data/aes-128-ecb_dec_gpu_opencl.dat' using ($2/1048576) title 'AES-128 OpenCL' with linespoints lw 2 pt 11, \
+     'plot-data/aes-128-ecb_dec_cpu.dat' using ($2/1048576) title 'AES-128 CPU' with linespoints lw 2 pt 7, \
+     'plot-data/aes-128-cbc_dec_gpu_cudamrg.dat' using ($2/1048576) title 'AES-128 CBC CUDA' with linespoints lw 2 pt 9, \
+     'plot-data/aes-128-cbc_dec_gpu_opencl.dat' using ($2/1048576) title 'AES-128 CBC OpenCL' with linespoints lw 2 pt 11, \
+     'plot-data/aes-128-cbc_dec_cpu.dat' using ($2/1048576) title 'AES-128 CBC CPU' with linespoints lw 2 pt 7
+
 set output "ecb-encrypt_bf.pdf"
 plot 'plot-data/bf-ecb_gpu_cudamrg.dat' using ($2/1048576) title 'Blowfish CUDA' with linespoints lw 2 pt 9, \
      'plot-data/bf-ecb_gpu_opencl.dat' using ($2/1048576) title 'Blowfish OpenCL' with linespoints lw 2 pt 11, \
      'plot-data/bf-ecb_cpu.dat' using ($2/1048576) title 'Blowfish CPU' with linespoints lw 2 pt 7
+
+set output "ecb-decrypt_bf.pdf"
+plot 'plot-data/bf-ecb_dec_gpu_cudamrg.dat' using ($2/1048576) title 'Blowfish CUDA' with linespoints lw 2 pt 9, \
+     'plot-data/bf-ecb_dec_gpu_opencl.dat' using ($2/1048576) title 'Blowfish OpenCL' with linespoints lw 2 pt 11, \
+     'plot-data/bf-ecb_dec_cpu.dat' using ($2/1048576) title 'Blowfish CPU' with linespoints lw 2 pt 7, \
+     'plot-data/bf-cbc_dec_gpu_cudamrg.dat' using ($2/1048576) title 'Blowfish CBC CUDA' with linespoints lw 2 pt 9, \
+     'plot-data/bf-cbc_dec_gpu_opencl.dat' using ($2/1048576) title 'Blowfish CBC OpenCL' with linespoints lw 2 pt 11, \
+     'plot-data/bf-cbc_dec_cpu.dat' using ($2/1048576) title 'Blowfish CBC CPU' with linespoints lw 2 pt 7
 
 set key inside left top vertical Right autotitles width 3 box linetype 1 linewidth 1.000
 set output "ecb-encrypt_cast5.pdf"
@@ -26,20 +42,52 @@ plot 'plot-data/cast5-ecb_gpu_cudamrg.dat' using ($2/1048576) title 'CAST5 CUDA'
      'plot-data/cast5-ecb_gpu_opencl.dat' using ($2/1048576) title 'CAST5 OpenCL' with linespoints lw 2 pt 11, \
      'plot-data/cast5-ecb_cpu.dat' using ($2/1048576) title 'CAST5 CPU' with linespoints lw 2 pt 7
 
+set output "ecb-decrypt_cast5.pdf"
+plot 'plot-data/cast5-ecb_dec_gpu_cudamrg.dat' using ($2/1048576) title 'CAST5 CUDA' with linespoints lw 2 pt 9, \
+     'plot-data/cast5-ecb_dec_gpu_opencl.dat' using ($2/1048576) title 'CAST5 OpenCL' with linespoints lw 2 pt 11, \
+     'plot-data/cast5-ecb_dec_cpu.dat' using ($2/1048576) title 'CAST5 CPU' with linespoints lw 2 pt 7, \
+     'plot-data/cast5-cbc_dec_gpu_cudamrg.dat' using ($2/1048576) title 'CAST5 CBC CUDA' with linespoints lw 2 pt 9, \
+     'plot-data/cast5-cbc_dec_gpu_opencl.dat' using ($2/1048576) title 'CAST5 CBC OpenCL' with linespoints lw 2 pt 11, \
+     'plot-data/cast5-cbc_dec_cpu.dat' using ($2/1048576) title 'CAST5 CBC CPU' with linespoints lw 2 pt 7
+
 set output "ecb-encrypt_des.pdf"
 plot 'plot-data/des-ecb_gpu_cudamrg.dat' using ($2/1048576) title 'DES CUDA' with linespoints lw 2 pt 9, \
      'plot-data/des-ecb_gpu_opencl.dat' using ($2/1048576) title 'DES OpenCL' with linespoints lw 2 pt 11, \
      'plot-data/des-ecb_cpu.dat' using ($2/1048576) title 'DES CPU' with linespoints lw 2 pt 7
+
+set output "ecb-decrypt_des.pdf"
+plot 'plot-data/des-ecb_dec_gpu_cudamrg.dat' using ($2/1048576) title 'DES CUDA' with linespoints lw 2 pt 9, \
+     'plot-data/des-ecb_dec_gpu_opencl.dat' using ($2/1048576) title 'DES OpenCL' with linespoints lw 2 pt 11, \
+     'plot-data/des-ecb_dec_cpu.dat' using ($2/1048576) title 'DES CPU' with linespoints lw 2 pt 7, \
+     'plot-data/des-cbc_dec_gpu_cudamrg.dat' using ($2/1048576) title 'DES CBC CUDA' with linespoints lw 2 pt 9, \
+     'plot-data/des-cbc_dec_gpu_opencl.dat' using ($2/1048576) title 'DES CBC OpenCL' with linespoints lw 2 pt 11, \
+     'plot-data/des-cbc_dec_cpu.dat' using ($2/1048576) title 'DES CBC CPU' with linespoints lw 2 pt 7
 
 set output "ecb-encrypt_idea.pdf"
 plot 'plot-data/idea-ecb_gpu_cudamrg.dat' using ($2/1048576) title 'IDEA CUDA' with linespoints lw 2 pt 9, \
      'plot-data/idea-ecb_gpu_opencl.dat' using ($2/1048576) title 'IDEA OpenCL' with linespoints lw 2 pt 11, \
      'plot-data/idea-ecb_cpu.dat' using ($2/1048576) title 'IDEA CPU' with linespoints lw 2 pt 7
 
+set output "ecb-decrypt_idea.pdf"
+plot 'plot-data/idea-ecb_dec_gpu_cudamrg.dat' using ($2/1048576) title 'IDEA CUDA' with linespoints lw 2 pt 9, \
+     'plot-data/idea-ecb_dec_gpu_opencl.dat' using ($2/1048576) title 'IDEA OpenCL' with linespoints lw 2 pt 11, \
+     'plot-data/idea-ecb_dec_cpu.dat' using ($2/1048576) title 'IDEA CPU' with linespoints lw 2 pt 7, \
+     'plot-data/idea-cbc_dec_gpu_cudamrg.dat' using ($2/1048576) title 'IDEA CBC CUDA' with linespoints lw 2 pt 9, \
+     'plot-data/idea-cbc_dec_gpu_opencl.dat' using ($2/1048576) title 'IDEA CBC OpenCL' with linespoints lw 2 pt 11, \
+     'plot-data/idea-cbc_dec_cpu.dat' using ($2/1048576) title 'IDEA CBC CPU' with linespoints lw 2 pt 7
+
 set output "ecb-encrypt_camellia-128.pdf"
 plot 'plot-data/camellia-128-ecb_gpu_cudamrg.dat' using ($2/1048576) title 'Camellia CUDA' with linespoints lw 2 pt 9, \
      'plot-data/camellia-128-ecb_gpu_opencl.dat' using ($2/1048576) title 'Camellia OpenCL' with linespoints lw 2 pt 11, \
      'plot-data/camellia-128-ecb_cpu.dat' using ($2/1048576) title 'Camellia CPU' with linespoints lw 2 pt 7
+
+set output "ecb-decrypt_camellia-128.pdf"
+plot 'plot-data/camellia-128-ecb_dec_gpu_cudamrg.dat' using ($2/1048576) title 'Camellia CUDA' with linespoints lw 2 pt 9, \
+     'plot-data/camellia-128-ecb_dec_gpu_opencl.dat' using ($2/1048576) title 'Camellia OpenCL' with linespoints lw 2 pt 11, \
+     'plot-data/camellia-128-ecb_dec_cpu.dat' using ($2/1048576) title 'Camellia CPU' with linespoints lw 2 pt 7, \
+     'plot-data/camellia-128-cbc_dec_gpu_cudamrg.dat' using ($2/1048576) title 'Camellia CBC CUDA' with linespoints lw 2 pt 9, \
+     'plot-data/camellia-128-cbc_dec_gpu_opencl.dat' using ($2/1048576) title 'Camellia CBC OpenCL' with linespoints lw 2 pt 11, \
+     'plot-data/camellia-128-cbc_dec_cpu.dat' using ($2/1048576) title 'Camellia CBC CPU' with linespoints lw 2 pt 7
 
 set terminal pdf size 15cm,11cm font "Palatino"
 set output "ecb-encrypt_cuda.pdf"

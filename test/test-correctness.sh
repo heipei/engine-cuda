@@ -4,7 +4,7 @@
 ENC_CIPHERS=(aes-128-ecb aes-192-ecb aes-256-ecb bf-ecb camellia-128-ecb cast5-ecb des-ecb idea-ecb)
 DEC_CIPHERS=(aes-128-ecb aes-192-ecb aes-256-ecb aes-128-cbc aes-192-cbc aes-256-cbc bf-ecb bf-cbc des-ecb des-cbc idea-ecb idea-cbc cast5-ecb cast5-cbc camellia-128-ecb camellia-128-cbc)
 #DEC_CIPHERS=(camellia-128-cbc des-cbc bf-cbc aes-128-cbc)
-#DEC_CIPHERS=(cast5-cbc)
+#DEC_CIPHERS=(camellia-128-cbc)
 
 IV="FFFF"
 BUFSIZE=8388608
