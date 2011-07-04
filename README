@@ -5,12 +5,12 @@ engine-cuda is an engine for the popular OpenSSL cryptography framework. It
 enables the execution of different block ciphers on a GPU using CUDA and
 OpenCL. Currently, the following block ciphers are supported:
 
-* AES-128, AES-192, AES-256 (ECB, CBC)
-* Blowfish (ECB)
-* Camellia-128 (ECB)
-* CAST5 (ECB)
-* DES (ECB)
-* IDEA
+* AES-128, AES-192, AES-256 (ECB, CBC decryption)
+* Blowfish (ECB, CBC decryption)
+* CAST5 (ECB, CBC decryption)
+* Camellia-128 (ECB, CBC decryption)
+* DES (ECB, CBC decryption)
+* IDEA (ECB, CBC decryption)
 
 Building engine-cuda
 --------------------
@@ -75,6 +75,20 @@ During development, use
   
 to compare the output of engine-cuda / engine_opencl with the CPU output in
 order to ensure functionality of the algorithm.
+
+Caveats
+-------
+
+There are many (very strange) problems which can arise when using and
+developing CUDA and OpenCL. We have tried to identify these within the
+documentation/source, but you may stumble on other problems as well.
+
+For CUDA, using the compute-exclusive mode removes the initial lag:
+
+   nvidia-smi -pm 1
+   nvidia-smi -c 1
+
+to set persistence-mode and compute-exclusive mode
 
 Credits
 -------

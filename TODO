@@ -1,17 +1,11 @@
 Still TODO
 ----------
-Most importantly, figure out an interesting direction of research.
 
 .Implementation
+* Use newer generation GPUs and CUDA
 * More blockmodes (CTR if possible), RC5 (http://www.openssl.org/docs/apps/enc.html)
-* CUDA 4.0
 * Streams and multi-GPU using CUDA 4
 * Have a look at parallel execution again
-
-.Organization
-* Setup a project page (github or google code or asciidoc)
-* Contact kgpu author [DONE]
-* Look for conferences
 
 Interesting Projects
 --------------------
@@ -22,57 +16,11 @@ Interesting Projects
 * SSLShader (reverse SSL proxy with GPU support)
 ** http://shader.kaist.edu/sslshader/
 
-* NVIDIA Graduate Fellowships
-** http://research.nvidia.com/content/nvidia-graduate-fellowship-results-2011
-** Projects like SSLShader, kgpu
+* libgpucrypto (CUDA library from the SSLShader guys)
+** http://shader.kaist.edu/sslshader/libgpucrypto/
 
 * Disk encryption software
 ** eCryptfs (crypto-filesystem)
 ** LUKS / dm-crypt / cryptoloop / Truecrypt (full-disk encryption)
 ** Comparison here: http://ecryptfs.sourceforge.net/ecryptfs-faq.html#compare
 ** Block modes
-  
-Conferences
------------
-A good list of crypto-conferences to be found at http://www.iacr.org/events/
-
-.Submission deadline in June
-* IMACC11, Oxford (http://www.hpl.hp.com/personal/Liqun_Chen/IMACC11-home.htm)
-** Submission: June 10
-* CANS 2011, China (http://www.infosec.sdu.edu.cn/cans2011/)
-** Submission: June 20
-
-.Submission deadline in July
-* ICICS'11, Beijing (http://www.icics2011.org/)
-** Submission: July 5
-* IEEE PDP12, Garching (http://www.pdp2012.org/)
-** Submission: July 25
-
-.Submission deadline in August
-* Inscrypt'2011, Beijing (http://www.inscrypt.cn/2011/cfp-inscrypt2011.html)
-** Submission: August 20
-
-.Submission deadline in October
-* Eurocrypt 2012, Cambridge (UK) (http://www.cs.bris.ac.uk/eurocrypt2012/)
-** Submission: October 15
-
-.Assorted
-* AfricaCrypt
-* CHES (Cryptographic Hardware and Embedded Systems)
-* Eurocrypt
-* Fast Software Encryption
-** 2012: 19-21. März
-* ISCA 22nd International Conference on Parallel and Distributed Computing and Communication Systems
-* SIGCOMM
-* Transactions on Computational Science XI (LNCS)
-* USENIX Security Symposium
-
-.IEEE
-* IEEE 2nd International Conference on Computer Engineering and Technology (ICCET)
-* IEEE International Conference on Multimedia and Uibquitous Engineering
-* IEEE International Conference on Parallel and Distributed Computing, Applications and Technologies
-* IEEE International Conference on Signal Processing and Communications
-* IEEE International Symposium on Parallel and Distributed Processing
-* IEEE Second International Conference on Communication Software and Networks
-* IEEE Second International Conference on Computational Science and Its Applications
-* IEEE Student Conference on Research and Development

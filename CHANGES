@@ -5,7 +5,9 @@ Updates since 0.1.2 [09 May 2011]
 ---------------------------------
 
   * CUDA support for DES, Blowfish, Camellia-128, CAST-5, IDEA
-    All algorithms supported in ECB mode, key-scheduling done on the CPU 
+    All algorithms supported in ECB mode, CBC decryption
+
+  * Key-scheduling done on the CPU 
 
   * Improved (coarse-grained) version of AES
 

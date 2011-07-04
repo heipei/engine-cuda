@@ -120,11 +120,11 @@ void checkCUDADevice(struct cudaDeviceProp *deviceProp, int output_verbosity) {
 	if (output_verbosity>=OUTPUT_NORMAL) 
 		fprintf(stdout,"Successfully found %d CUDA devices (CUDART_VERSION %d).\n",deviceCount, CUDART_VERSION);
 
-	_CUDA(cudaSetDevice(0));
-	_CUDA(cudaGetDeviceProperties(deviceProp, 0));
+	_CUDA(cudaSetDevice(6));
+	_CUDA(cudaGetDeviceProperties(deviceProp, 6));
 	
 	if (output_verbosity==OUTPUT_VERBOSE) {
-        	fprintf(stdout,"\nDevice %d: \"%s\"\n", 0, deviceProp->name);
+        	fprintf(stdout,"\nDevice %d: \"%s\"\n", 6, deviceProp->name);
       	 	fprintf(stdout,"  CUDA Compute Capability:                       %d.%d\n", deviceProp->major,deviceProp->minor);
 #if CUDART_VERSION >= 2000
         	fprintf(stdout,"  Number of multiprocessors (SM):                %d\n", deviceProp->multiProcessorCount);
