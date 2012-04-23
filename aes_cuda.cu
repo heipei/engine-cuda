@@ -1173,11 +1173,12 @@ extern "C" void AES_cuda_transfer_iv(const unsigned char *iv) {
 
 extern "C" void AES_cuda_crypt(cuda_crypt_parameters *c) {
 
-	int gridSize = c->nbytes/(MAX_THREAD*DES_BLOCK_SIZE);
+	int gridSize = c->nbytes/(MAX_THREAD*AES_BLOCK_SIZE);
 
 	transferHostToDevice(c->in, (uint32_t *)c->d_in, c->host_data, c->nbytes);
 
 	#ifdef AES_COARSE
+		gridSize = c->nbytes/(MAX_THREAD*AES_BLOCK_SIZE);
 		if (!(c->nbytes%(MAX_THREAD*AES_BLOCK_SIZE))==0)
 			gridSize = c->nbytes/(MAX_THREAD*AES_BLOCK_SIZE)+1;
 

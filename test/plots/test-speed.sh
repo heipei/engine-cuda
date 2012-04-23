@@ -2,8 +2,8 @@
 OPENSSL=openssl
 RUN=17
 AVG_RUNS=1
-#ENC_CIPHERS=(aes-128-ecb aes-192-ecb aes-256-ecb bf-ecb camellia-128-ecb cast5-ecb des-ecb idea-ecb)
-ENC_CIPHERS=()
+ENC_CIPHERS=(aes-128-ecb aes-192-ecb aes-256-ecb bf-ecb camellia-128-ecb cast5-ecb des-ecb idea-ecb)
+#ENC_CIPHERS=()
 #DEC_CIPHERS=(aes-128-ecb aes-192-ecb aes-256-ecb bf-ecb des-ecb idea-ecb cast5-ecb camellia-128-ecb aes-128-cbc aes-192-cbc aes-256-cbc bf-cbc des-cbc idea-cbc cast5-cbc camellia-128-cbc)
 DEC_CIPHERS=(aes-128-cbc aes-192-cbc aes-256-cbc bf-cbc des-cbc idea-cbc cast5-cbc camellia-128-cbc)
 ENGINE=cudamrg
