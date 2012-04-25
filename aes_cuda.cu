@@ -1238,7 +1238,7 @@ extern "C" void AES_cuda_crypt(cuda_crypt_parameters *c) {
 		transferDeviceToHost(c->out, (uint32_t *)c->d_in, c->host_data, c->host_data, c->nbytes);
 	} else { 
 		transferDeviceToHost(c->out, (uint32_t *)c->d_out, c->host_data, c->host_data, c->nbytes);
-		AES_cuda_transfer_iv(c->in+c->nbytes-AES_BLOCK_SIZE);
+		//AES_cuda_transfer_iv(c->in+c->nbytes-AES_BLOCK_SIZE);
 	}
 }
 

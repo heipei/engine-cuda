@@ -15,6 +15,12 @@ plot 'plot-data/aes-128-ecb_gpu_cudamrg.dat' using ($2/1048576) title 'AES-128 C
      'plot-data/aes-192-ecb_cpu.dat' using ($2/1048576) title 'AES-192 CPU' with linespoints lw 2 pt 9, \
      'plot-data/aes-256-ecb_cpu.dat' using ($2/1048576) title 'AES-256 CPU' with linespoints lw 2 pt 9
 
+set output "cbc-decrypt_aes.pdf"
+plot 'plot-data/aes-128-cbc_dec_gpu_cudamrg.dat' using ($2/1048576) title 'AES-128 CBC CUDA' with linespoints lw 2 pt 9, \
+     'plot-data/aes-128-ecb_dec_gpu_cudamrg.dat' using ($2/1048576) title 'AES-128 ECB CUDA' with linespoints lw 2 pt 9, \
+     'plot-data/aes-128-cbc_dec_gpu_opencl.dat' using ($2/1048576) title 'AES-128 CBC OpenCL' with linespoints lw 2 pt 11, \
+     'plot-data/aes-128-ecb_dec_gpu_opencl.dat' using ($2/1048576) title 'AES-128 ECB OpenCL' with linespoints lw 2 pt 11 
+
 set output "ecb-decrypt_aes-128.pdf"
 plot 'plot-data/aes-128-ecb_dec_gpu_cudamrg.dat' using ($2/1048576) title 'AES-128 CUDA' with linespoints lw 2 pt 9, \
      'plot-data/aes-128-ecb_dec_gpu_opencl.dat' using ($2/1048576) title 'AES-128 OpenCL' with linespoints lw 2 pt 11, \
@@ -22,6 +28,22 @@ plot 'plot-data/aes-128-ecb_dec_gpu_cudamrg.dat' using ($2/1048576) title 'AES-1
      'plot-data/aes-128-cbc_dec_gpu_cudamrg.dat' using ($2/1048576) title 'AES-128 CBC CUDA' with linespoints lw 2 pt 9, \
      'plot-data/aes-128-cbc_dec_gpu_opencl.dat' using ($2/1048576) title 'AES-128 CBC OpenCL' with linespoints lw 2 pt 11, \
      'plot-data/aes-128-cbc_dec_cpu.dat' using ($2/1048576) title 'AES-128 CBC CPU' with linespoints lw 2 pt 7
+
+set output "ecb-decrypt_aes-192.pdf"
+plot 'plot-data/aes-192-ecb_dec_gpu_cudamrg.dat' using ($2/1048576) title 'AES-192 CUDA' with linespoints lw 2 pt 9, \
+     'plot-data/aes-192-ecb_dec_gpu_opencl.dat' using ($2/1048576) title 'AES-192 OpenCL' with linespoints lw 2 pt 11, \
+     'plot-data/aes-192-ecb_dec_cpu.dat' using ($2/1048576) title 'AES-192 CPU' with linespoints lw 2 pt 7, \
+     'plot-data/aes-192-cbc_dec_gpu_cudamrg.dat' using ($2/1048576) title 'AES-192 CBC CUDA' with linespoints lw 2 pt 9, \
+     'plot-data/aes-192-cbc_dec_gpu_opencl.dat' using ($2/1048576) title 'AES-192 CBC OpenCL' with linespoints lw 2 pt 11, \
+     'plot-data/aes-192-cbc_dec_cpu.dat' using ($2/1048576) title 'AES-192 CBC CPU' with linespoints lw 2 pt 7
+
+set output "ecb-decrypt_aes-256.pdf"
+plot 'plot-data/aes-256-ecb_dec_gpu_cudamrg.dat' using ($2/1048576) title 'AES-256 CUDA' with linespoints lw 2 pt 9, \
+     'plot-data/aes-256-ecb_dec_gpu_opencl.dat' using ($2/1048576) title 'AES-256 OpenCL' with linespoints lw 2 pt 11, \
+     'plot-data/aes-256-ecb_dec_cpu.dat' using ($2/1048576) title 'AES-256 CPU' with linespoints lw 2 pt 7, \
+     'plot-data/aes-256-cbc_dec_gpu_cudamrg.dat' using ($2/1048576) title 'AES-256 CBC CUDA' with linespoints lw 2 pt 9, \
+     'plot-data/aes-256-cbc_dec_gpu_opencl.dat' using ($2/1048576) title 'AES-256 CBC OpenCL' with linespoints lw 2 pt 11, \
+     'plot-data/aes-256-cbc_dec_cpu.dat' using ($2/1048576) title 'AES-256 CBC CPU' with linespoints lw 2 pt 7
 
 set output "ecb-encrypt_bf.pdf"
 plot 'plot-data/bf-ecb_gpu_cudamrg.dat' using ($2/1048576) title 'Blowfish CUDA' with linespoints lw 2 pt 9, \
