@@ -103,3 +103,7 @@ This is a full credits-file of people that have contributed to this project.
 ** Developer, tester and maintainer
 ** http://www.mrgcorner.it
 
+Donations
+---------
+
+Since a few people asked me, you can donate here: http://pledgie.com/campaigns/18855
