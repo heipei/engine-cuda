@@ -120,11 +120,26 @@ void checkCUDADevice(struct cudaDeviceProp *deviceProp, int output_verbosity) {
 	if (output_verbosity>=OUTPUT_NORMAL) 
 		fprintf(stdout,"Successfully found %d CUDA devices (CUDART_VERSION %d).\n",deviceCount, CUDART_VERSION);
 
-	_CUDA(cudaSetDevice(6));
-	_CUDA(cudaGetDeviceProperties(deviceProp, 6));
+	/* added by abu naser(an16e@my.fsu.edu) to solve deviceid problem */	
+	int deviceId;
+	_CUDA(cudaGetDevice(&deviceId)) ;
+	if(!deviceId)
+		fprintf(stdout,"Successfully found  CUDA deviceId = %d.\n",deviceId);
+	else
+		fprintf(stdout,"CUDA deviceId not found.\n");
+	
+	_CUDA(cudaSetDevice(deviceId));
+	_CUDA(cudaGetDeviceProperties(deviceProp, deviceId));
+	
+	// _CUDA(cudaSetDevice(6));
+	// _CUDA(cudaGetDeviceProperties(deviceProp, 6));
+	/* end of add */
+	
+
 	
 	if (output_verbosity==OUTPUT_VERBOSE) {
-        	fprintf(stdout,"\nDevice %d: \"%s\"\n", 6, deviceProp->name);
+			fprintf(stdout,"\nDevice %d: \"%s\"\n", deviceId, deviceProp->name);
+			// fprintf(stdout,"\nDevice %d: \"%s\"\n", 6, deviceProp->name);
       	 	fprintf(stdout,"  CUDA Compute Capability:                       %d.%d\n", deviceProp->major,deviceProp->minor);
 #if CUDART_VERSION >= 2000
         	fprintf(stdout,"  Number of multiprocessors (SM):                %d\n", deviceProp->multiProcessorCount);
